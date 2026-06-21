@@ -55,8 +55,8 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
             }
 
             // Sub-Tab clicks (Ammunition vs Deployable)
-            // The tabs are rendered exactly at Y = 410 (before scroll offset)
-            int scrolledTabY = 410 - (int)this.scrollOffset;
+            // The tabs are rendered exactly at Y = 440 (before scroll offset)
+            int scrolledTabY = 440 - (int)this.scrollOffset;
             if (pMouseY >= scrolledTabY && pMouseY <= scrolledTabY + 20) {
                 if (pMouseX >= 20 && pMouseX <= 110) {
                     this.showAmmunitionTab = true;
@@ -176,7 +176,8 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
                 ? (20 + 16 + (numPrimary * 31) + 10 + 16 + (numSidearm * 31)) 
                 : (20 + 16 + (numGrenade * 31) + 10 + 16 + (numTactical * 31));
                 
-        int listHeight = 335 + dynamicItemsHeight; 
+        // 365 = 75 (Weapon) + 30 (Attachments Header) + 225 (5 Core) + 35 (Tabs)
+        int listHeight = 365 + dynamicItemsHeight; 
         int visibleHeight = trueHeight - 100;
         
         // Calculate max scroll bounds
@@ -192,13 +193,18 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
         drawCleanBox(guiGraphics, 20, currentY, 200, 70); 
         currentY += 75;
 
-        // 2. 5 Core Attachment Boxes (40px tall)
+        // 2. Attachments Header Line
+        currentY += 5; // Padding
+        guiGraphics.fill(20, currentY + 15, 220, currentY + 16, 0xFF2E3136);
+        currentY += 25;
+
+        // 3. 5 Core Attachment Boxes (40px tall)
         for (int i = 0; i < 5; i++) {
             drawCleanBox(guiGraphics, 20, currentY, 200, 40);
             currentY += 45;
         }
 
-        // 3. Dual Tabs (Ammunition & Deployable) - Underlines
+        // 4. Dual Tabs (Ammunition & Deployable) - Underlines
         int tabY = currentY + 10;
         guiGraphics.fill(20, tabY + 14, 220, tabY + 15, 0xFF2E3136); // Base line
         
@@ -209,7 +215,7 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
         }
         currentY = tabY + 20; // 20px pad below the tabs line
         
-        // 4. Sub-items (Underlines ONLY, perfectly synchronized with labels)
+        // 5. Sub-items (Underlines ONLY, perfectly synchronized with labels)
         if (this.showAmmunitionTab) {
             // Primary Ammunition Header Line
             guiGraphics.fill(20, currentY + 15, 220, currentY + 16, 0xFF2E3136);
@@ -336,7 +342,6 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
     private void renderGunsmithLabels(GuiGraphics guiGraphics) {
         drawSmallText(guiGraphics, "< WEAPON BUILD", 20, 25, 0.75f, 0xFFFFFF);
         drawSmallText(guiGraphics, "ASSAULT RIFLE", 20, 55, 0.65f, 0xFFD62929); 
-        drawSmallText(guiGraphics, "MK18", 20, 75, 1.1f, 0xFFFFFF); 
 
         int startY = 100;
         int currentY = startY - (int)this.scrollOffset;
@@ -349,7 +354,12 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
         drawSmallText(guiGraphics, "CURRENT", leftX, currentY + 58, 0.65f, 0xFFD2D6DE);
         currentY += 75;
 
-        // 2. 5 Core Attachments Boxes Text (Pushed down & scaled smaller)
+        // 2. Attachments Header Text
+        currentY += 5; // Padding
+        drawSmallText(guiGraphics, "ATTACHMENTS", leftX, currentY + 6, 0.65f, 0xFF7A818C);
+        currentY += 25;
+
+        // 3. 5 Core Attachments Boxes Text (Pushed down & scaled smaller)
         String[] boxCats = {"OPTIC", "BARREL", "MUZZLE", "UNDERBARREL", "LASER"};
         String[] boxNames = {"EXPS3 HOLOGRAPHIC", "10.3\" CQB BARREL", "SUREFIRE SOCOM556", "MAGPUL RVG", "PEQ-15"};
 
@@ -359,13 +369,13 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
             currentY += 45;
         }
 
-        // 3. Tabs Header Text
+        // 4. Tabs Header Text
         int tabY = currentY + 10;
         drawSmallText(guiGraphics, "AMMUNITION", leftX, tabY + 6, 0.55f, this.showAmmunitionTab ? 0xFFFFFFFF : 0xFF7A818C);
         drawSmallText(guiGraphics, "DEPLOYABLE", 116, tabY + 6, 0.55f, !this.showAmmunitionTab ? 0xFFFFFFFF : 0xFF7A818C);
         currentY = tabY + 20;
 
-        // 4. Sub-items Text (Synchronized with renderGunsmithBg line offsets)
+        // 5. Sub-items Text (Synchronized with renderGunsmithBg line offsets)
         if (this.showAmmunitionTab) {
             
             // --- EDIT THESE ARRAYS TO CHANGE AMMUNITION LOADOUT ---
