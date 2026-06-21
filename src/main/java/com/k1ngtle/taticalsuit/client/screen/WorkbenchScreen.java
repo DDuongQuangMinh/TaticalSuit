@@ -7,12 +7,14 @@ import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.gui.screens.inventory.InventoryScreen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.item.ItemStack;
 
 public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
     
     private boolean isDraggingModel = false;
     private float playerRotation = 0f;
     private boolean inGunsmith = false; // UI State Tracker
+    private boolean inWeaponSelection = false; // Weapon Grid State Tracker
     private boolean showAmmunitionTab = true; // Sub-Tab Tracker for Gunsmith
     private boolean showPrimaryWeaponTab = true; // Weapon Tracker for Gunsmith
     
@@ -35,7 +37,35 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
 
     @Override
     public boolean mouseClicked(double pMouseX, double pMouseY, int pButton) {
-        if (this.inGunsmith) {
+        if (this.inWeaponSelection) {
+            // Back Button inside Weapon Selection
+            if (pMouseX >= 20 && pMouseX <= 100 && pMouseY >= 15 && pMouseY <= 35) {
+                this.inWeaponSelection = false;
+                this.scrollOffset = 0f;
+                return true;
+            }
+
+            // Weapon Grid Clicks
+            int startX = 22;
+            int startY = 100 - (int)this.scrollOffset;
+            int boxSize = 46;
+            int spacing = 6;
+            
+            for (int row = 0; row < 8; row++) {
+                for (int col = 0; col < 4; col++) {
+                    int x = startX + (col * (boxSize + spacing));
+                    int y = startY + (row * (boxSize + spacing));
+                    
+                    if (pMouseX >= x && pMouseX <= x + boxSize && pMouseY >= y && pMouseY <= y + boxSize) {
+                        // Clicked a gun! Transition back to Gunsmith layout
+                        this.inWeaponSelection = false;
+                        this.scrollOffset = 0f;
+                        return true;
+                    }
+                }
+            }
+            return true;
+        } else if (this.inGunsmith) {
             // Back Button inside the Gunsmith
             if (pMouseX >= 20 && pMouseX <= 100 && pMouseY >= 15 && pMouseY <= 35) {
                 this.inGunsmith = false;
@@ -55,6 +85,14 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
                 }
             }
 
+            // Weapon Box Click (Opens Weapon Selection Grid)
+            int weaponBoxY = 100 - (int)this.scrollOffset;
+            if (pMouseX >= 20 && pMouseX <= 220 && pMouseY >= weaponBoxY && pMouseY <= weaponBoxY + 70) {
+                this.inWeaponSelection = true;
+                this.scrollOffset = 0f; // Reset scroll for the new grid layout
+                return true;
+            }
+
             // Sub-Tab clicks (Ammunition vs Deployable)
             // The Y coordinate dynamically shifts based on the number of core attachments
             int numCoreAttachments = this.showPrimaryWeaponTab ? 5 : 3;
@@ -71,8 +109,7 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
                 }
             }
             
-            // Block interaction with hidden vanilla slots behind the custom UI!
-            return true; 
+            return true; // Block interaction with hidden vanilla slots behind the custom UI!
         } else {
             // Check if clicking the Primary Weapon tab
             if (pMouseX >= 20 && pMouseX <= 220 && pMouseY >= 40 && pMouseY <= 85) {
@@ -100,15 +137,15 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
 
     @Override
     public boolean mouseDragged(double pMouseX, double pMouseY, int pButton, double pDragX, double pDragY) {
-        // Drag up/down on the left side to scroll attachments
-        if (this.inGunsmith && pMouseX < 240 && pMouseY >= 90) {
+        // Drag up/down on the left side to scroll lists (Works for both Gunsmith and Weapon Selection)
+        if ((this.inGunsmith || this.inWeaponSelection) && pMouseX < 240 && pMouseY >= 90) {
             this.scrollOffset -= (float) pDragY;
             this.scrollOffset = Math.max(0f, Math.min(this.scrollOffset, this.maxScroll));
             return true;
         }
         
         // Drag horizontally on the right side to rotate model
-        if (this.isDraggingModel && !this.inGunsmith) {
+        if (this.isDraggingModel && !this.inGunsmith && !this.inWeaponSelection) {
             this.playerRotation += (float) pDragX * 1.5f; 
             return true;
         }
@@ -117,13 +154,18 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
 
     @Override
     public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float delta) {
-        if (this.inGunsmith) {
-            // Completely bypass vanilla container rendering to stop ghost slots!
+        if (this.inWeaponSelection) {
+            // Weapon Grid Selection Screen
+            guiGraphics.fill(0, 0, this.width, this.height, 0xFF070707); // Studio Void
+            this.renderWeaponSelectionBg(guiGraphics, this.height);
+            this.renderWeaponSelectionLabels(guiGraphics, this.width, this.height);
+        } else if (this.inGunsmith) {
+            // Gunsmith Build Screen
             guiGraphics.fill(0, 0, this.width, this.height, 0xFF070707); // Studio Void
             this.renderGunsmithBg(guiGraphics, this.height);
             this.renderGunsmithLabels(guiGraphics);
         } else {
-            // Render the normal Loadout screen with slots
+            // Normal Loadout screen with slots
             super.render(guiGraphics, mouseX, mouseY, delta);
             renderTooltip(guiGraphics, mouseX, mouseY); 
         }
@@ -140,6 +182,82 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
     protected void renderLabels(GuiGraphics guiGraphics, int mouseX, int mouseY) {
         // Only called when !inGunsmith
         renderLoadoutLabels(guiGraphics);
+    }
+
+    // --- WEAPON SELECTION BACKGROUND ---
+    private void renderWeaponSelectionBg(GuiGraphics guiGraphics, int trueHeight) {
+        int startY = 100;
+        int boxSize = 46;
+        int spacing = 6;
+        int rows = 8; // Dynamically adjusts grid bounds
+        int cols = 4;
+        
+        int listHeight = rows * (boxSize + spacing); 
+        int visibleHeight = trueHeight - 100;
+        
+        // Calculate max scroll bounds
+        this.maxScroll = Math.max(0f, (float)(listHeight - visibleHeight + 20));
+        this.scrollOffset = Math.max(0f, Math.min(this.scrollOffset, this.maxScroll));
+
+        // Clip rendering so grid items don't draw over the header
+        guiGraphics.enableScissor(0, 90, 240, trueHeight);
+        
+        int currentY = startY - (int)this.scrollOffset;
+        int startX = 22;
+
+        ItemStack currentWeapon = this.menu.getSlot(this.showPrimaryWeaponTab ? 0 : 1).getItem();
+
+        // Render the Grid
+        for (int r = 0; r < rows; r++) {
+            for (int c = 0; c < cols; c++) {
+                int x = startX + (c * (boxSize + spacing));
+                int y = currentY + (r * (boxSize + spacing));
+                drawCleanBox(guiGraphics, x, y, boxSize, boxSize);
+                
+                // Draw a mock item visually to fill the grid up
+                if (!currentWeapon.isEmpty() && (r * cols + c) < 20) {
+                    guiGraphics.pose().pushPose();
+                    guiGraphics.pose().translate(x + 5, y + 5, 10);
+                    guiGraphics.pose().scale(2.2f, 2.2f, 1.0f);
+                    guiGraphics.renderItem(currentWeapon, 0, 0);
+                    guiGraphics.pose().popPose();
+                }
+            }
+        }
+        
+        // Dynamic Visual Scrollbar Track
+        if (this.maxScroll > 0) {
+            guiGraphics.fill(225, 100, 227, trueHeight - 20, 0xFF2E3136);
+            int thumbHeight = Math.max(20, visibleHeight * visibleHeight / listHeight);
+            int thumbY = 100 + (int)((this.scrollOffset / this.maxScroll) * (visibleHeight - 20 - thumbHeight));
+            guiGraphics.fill(224, thumbY, 228, thumbY + thumbHeight, 0xFFD2D6DE);
+        }
+        
+        guiGraphics.disableScissor();
+    }
+
+    // --- WEAPON SELECTION TEXT ---
+    private void renderWeaponSelectionLabels(GuiGraphics guiGraphics, int trueWidth, int trueHeight) {
+        drawSmallText(guiGraphics, "< WEAPON BUILD", 20, 25, 0.75f, 0xFFFFFF);
+        
+        String title = this.showPrimaryWeaponTab ? "PRIMARY" : "SIDE ARM";
+        String subtitle = this.showPrimaryWeaponTab ? "ASSAULT RIFLE" : "PISTOL";
+        
+        drawSmallText(guiGraphics, title, 20, 55, 1.1f, 0xFFFFFF); 
+        drawSmallText(guiGraphics, subtitle, 20, 75, 0.65f, 0xFFD62929); 
+
+        // --- DISPLAY MASSIVE PREVIEW MODEL ON THE RIGHT SIDE ---
+        ItemStack weaponStack = this.menu.getSlot(this.showPrimaryWeaponTab ? 0 : 1).getItem();
+        if (!weaponStack.isEmpty()) {
+            guiGraphics.pose().pushPose();
+            int rightCenterX = 240 + (trueWidth - 240) / 2;
+            int rightCenterY = trueHeight / 2 - 40; 
+            
+            guiGraphics.pose().translate(rightCenterX - 40, rightCenterY, 100); 
+            guiGraphics.pose().scale(6.0f, 6.0f, 1.0f); 
+            guiGraphics.renderItem(weaponStack, 0, 0);
+            guiGraphics.pose().popPose();
+        }
     }
 
     // --- MAIN LOADOUT BACKGROUND ---
@@ -380,6 +498,21 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
         // 1. Weapon Box Text
         drawSmallText(guiGraphics, "WEAPON", leftX, currentY + 50, 0.45f, 0xFF7A818C);
         drawSmallText(guiGraphics, "CURRENT", leftX, currentY + 58, 0.65f, 0xFFD2D6DE);
+        
+        // --- DISPLAY VIC'S POINT BLANK GUN MODEL ---
+        ItemStack weaponStack = this.menu.getSlot(this.showPrimaryWeaponTab ? 0 : 1).getItem();
+        if (!weaponStack.isEmpty()) {
+            guiGraphics.pose().pushPose();
+            // Position the weapon gracefully on the right side of the box, above background layer
+            guiGraphics.pose().translate(110, currentY + 8, 100); 
+            // Scale up to 3.5x so the Vic's Point Blank 3D model looks massive and detailed
+            guiGraphics.pose().scale(3.5f, 3.5f, 1.0f); 
+            guiGraphics.renderItem(weaponStack, 0, 0);
+            guiGraphics.pose().popPose();
+        } else {
+            drawSmallText(guiGraphics, "NO WEAPON EQUIPPED", 90, currentY + 32, 0.55f, 0xFF555555);
+        }
+
         currentY += 75;
 
         // 2. Attachments Header Text
