@@ -14,6 +14,7 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
     private float playerRotation = 0f;
     private boolean inGunsmith = false; // UI State Tracker
     private boolean showAmmunitionTab = true; // Sub-Tab Tracker for Gunsmith
+    private boolean showPrimaryWeaponTab = true; // Weapon Tracker for Gunsmith
     
     // Scroll Trackers
     private float scrollOffset = 0f;
@@ -34,29 +35,32 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
 
     @Override
     public boolean mouseClicked(double pMouseX, double pMouseY, int pButton) {
-        if (!this.inGunsmith) {
-            // Check if clicking the Primary Weapon tab
-            if (pMouseX >= 20 && pMouseX <= 220 && pMouseY >= 40 && pMouseY <= 85) {
-                this.inGunsmith = true;
-                this.scrollOffset = 0f; // Reset scroll when entering Gunsmith
-                this.showAmmunitionTab = true; // Default to Ammunition tab
-                return true;
-            }
-            
-            // Grab model rotation
-            if (pMouseX >= 240) {
-                this.isDraggingModel = true;
-            }
-        } else {
+        if (this.inGunsmith) {
             // Back Button inside the Gunsmith
             if (pMouseX >= 20 && pMouseX <= 100 && pMouseY >= 15 && pMouseY <= 35) {
                 this.inGunsmith = false;
                 return true;
             }
 
+            // Primary vs Side Arm Weapon Tabs (Top fixed area)
+            if (pMouseY >= 70 && pMouseY <= 90) {
+                if (pMouseX >= 20 && pMouseX <= 90) {
+                    this.showPrimaryWeaponTab = true;
+                    this.scrollOffset = 0f; // Reset scroll on switch
+                    return true;
+                } else if (pMouseX > 90 && pMouseX <= 180) {
+                    this.showPrimaryWeaponTab = false;
+                    this.scrollOffset = 0f; // Reset scroll on switch
+                    return true;
+                }
+            }
+
             // Sub-Tab clicks (Ammunition vs Deployable)
-            // The tabs are rendered exactly at Y = 440 (before scroll offset)
-            int scrolledTabY = 440 - (int)this.scrollOffset;
+            // The Y coordinate dynamically shifts based on the number of core attachments
+            int numCoreAttachments = this.showPrimaryWeaponTab ? 5 : 3;
+            int baseTabY = 100 + 75 + 30 + (numCoreAttachments * 45) + 10;
+            int scrolledTabY = baseTabY - (int)this.scrollOffset;
+            
             if (pMouseY >= scrolledTabY && pMouseY <= scrolledTabY + 20) {
                 if (pMouseX >= 20 && pMouseX <= 110) {
                     this.showAmmunitionTab = true;
@@ -66,8 +70,26 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
                     return true;
                 }
             }
+            
+            // Block interaction with hidden vanilla slots behind the custom UI!
+            return true; 
+        } else {
+            // Check if clicking the Primary Weapon tab
+            if (pMouseX >= 20 && pMouseX <= 220 && pMouseY >= 40 && pMouseY <= 85) {
+                this.inGunsmith = true;
+                this.scrollOffset = 0f; // Reset scroll when entering Gunsmith
+                this.showAmmunitionTab = true; // Default to Ammunition tab
+                this.showPrimaryWeaponTab = true; // Default to Primary Weapon
+                return true;
+            }
+            
+            // Grab model rotation
+            if (pMouseX >= 240) {
+                this.isDraggingModel = true;
+            }
+            
+            return super.mouseClicked(pMouseX, pMouseY, pButton);
         }
-        return super.mouseClicked(pMouseX, pMouseY, pButton);
     }
 
     @Override
@@ -94,19 +116,30 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
     }
 
     @Override
-    protected void renderBg(GuiGraphics guiGraphics, float partialTick, int mouseX, int mouseY) {
-        int trueHeight = guiGraphics.guiHeight();
-        int trueWidth = guiGraphics.guiWidth();
-
-        // 1. Studio Dark Void
-        guiGraphics.fill(0, 0, trueWidth, trueHeight, 0xFF070707);
-
-        // Branch based on UI state
+    public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float delta) {
         if (this.inGunsmith) {
-            renderGunsmithBg(guiGraphics, trueHeight);
+            // Completely bypass vanilla container rendering to stop ghost slots!
+            guiGraphics.fill(0, 0, this.width, this.height, 0xFF070707); // Studio Void
+            this.renderGunsmithBg(guiGraphics, this.height);
+            this.renderGunsmithLabels(guiGraphics);
         } else {
-            renderLoadoutBg(guiGraphics, trueWidth, trueHeight, mouseX, mouseY);
+            // Render the normal Loadout screen with slots
+            super.render(guiGraphics, mouseX, mouseY, delta);
+            renderTooltip(guiGraphics, mouseX, mouseY); 
         }
+    }
+
+    @Override
+    protected void renderBg(GuiGraphics guiGraphics, float partialTick, int mouseX, int mouseY) {
+        // This is only called when !inGunsmith, thanks to our custom render() branch.
+        guiGraphics.fill(0, 0, this.width, this.height, 0xFF070707);
+        renderLoadoutBg(guiGraphics, this.width, this.height, mouseX, mouseY);
+    }
+
+    @Override
+    protected void renderLabels(GuiGraphics guiGraphics, int mouseX, int mouseY) {
+        // Only called when !inGunsmith
+        renderLoadoutLabels(guiGraphics);
     }
 
     // --- MAIN LOADOUT BACKGROUND ---
@@ -165,19 +198,20 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
     private void renderGunsmithBg(GuiGraphics guiGraphics, int trueHeight) {
         int startY = 100;
         
-        // Settings: You can edit the number of items here to fix background line calculations
         int numPrimary = 2; 
         int numSidearm = 2; 
         int numGrenade = 4; 
         int numTactical = 5; 
         
-        // Calculate dynamic height based on tighter spacing
         int dynamicItemsHeight = this.showAmmunitionTab 
                 ? (20 + 16 + (numPrimary * 31) + 10 + 16 + (numSidearm * 31)) 
                 : (20 + 16 + (numGrenade * 31) + 10 + 16 + (numTactical * 31));
                 
-        // 365 = 75 (Weapon) + 30 (Attachments Header) + 225 (5 Core) + 35 (Tabs)
-        int listHeight = 365 + dynamicItemsHeight; 
+        // Calculate core boxes (5 for primary, 3 for sidearm)
+        int numCoreAttachments = this.showPrimaryWeaponTab ? 5 : 3;
+        
+        // 75 (Weapon) + 30 (Header) + CoreBoxes + 35 (Tabs)
+        int listHeight = 75 + 30 + (numCoreAttachments * 45) + 35 + dynamicItemsHeight; 
         int visibleHeight = trueHeight - 100;
         
         // Calculate max scroll bounds
@@ -198,8 +232,8 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
         guiGraphics.fill(20, currentY + 15, 220, currentY + 16, 0xFF2E3136);
         currentY += 25;
 
-        // 3. 5 Core Attachment Boxes (40px tall)
-        for (int i = 0; i < 5; i++) {
+        // 3. Core Attachment Boxes (40px tall dynamically generated)
+        for (int i = 0; i < numCoreAttachments; i++) {
             drawCleanBox(guiGraphics, 20, currentY, 200, 40);
             currentY += 45;
         }
@@ -283,22 +317,7 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
         guiGraphics.drawString(this.font, text, 0, 0, color, false);
         guiGraphics.pose().popPose();
     }
-
-    @Override
-    public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float delta) {
-        super.render(guiGraphics, mouseX, mouseY, delta);
-        renderTooltip(guiGraphics, mouseX, mouseY); 
-    }
     
-    @Override
-    protected void renderLabels(GuiGraphics guiGraphics, int mouseX, int mouseY) {
-        if (this.inGunsmith) {
-            renderGunsmithLabels(guiGraphics);
-        } else {
-            renderLoadoutLabels(guiGraphics);
-        }
-    }
-
     // --- MAIN LOADOUT TEXT ---
     private void renderLoadoutLabels(GuiGraphics guiGraphics) {
         guiGraphics.drawString(this.font, "LOADOUT", 20, 6, 0xFFFFFF, false);
@@ -341,7 +360,16 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
     // --- GUNSMITH TEXT ---
     private void renderGunsmithLabels(GuiGraphics guiGraphics) {
         drawSmallText(guiGraphics, "< WEAPON BUILD", 20, 25, 0.75f, 0xFFFFFF);
-        drawSmallText(guiGraphics, "ASSAULT RIFLE", 20, 55, 0.65f, 0xFFD62929); 
+        
+        // Primary vs Side Arm Weapon Switch Tabs
+        drawSmallText(guiGraphics, "PRIMARY", 20, 75, 0.85f, this.showPrimaryWeaponTab ? 0xFFFFFFFF : 0xFF7A818C);
+        drawSmallText(guiGraphics, "SIDE ARM", 100, 75, 0.85f, !this.showPrimaryWeaponTab ? 0xFFFFFFFF : 0xFF7A818C);
+        
+        if (this.showPrimaryWeaponTab) {
+            guiGraphics.fill(20, 87, 80, 89, 0xFFD62929); // Red line under Primary
+        } else {
+            guiGraphics.fill(100, 87, 160, 89, 0xFFD62929); // Red line under Side Arm
+        }
 
         int startY = 100;
         int currentY = startY - (int)this.scrollOffset;
@@ -359,11 +387,16 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
         drawSmallText(guiGraphics, "ATTACHMENTS", leftX, currentY + 6, 0.65f, 0xFF7A818C);
         currentY += 25;
 
-        // 3. 5 Core Attachments Boxes Text (Pushed down & scaled smaller)
-        String[] boxCats = {"OPTIC", "BARREL", "MUZZLE", "UNDERBARREL", "LASER"};
-        String[] boxNames = {"EXPS3 HOLOGRAPHIC", "10.3\" CQB BARREL", "SUREFIRE SOCOM556", "MAGPUL RVG", "PEQ-15"};
+        // 3. Core Attachments Boxes Text (Dynamic between Primary and Side Arm)
+        int numCoreAttachments = this.showPrimaryWeaponTab ? 5 : 3;
+        String[] boxCats = this.showPrimaryWeaponTab 
+                ? new String[]{"OPTIC", "BARREL", "MUZZLE", "UNDERBARREL", "LASER"}
+                : new String[]{"OPTIC", "MUZZLE", "LASER"};
+        String[] boxNames = this.showPrimaryWeaponTab
+                ? new String[]{"EXPS3 HOLOGRAPHIC", "10.3\" CQB BARREL", "SUREFIRE SOCOM556", "MAGPUL RVG", "PEQ-15"}
+                : new String[]{"RMR RED DOT", "SILENCERCO OMEGA", "TLR-7 G"};
 
-        for (int i = 0; i < 5; i++) {
+        for (int i = 0; i < numCoreAttachments; i++) {
             drawSmallText(guiGraphics, boxCats[i], leftX, currentY + 24, 0.45f, 0xFF7A818C);
             drawSmallText(guiGraphics, boxNames[i], leftX, currentY + 32, 0.65f, 0xFFD2D6DE);
             currentY += 45;
