@@ -10,6 +10,9 @@ import net.minecraft.world.entity.player.Inventory;
 
 public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
     
+    private boolean isDraggingModel = false;
+    private float playerRotation = 0f;
+
     public WorkbenchScreen(WorkbenchMenu menu, Inventory inventory, Component title) {
         super(menu, inventory, title);
     }
@@ -21,6 +24,31 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
         this.imageHeight = this.height;
         this.leftPos = 0;
         this.topPos = 0;
+    }
+
+    @Override
+    public boolean mouseClicked(double pMouseX, double pMouseY, int pButton) {
+        // Sidebar is 240px wide. Clicking anywhere in the right-side void grabs the model.
+        if (pMouseX >= 240) {
+            this.isDraggingModel = true;
+        }
+        return super.mouseClicked(pMouseX, pMouseY, pButton);
+    }
+
+    @Override
+    public boolean mouseReleased(double pMouseX, double pMouseY, int pButton) {
+        this.isDraggingModel = false;
+        return super.mouseReleased(pMouseX, pMouseY, pButton);
+    }
+
+    @Override
+    public boolean mouseDragged(double pMouseX, double pMouseY, int pButton, double pDragX, double pDragY) {
+        if (this.isDraggingModel) {
+            // Dragging horizontally rotates the player model
+            this.playerRotation += (float) pDragX * 1.5f; 
+            return true;
+        }
+        return super.mouseDragged(pMouseX, pMouseY, pButton, pDragX, pDragY);
     }
 
     @Override
@@ -75,18 +103,29 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
             int operatorScale = 260; 
             int operatorFloorAnchor = trueHeight + 170; 
 
-            float mouseTrackingX = (float)(openSpaceCenter - mouseX);
-            float mouseTrackingY = (float)(operatorFloorAnchor - (operatorScale * 0.8f) - mouseY);
+            guiGraphics.pose().pushPose();
+            
+            // Move origin to the player's center, accounting for the internal method's 50.0 Z-depth translation
+            guiGraphics.pose().translate(openSpaceCenter, operatorFloorAnchor, 50.0);
+            
+            // Apply our 360-degree drag rotation
+            guiGraphics.pose().mulPose(com.mojang.math.Axis.YP.rotationDegrees(this.playerRotation));
+            
+            // Counter-translate so the model spins exactly on its axis instead of orbiting in a circle
+            guiGraphics.pose().translate(0, 0, -50.0);
 
+            // Render at 0,0 with 0,0 mouse tracking to force the model to stand perfectly rigid and straight
             InventoryScreen.renderEntityInInventoryFollowsMouse(
                     guiGraphics,
-                    openSpaceCenter, 
-                    operatorFloorAnchor, 
+                    0, 
+                    0, 
                     operatorScale, 
-                    mouseTrackingX, 
-                    mouseTrackingY,  
+                    0f, 
+                    0f,  
                     Minecraft.getInstance().player 
             );
+
+            guiGraphics.pose().popPose();
         }
     }
 
