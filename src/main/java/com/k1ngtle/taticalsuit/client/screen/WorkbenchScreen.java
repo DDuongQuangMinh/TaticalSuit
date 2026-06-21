@@ -17,7 +17,6 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
     @Override
     protected void init() {
         super.init();
-        // Force the GUI to cover the entire screen
         this.imageWidth = this.width; 
         this.imageHeight = this.height;
         this.leftPos = 0;
@@ -26,47 +25,83 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
 
     @Override
     protected void renderBg(GuiGraphics guiGraphics, float partialTick, int mouseX, int mouseY) {
-        // 1. Full screen background
-        guiGraphics.fill(0, 0, this.width, this.height, 0xFF0A0A0A);
+        int trueHeight = guiGraphics.guiHeight();
+        int trueWidth = guiGraphics.guiWidth();
 
-        // 2. Left Sidebar (Now slightly wider for the bigger slots)
-        guiGraphics.fill(0, 0, 180, this.height, 0xFF141414);
+        // 1. Studio Dark Void
+        guiGraphics.fill(0, 0, trueWidth, trueHeight, 0xFF070707);
 
-        // 3. Red Accent Line
-        guiGraphics.fill(20, 25, 160, 27, 0xFFD62929);
+        // 2. Main Left Sidebar (Shrunk to 240px width)
+        guiGraphics.fill(0, 0, 240, trueHeight, 0xFF121212);
 
-        // 4. BIGGER SLOT DRAWING (Width: 120 -> 140, Height: 32 -> 40)
-        // Weapons (Pushed down slightly)
-        drawCustomBox(guiGraphics, 20, 50, 140, 40); // Primary 
-        drawCustomBox(guiGraphics, 20, 95, 140, 40); // Secondary
-        
-        // Armor (Chunky squares: 48 -> 60)
-        drawCustomBox(guiGraphics, 20, 150, 60, 60); // Helmet
-        drawCustomBox(guiGraphics, 90, 150, 60, 60); // Chest
-        drawCustomBox(guiGraphics, 20, 220, 60, 60); // Legs
-        drawCustomBox(guiGraphics, 90, 220, 60, 60); // Boots
+        // 3. Top Red Accent Line
+        guiGraphics.fill(20, 16, 220, 18, 0xFFD62929);
 
-        // 5. HUGE PLAYER MODEL
+        // --- SECTION 1: WEAPONS ---
+        // Boxes stick together vertically (Y: 40, 85, 130)
+        drawCleanBox(guiGraphics, 20, 40, 200, 45);  // Primary Tab
+        drawCleanBox(guiGraphics, 20, 85, 200, 45);  // Secondary Tab
+        drawCleanBox(guiGraphics, 20, 130, 200, 45); // Tactical Tab
+
+        // --- SECTION 2: ARMOR & MUNITIONS ---
+        // Boxes stick horizontally
+        drawCleanBox(guiGraphics, 20, 205, 80, 55);  // Vest Box
+        drawCleanBox(guiGraphics, 100, 205, 120, 55); // Specs Box
+        guiGraphics.fill(100, 232, 220, 233, 0xFF2E3136); // Divider
+
+        // Munition Slots (Vertical lines to separate groups)
+        // Group 1 (5 slots packed)
+        for(int i = 0; i < 5; i++) drawCleanBox(guiGraphics, 20 + (i * 20), 285, 20, 24);
+        guiGraphics.fill(20, 309, 120, 317, 0xFF2E3136); // "AP" Bar 1
+        guiGraphics.fill(123, 285, 124, 317, 0xFF2E3136); // Vertical Separator 1
+
+        // Group 2 (3 slots packed)
+        for(int i = 0; i < 3; i++) drawCleanBox(guiGraphics, 127 + (i * 20), 285, 20, 24);
+        guiGraphics.fill(127, 309, 187, 317, 0xFF2E3136); // "AP" Bar 2
+        guiGraphics.fill(190, 285, 191, 317, 0xFF2E3136); // Vertical Separator 2
+
+        // Group 3 (1 slot)
+        drawCleanBox(guiGraphics, 194, 285, 20, 24);
+        guiGraphics.fill(194, 309, 214, 317, 0xFF2E3136); // "5" Bar 3
+
+        // --- SECTION 3: HEADWEAR ---
+        drawCleanBox(guiGraphics, 20, 345, 80, 55);  // Helmet Box
+        drawCleanBox(guiGraphics, 100, 345, 120, 55); // Specs Box
+        guiGraphics.fill(100, 372, 220, 373, 0xFF2E3136); // Divider
+
+        // --- THE COLOSSAL OPERATOR MODEL ---
         if (Minecraft.getInstance().player != null) {
-            // Place model to the right of the sidebar
-            int playerX = 180 + (this.width - 180) / 2; 
-            int playerY = this.height / 2 + 150;        
-            
+            int openSpaceCenter = 240 + (trueWidth - 240) / 2; 
+            int operatorScale = 260; 
+            int operatorFloorAnchor = trueHeight + 170; 
+
+            float mouseTrackingX = (float)(openSpaceCenter - mouseX);
+            float mouseTrackingY = (float)(operatorFloorAnchor - (operatorScale * 0.8f) - mouseY);
+
             InventoryScreen.renderEntityInInventoryFollowsMouse(
                     guiGraphics,
-                    playerX, 
-                    playerY, 
-                    120, // Increased scale for a massive, high-detail look
-                    (float)(playerX - mouseX),
-                    (float)(playerY - 120 - mouseY),
+                    openSpaceCenter, 
+                    operatorFloorAnchor, 
+                    operatorScale, 
+                    mouseTrackingX, 
+                    mouseTrackingY,  
                     Minecraft.getInstance().player 
             );
         }
     }
 
-    private void drawCustomBox(GuiGraphics guiGraphics, int x, int y, int w, int h) {
-        guiGraphics.fill(x, y, x + w, y + h, 0xFF333333); // Border
-        guiGraphics.fill(x + 2, y + 2, x + w - 2, y + h - 2, 0xFF000000); // Inner
+    private void drawCleanBox(GuiGraphics guiGraphics, int x, int y, int w, int h) {
+        guiGraphics.fill(x, y, x + w, y + h, 0xFF2E3136); // Subtle gray border
+        guiGraphics.fill(x + 1, y + 1, x + w - 1, y + h - 1, 0xFF0B0C0E); // Deep interior
+    }
+
+    // Custom text scaler so bulky text fits cleanly into the bottom corners
+    private void drawSmallText(GuiGraphics guiGraphics, String text, int x, int y, float scale, int color) {
+        guiGraphics.pose().pushPose();
+        guiGraphics.pose().translate(x, y, 0);
+        guiGraphics.pose().scale(scale, scale, 1.0F);
+        guiGraphics.drawString(this.font, text, 0, 0, color, false);
+        guiGraphics.pose().popPose();
     }
 
     @Override
@@ -77,13 +112,58 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
     
     @Override
     protected void renderLabels(GuiGraphics guiGraphics, int mouseX, int mouseY) {
-        // Because we forced leftPos and topPos to 0, these draw at absolute screen coordinates
-        
-        // Main Title
-        guiGraphics.drawString(this.font, "LOADOUT", 20, 12, 0xFFFFFF, false);
+        // --- TOP HEADER ---
+        guiGraphics.drawString(this.font, "LOADOUT", 20, 6, 0xFFFFFF, false);
 
-        // Category Subheaders
-        guiGraphics.drawString(this.font, "WEAPONS", 20, 35, 0xFFAAAAAA, false);
-        guiGraphics.drawString(this.font, "ARMOR & MUNITIONS", 20, 125, 0xFFAAAAAA, false);
+        // --- SECTION 1: WEAPONS ---
+        drawSmallText(guiGraphics, "WEAPONS", 20, 26, 0.65f, 0xFFAAAAAA);
+        
+        // Tab 1 (Bottom Left)
+        drawSmallText(guiGraphics, "ASSAULT RIFLE", 26, 68, 0.55f, 0xFF7A818C);
+        drawSmallText(guiGraphics, "MK18", 26, 74, 0.75f, 0xFFD2D6DE);
+
+        // Tab 2 
+        drawSmallText(guiGraphics, "PISTOL", 26, 113, 0.55f, 0xFF7A818C);
+        drawSmallText(guiGraphics, "G19", 26, 119, 0.75f, 0xFFD2D6DE);
+
+        // Tab 3
+        drawSmallText(guiGraphics, "LONG TACTICAL", 26, 158, 0.55f, 0xFF7A818C);
+        drawSmallText(guiGraphics, "MIRRORGUN", 26, 164, 0.75f, 0xFFD2D6DE);
+
+        // --- SECTION 2: ARMOR & MUNITIONS ---
+        drawSmallText(guiGraphics, "ARMOR & MUNITIONS", 20, 190, 0.65f, 0xFFAAAAAA);
+        
+        // Vest Box
+        drawSmallText(guiGraphics, "VEST | ", 26, 243, 0.55f, 0xFF7A818C);
+        drawSmallText(guiGraphics, "13 SLOTS", 26 + (int)(this.font.width("VEST | ") * 0.55f), 243, 0.55f, 0xFFD62929);
+        drawSmallText(guiGraphics, "LIGHT ARMOR", 26, 249, 0.75f, 0xFFD2D6DE);
+
+        // Specs Box
+        drawSmallText(guiGraphics, "MATERIAL", 106, 218, 0.55f, 0xFF7A818C);
+        drawSmallText(guiGraphics, "STEEL", 106, 224, 0.75f, 0xFFD2D6DE);
+        drawSmallText(guiGraphics, "COVERAGE", 106, 244, 0.55f, 0xFF7A818C);
+        drawSmallText(guiGraphics, "FRONT/BACK", 106, 250, 0.75f, 0xFFD2D6DE);
+
+        // Munitions Line
+        drawSmallText(guiGraphics, "MUNITION SLOTS", 20, 275, 0.65f, 0xFFAAAAAA);
+        drawSmallText(guiGraphics, this.menu.getMunitionCount() + "/13 SLOTS", 165, 275, 0.65f, 0xFFD62929);
+
+        drawSmallText(guiGraphics, "AP", 66, 310, 0.55f, 0xFFFFFFFF);
+        drawSmallText(guiGraphics, "AP", 153, 310, 0.55f, 0xFFFFFFFF);
+        drawSmallText(guiGraphics, "5", 201, 310, 0.55f, 0xFFFFFFFF);
+
+        // --- SECTION 3: HEADWEAR ---
+        drawSmallText(guiGraphics, "HEADWEAR", 20, 330, 0.65f, 0xFFAAAAAA);
+
+        // Helmet Box
+        drawSmallText(guiGraphics, "HELMET", 26, 383, 0.55f, 0xFF7A818C);
+        drawSmallText(guiGraphics, "HELMET ONLY", 26, 389, 0.75f, 0xFFD2D6DE);
+
+        // Specs Box
+        drawSmallText(guiGraphics, "MOUNT | ", 106, 358, 0.55f, 0xFF7A818C);
+        drawSmallText(guiGraphics, "WHITE PHOSPHOR", 106 + (int)(this.font.width("MOUNT | ") * 0.55f), 358, 0.55f, 0xFFD62929);
+        drawSmallText(guiGraphics, "GPNVGS", 106, 364, 0.75f, 0xFFD2D6DE);
+        drawSmallText(guiGraphics, "FACEWEAR", 106, 384, 0.55f, 0xFF7A818C);
+        drawSmallText(guiGraphics, "ANTI-FLASH GOGGLES", 106, 390, 0.75f, 0xFFD2D6DE);
     }
 }
