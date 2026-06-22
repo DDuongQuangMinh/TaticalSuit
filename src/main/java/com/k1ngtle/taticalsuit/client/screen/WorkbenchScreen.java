@@ -8,7 +8,6 @@ import net.minecraft.client.gui.screens.inventory.InventoryScreen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.registries.ForgeRegistries;
 
 public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
     
@@ -26,6 +25,23 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
     private float scrollOffset = 0f;
     private float maxScroll = 0f;
 
+    // --- VIC'S POINT BLANK WEAPON POOLS ---
+    private static final String[] PRIMARY_WEAPON_IDS = new String[]{
+            "pointblank:aa12", "pointblank:ak12", "pointblank:ak47", "pointblank:ak74",
+            "pointblank:an94", "pointblank:m4a1", "pointblank:m16a1", "pointblank:hk416",
+            "pointblank:scarl", "pointblank:g36c", "pointblank:vector"
+    };
+
+    // Exactly 12 slots as requested (added placeholders for the remaining 5)
+    private static final String[] SIDEARM_WEAPON_IDS = new String[]{
+            "pointblank:glock17", "pointblank:glock18", "pointblank:m1911a1", "pointblank:deserteagle",
+            "pointblank:m9", "pointblank:p30l", "pointblank:tti_viper", "pointblank:m17",
+            "pointblank:p250", "pointblank:fn509", "pointblank:usp45", "pointblank:fnx45"
+    };
+
+    private ItemStack[] primaryWeaponStacks;
+    private ItemStack[] sidearmWeaponStacks;
+
     public WorkbenchScreen(WorkbenchMenu menu, Inventory inventory, Component title) {
         super(menu, inventory, title);
     }
@@ -38,93 +54,73 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
         this.leftPos = 0;
         this.topPos = 0;
         
-        // Reset transient states on open to prevent stuck GUI bugs
         this.inWeaponSelection = false;
         this.scrollOffset = 0f;
+
+        this.primaryWeaponStacks = resolveWeaponStacks(PRIMARY_WEAPON_IDS);
+        this.sidearmWeaponStacks = resolveWeaponStacks(SIDEARM_WEAPON_IDS);
     }
 
-    // Dynamic scanner to find Point Blank weapons in the player's inventory
-    private java.util.List<Integer> getAvailableWeaponSlots() {
-        java.util.List<Integer> availableInvSlots = new java.util.ArrayList<>();
-        if (Minecraft.getInstance().player == null) return availableInvSlots;
-        
-        Inventory inv = Minecraft.getInstance().player.getInventory();
-        for (int i = 0; i < inv.getContainerSize(); i++) {
-            ItemStack stack = inv.getItem(i);
-            if (!stack.isEmpty()) {
-                String namespace = ForgeRegistries.ITEMS.getKey(stack.getItem()).getNamespace();
-                String path = ForgeRegistries.ITEMS.getKey(stack.getItem()).getPath().toLowerCase();
-                
-                // Relaxed Scanner: Automatically picks up ANY modded item that doesn't sound like ammo/attachments
-                if (!namespace.equals("minecraft") && 
-                    !path.contains("mag") && !path.contains("ammo") && !path.contains("bullet") && 
-                    !path.contains("grenade") && !path.contains("vest") && !path.contains("helmet") &&
-                    !path.contains("optic") && !path.contains("sight") && !path.contains("grip") && 
-                    !path.contains("suppressor") && !path.contains("barrel") && !path.contains("stock") && !path.contains("laser")) {
-                    
-                    availableInvSlots.add(i);
-                }
+    private ItemStack[] resolveWeaponStacks(String[] ids) {
+        ItemStack[] stacks = new ItemStack[ids.length];
+        for (int i = 0; i < ids.length; i++) {
+            net.minecraft.resources.ResourceLocation loc = net.minecraft.resources.ResourceLocation.parse(ids[i]);
+            java.util.Optional<net.minecraft.world.item.Item> item =
+                    net.minecraft.core.registries.BuiltInRegistries.ITEM.getOptional(loc);
+            if (item.isPresent()) {
+                stacks[i] = new ItemStack(item.get());
+            } else {
+                stacks[i] = ItemStack.EMPTY;
             }
         }
-        return availableInvSlots;
+        return stacks;
     }
 
     @Override
     public boolean mouseClicked(double pMouseX, double pMouseY, int pButton) {
-        if (this.inGunsmith) {
-            
-            // 1. Back Button
+        if (this.inWeaponSelection) {
             if (pMouseX >= 20 && pMouseX <= 100 && pMouseY >= 15 && pMouseY <= 35) {
-                if (this.inWeaponSelection) {
-                    this.inWeaponSelection = false; // Go back to Gunsmith Layout
+                this.inWeaponSelection = false;
+                this.scrollOffset = 0f;
+                return true;
+            }
+
+            // Fixed Weapon Selection List Clicks (11 or 12 Boxes)
+            String[] idPool = this.showPrimaryWeaponTab ? PRIMARY_WEAPON_IDS : SIDEARM_WEAPON_IDS;
+            int startY = 100 - (int)this.scrollOffset;
+            
+            for (int i = 0; i < idPool.length; i++) {
+                int boxY = startY + (i * 45);
+                if (pMouseX >= 20 && pMouseX <= 220 && pMouseY >= boxY && pMouseY <= boxY + 40) {
+                    int menuSlotIndex = this.showPrimaryWeaponTab ? 0 : 1; 
+                    // Send String ID to Server!
+                    com.k1ngtle.taticalsuit.network.ModNetworking.CHANNEL.sendToServer(
+                            new com.k1ngtle.taticalsuit.network.EquipWeaponPacket(menuSlotIndex, idPool[i])
+                    );
+                    this.inWeaponSelection = false; 
                     this.scrollOffset = 0f;
-                    return true;
-                } else {
-                    this.inGunsmith = false; // Go back to Loadout Layout
                     return true;
                 }
             }
+            return true; // Consume clicks in the list area
+        } else if (this.inGunsmith) {
+            if (pMouseX >= 20 && pMouseX <= 100 && pMouseY >= 15 && pMouseY <= 35) {
+                this.inGunsmith = false;
+                return true;
+            }
 
-            // 2. Primary vs Side Arm Weapon Tabs (Top fixed area)
             if (pMouseY >= 70 && pMouseY <= 90) {
                 if (pMouseX >= 20 && pMouseX <= 90) {
                     this.showPrimaryWeaponTab = true;
-                    this.scrollOffset = 0f; // Reset scroll on switch
+                    this.scrollOffset = 0f; 
                     return true;
                 } else if (pMouseX > 90 && pMouseX <= 180) {
                     this.showPrimaryWeaponTab = false;
-                    this.scrollOffset = 0f; // Reset scroll on switch
+                    this.scrollOffset = 0f; 
                     return true;
                 }
             }
 
-            // 3. Handle Weapon Selection List Clicks
-            if (this.inWeaponSelection) {
-                int numBoxes = this.showPrimaryWeaponTab ? 11 : 12;
-                int startY = 100 - (int)this.scrollOffset;
-                java.util.List<Integer> weaponSlots = getAvailableWeaponSlots();
-                
-                for (int i = 0; i < numBoxes; i++) {
-                    int boxY = startY + (i * 45);
-                    if (pMouseX >= 20 && pMouseX <= 220 && pMouseY >= boxY && pMouseY <= boxY + 40) {
-                        if (i < weaponSlots.size()) {
-                            int playerInvIndex = weaponSlots.get(i);
-                            int menuSlotIndex = this.showPrimaryWeaponTab ? 0 : 1; 
-                            
-                            // Send swap packet to the Server!
-                            com.k1ngtle.taticalsuit.network.ModNetworking.CHANNEL.sendToServer(
-                                    new com.k1ngtle.taticalsuit.network.EquipWeaponPacket(menuSlotIndex, playerInvIndex)
-                            );
-                        }
-                        this.inWeaponSelection = false; 
-                        this.scrollOffset = 0f;
-                        return true;
-                    }
-                }
-                return true; // Consume clicks so they don't click through the list
-            }
-
-            // 4. Weapon Box Click (Opens Weapon Selection List)
             int weaponBoxY = 100 - (int)this.scrollOffset;
             if (pMouseX >= 20 && pMouseX <= 220 && pMouseY >= weaponBoxY && pMouseY <= weaponBoxY + 70) {
                 this.inWeaponSelection = true; 
@@ -132,9 +128,8 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
                 return true;
             }
 
-            // 5. Sub-Tab clicks (Ammunition vs Deployable)
             int numCoreAttachments = this.showPrimaryWeaponTab ? 5 : 3;
-            int baseTabY = 100 + 75 + 30 + (numCoreAttachments * 45) + 10;
+            int baseTabY = 100 + 75 + 30 + (numCoreAttachments * 45) + 10; 
             int scrolledTabY = baseTabY - (int)this.scrollOffset;
             
             if (pMouseY >= scrolledTabY && pMouseY <= scrolledTabY + 20) {
@@ -147,9 +142,8 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
                 }
             }
             
-            return true; // Block interaction with hidden vanilla slots behind the custom UI
+            return true; 
         } else {
-            // Check if clicking the Primary Weapon box on Loadout Screen
             if (pMouseX >= 20 && pMouseX <= 220 && pMouseY >= 40 && pMouseY <= 85) {
                 this.inGunsmith = true;
                 this.scrollOffset = 0f; 
@@ -158,7 +152,6 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
                 return true;
             }
             
-            // Check if clicking the Side Arm Weapon box on Loadout Screen
             if (pMouseX >= 20 && pMouseX <= 220 && pMouseY >= 85 && pMouseY <= 130) {
                 this.inGunsmith = true;
                 this.scrollOffset = 0f; 
@@ -183,13 +176,13 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
 
     @Override
     public boolean mouseDragged(double pMouseX, double pMouseY, int pButton, double pDragX, double pDragY) {
-        if (this.inGunsmith && pMouseX < 240 && pMouseY >= 90) {
+        if ((this.inGunsmith || this.inWeaponSelection) && pMouseX < 240 && pMouseY >= 90) {
             this.scrollOffset -= (float) pDragY;
             this.scrollOffset = Math.max(0f, Math.min(this.scrollOffset, this.maxScroll));
             return true;
         }
         
-        if (this.isDraggingModel && !this.inGunsmith) {
+        if (this.isDraggingModel && !this.inGunsmith && !this.inWeaponSelection) {
             this.playerRotation += (float) pDragX * 1.5f; 
             return true;
         }
@@ -198,10 +191,14 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
 
     @Override
     public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float delta) {
-        if (this.inGunsmith) {
-            guiGraphics.fill(0, 0, this.width, this.height, 0xFF070707); // Studio Void
+        if (this.inWeaponSelection) {
+            guiGraphics.fill(0, 0, this.width, this.height, 0xFF070707); 
+            this.renderWeaponSelectionBg(guiGraphics, this.height);
+            this.renderWeaponSelectionLabels(guiGraphics, mouseX, mouseY, this.width, this.height);
+        } else if (this.inGunsmith) {
+            guiGraphics.fill(0, 0, this.width, this.height, 0xFF070707); 
             this.renderGunsmithBg(guiGraphics, this.height);
-            this.renderGunsmithLabels(guiGraphics, mouseX, mouseY);
+            this.renderGunsmithLabels(guiGraphics);
         } else {
             super.render(guiGraphics, mouseX, mouseY, delta);
             renderTooltip(guiGraphics, mouseX, mouseY); 
@@ -224,12 +221,10 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
         guiGraphics.fill(0, 0, 240, trueHeight, 0xFF121212);
         guiGraphics.fill(20, 16, 220, 18, 0xFFD62929);
 
-        // --- SECTION 1: WEAPONS ---
         drawCleanBox(guiGraphics, 20, 40, 200, 45);  
         drawCleanBox(guiGraphics, 20, 85, 200, 45);  
         drawCleanBox(guiGraphics, 20, 130, 200, 45); 
 
-        // --- SECTION 2: ARMOR & MUNITIONS ---
         drawCleanBox(guiGraphics, 20, 205, 80, 55);  
         drawCleanBox(guiGraphics, 100, 205, 120, 55); 
         guiGraphics.fill(100, 232, 220, 233, 0xFF2E3136); 
@@ -245,12 +240,10 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
         drawCleanBox(guiGraphics, 194, 285, 20, 24);
         guiGraphics.fill(194, 309, 214, 317, 0xFF2E3136); 
 
-        // --- SECTION 3: HEADWEAR ---
         drawCleanBox(guiGraphics, 20, 345, 80, 55);  
         drawCleanBox(guiGraphics, 100, 345, 120, 55); 
         guiGraphics.fill(100, 372, 220, 373, 0xFF2E3136); 
 
-        // --- THE COLOSSAL OPERATOR MODEL ---
         if (Minecraft.getInstance().player != null) {
             int openSpaceCenter = 240 + (trueWidth - 240) / 2; 
             int operatorScale = 260; 
@@ -270,117 +263,131 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
         }
     }
 
+    // --- WEAPON SELECTION BACKGROUND ---
+    private void renderWeaponSelectionBg(GuiGraphics guiGraphics, int trueHeight) {
+        int startY = 100;
+        int visibleHeight = trueHeight - 100;
+        
+        ItemStack[] weaponPool = this.showPrimaryWeaponTab ? this.primaryWeaponStacks : this.sidearmWeaponStacks;
+        int numBoxes = weaponPool.length; // Strictly 11 or 12
+        int listHeight = numBoxes * 45; 
+        
+        this.maxScroll = Math.max(0f, (float)(listHeight - visibleHeight + 20));
+        this.scrollOffset = Math.max(0f, Math.min(this.scrollOffset, this.maxScroll));
+
+        guiGraphics.enableScissor(0, 90, 240, trueHeight);
+        int currentY = startY - (int)this.scrollOffset;
+        
+        for (int i = 0; i < numBoxes; i++) {
+            drawCleanBox(guiGraphics, 20, currentY, 200, 40);
+            
+            if (weaponPool[i] != null && !weaponPool[i].isEmpty()) {
+                guiGraphics.pose().pushPose();
+                guiGraphics.pose().translate(30, currentY + 8, 10);
+                guiGraphics.pose().scale(1.8f, 1.8f, 1.0f);
+                guiGraphics.renderItem(weaponPool[i], 0, 0);
+                guiGraphics.pose().popPose();
+            }
+            
+            currentY += 45;
+        }
+        
+        if (this.maxScroll > 0) {
+            guiGraphics.fill(225, 100, 227, trueHeight - 20, 0xFF2E3136);
+            int thumbHeight = Math.max(20, visibleHeight * visibleHeight / listHeight);
+            int thumbY = 100 + (int)((this.scrollOffset / this.maxScroll) * (visibleHeight - 20 - thumbHeight));
+            guiGraphics.fill(224, thumbY, 228, thumbY + thumbHeight, 0xFFD2D6DE);
+        }
+        guiGraphics.disableScissor();
+    }
+
     // --- GUNSMITH BACKGROUND ---
     private void renderGunsmithBg(GuiGraphics guiGraphics, int trueHeight) {
         int startY = 100;
         int visibleHeight = trueHeight - 100;
         
-        if (this.inWeaponSelection) {
-            // WEAPON SELECTION LIST BACKGROUND (11 or 12 Boxes)
-            int numBoxes = this.showPrimaryWeaponTab ? 11 : 12;
-            int listHeight = numBoxes * 45; 
-            
-            this.maxScroll = Math.max(0f, (float)(listHeight - visibleHeight + 20));
-            this.scrollOffset = Math.max(0f, Math.min(this.scrollOffset, this.maxScroll));
-
-            guiGraphics.enableScissor(0, 90, 240, trueHeight);
-            int currentY = startY - (int)this.scrollOffset;
-            
-            for (int i = 0; i < numBoxes; i++) {
-                drawCleanBox(guiGraphics, 20, currentY, 200, 40);
-                currentY += 45;
-            }
-            
-            if (this.maxScroll > 0) {
-                guiGraphics.fill(225, 100, 227, trueHeight - 20, 0xFF2E3136);
-                int thumbHeight = Math.max(20, visibleHeight * visibleHeight / listHeight);
-                int thumbY = 100 + (int)((this.scrollOffset / this.maxScroll) * (visibleHeight - 20 - thumbHeight));
-                guiGraphics.fill(224, thumbY, 228, thumbY + thumbHeight, 0xFFD2D6DE);
-            }
-            guiGraphics.disableScissor();
-            
-        } else {
-            // NORMAL GUNSMITH BUILD BACKGROUND
-            int numPrimary = 2; 
-            int numSidearm = 2; 
-            int numGrenade = 4; 
-            int numTactical = 5; 
-            
-            int dynamicItemsHeight = this.showAmmunitionTab 
-                    ? (20 + 16 + (numPrimary * 31) + 10 + 16 + (numSidearm * 31)) 
-                    : (20 + 16 + (numGrenade * 31) + 10 + 16 + (numTactical * 31));
-                    
-            int numCoreAttachments = this.showPrimaryWeaponTab ? 5 : 3;
-            int listHeight = 75 + 30 + (numCoreAttachments * 45) + 35 + dynamicItemsHeight; 
-            
-            this.maxScroll = Math.max(0f, (float)(listHeight - visibleHeight + 20));
-            this.scrollOffset = Math.max(0f, Math.min(this.scrollOffset, this.maxScroll));
-
-            guiGraphics.enableScissor(0, 90, 240, trueHeight);
-            int currentY = startY - (int)this.scrollOffset;
-            
-            drawCleanBox(guiGraphics, 20, currentY, 200, 70); 
-            currentY += 75;
-
-            currentY += 5; 
-            guiGraphics.fill(20, currentY + 15, 220, currentY + 16, 0xFF2E3136);
-            currentY += 25;
-
-            for (int i = 0; i < numCoreAttachments; i++) {
-                drawCleanBox(guiGraphics, 20, currentY, 200, 40);
-                currentY += 45;
-            }
-
-            int tabY = currentY + 10;
-            guiGraphics.fill(20, tabY + 14, 220, tabY + 15, 0xFF2E3136); 
-            
-            if (this.showAmmunitionTab) {
-                guiGraphics.fill(20, tabY + 14, 110, tabY + 15, 0xFFD62929); 
-            } else {
-                guiGraphics.fill(110, tabY + 14, 220, tabY + 15, 0xFFD62929); 
-            }
-            currentY = tabY + 20; 
-            
-            if (this.showAmmunitionTab) {
-                guiGraphics.fill(20, currentY + 15, 220, currentY + 16, 0xFF2E3136);
-                currentY += 16;
-                for (int i = 0; i < numPrimary; i++) {
-                    guiGraphics.fill(20, currentY + 30, 220, currentY + 31, 0xFF2E3136);
-                    currentY += 31; 
-                }
+        int numPrimary = 2; 
+        int numSidearm = 2; 
+        int numGrenade = 4; 
+        int numTactical = 5; 
+        
+        int dynamicItemsHeight = this.showAmmunitionTab 
+                ? (20 + 16 + (numPrimary * 31) + 10 + 16 + (numSidearm * 31)) 
+                : (20 + 16 + (numGrenade * 31) + 10 + 16 + (numTactical * 31));
                 
-                currentY += 10; 
-                guiGraphics.fill(20, currentY + 15, 220, currentY + 16, 0xFF2E3136);
-                currentY += 16;
-                for (int i = 0; i < numSidearm; i++) {
-                    guiGraphics.fill(20, currentY + 30, 220, currentY + 31, 0xFF2E3136);
-                    currentY += 31; 
-                }
-            } else {
-                guiGraphics.fill(20, currentY + 15, 220, currentY + 16, 0xFF2E3136);
-                currentY += 16;
-                for (int i = 0; i < numGrenade; i++) {
-                    guiGraphics.fill(20, currentY + 30, 220, currentY + 31, 0xFF2E3136);
-                    currentY += 31; 
-                }
+        int numCoreAttachments = this.showPrimaryWeaponTab ? 5 : 3;
+        
+        // 75 (Weapon) + 30 (Header) + 45px per attachment box + 35 (Tabs)
+        int listHeight = 75 + 30 + (numCoreAttachments * 45) + 35 + dynamicItemsHeight; 
+        
+        this.maxScroll = Math.max(0f, (float)(listHeight - visibleHeight + 20));
+        this.scrollOffset = Math.max(0f, Math.min(this.scrollOffset, this.maxScroll));
 
-                currentY += 10; 
-                guiGraphics.fill(20, currentY + 15, 220, currentY + 16, 0xFF2E3136);
-                currentY += 16;
-                for (int i = 0; i < numTactical; i++) {
-                    guiGraphics.fill(20, currentY + 30, 220, currentY + 31, 0xFF2E3136);
-                    currentY += 31; 
-                }
-            }
+        guiGraphics.enableScissor(0, 90, 240, trueHeight);
+        int currentY = startY - (int)this.scrollOffset;
+        
+        drawCleanBox(guiGraphics, 20, currentY, 200, 70); 
+        currentY += 75;
 
-            if (this.maxScroll > 0) {
-                guiGraphics.fill(225, 100, 227, trueHeight - 20, 0xFF2E3136);
-                int thumbHeight = Math.max(20, visibleHeight * visibleHeight / listHeight);
-                int thumbY = 100 + (int)((this.scrollOffset / this.maxScroll) * (visibleHeight - 20 - thumbHeight));
-                guiGraphics.fill(224, thumbY, 228, thumbY + thumbHeight, 0xFFD2D6DE);
-            }
-            guiGraphics.disableScissor();
+        currentY += 5; 
+        guiGraphics.fill(20, currentY + 15, 220, currentY + 16, 0xFF2E3136);
+        currentY += 25;
+
+        // FIXED ATTACHMENTS LAYOUT (Full 200x40 width rectangular boxes)
+        for (int i = 0; i < numCoreAttachments; i++) {
+            drawCleanBox(guiGraphics, 20, currentY, 200, 40);
+            currentY += 45; 
         }
+
+        int tabY = currentY + 10;
+        guiGraphics.fill(20, tabY + 14, 220, tabY + 15, 0xFF2E3136); 
+        
+        if (this.showAmmunitionTab) {
+            guiGraphics.fill(20, tabY + 14, 110, tabY + 15, 0xFFD62929); 
+        } else {
+            guiGraphics.fill(110, tabY + 14, 220, tabY + 15, 0xFFD62929); 
+        }
+        currentY = tabY + 20; 
+        
+        if (this.showAmmunitionTab) {
+            guiGraphics.fill(20, currentY + 15, 220, currentY + 16, 0xFF2E3136);
+            currentY += 16;
+            for (int i = 0; i < numPrimary; i++) {
+                guiGraphics.fill(20, currentY + 30, 220, currentY + 31, 0xFF2E3136);
+                currentY += 31; 
+            }
+            
+            currentY += 10; 
+            guiGraphics.fill(20, currentY + 15, 220, currentY + 16, 0xFF2E3136);
+            currentY += 16;
+            for (int i = 0; i < numSidearm; i++) {
+                guiGraphics.fill(20, currentY + 30, 220, currentY + 31, 0xFF2E3136);
+                currentY += 31; 
+            }
+        } else {
+            guiGraphics.fill(20, currentY + 15, 220, currentY + 16, 0xFF2E3136);
+            currentY += 16;
+            for (int i = 0; i < numGrenade; i++) {
+                guiGraphics.fill(20, currentY + 30, 220, currentY + 31, 0xFF2E3136);
+                currentY += 31; 
+            }
+
+            currentY += 10; 
+            guiGraphics.fill(20, currentY + 15, 220, currentY + 16, 0xFF2E3136);
+            currentY += 16;
+            for (int i = 0; i < numTactical; i++) {
+                guiGraphics.fill(20, currentY + 30, 220, currentY + 31, 0xFF2E3136);
+                currentY += 31; 
+            }
+        }
+
+        if (this.maxScroll > 0) {
+            guiGraphics.fill(225, 100, 227, trueHeight - 20, 0xFF2E3136);
+            int thumbHeight = Math.max(20, visibleHeight * visibleHeight / listHeight);
+            int thumbY = 100 + (int)((this.scrollOffset / this.maxScroll) * (visibleHeight - 20 - thumbHeight));
+            guiGraphics.fill(224, thumbY, 228, thumbY + thumbHeight, 0xFFD2D6DE);
+        }
+        guiGraphics.disableScissor();
     }
 
     private void drawCleanBox(GuiGraphics guiGraphics, int x, int y, int w, int h) {
@@ -396,27 +403,78 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
         guiGraphics.pose().popPose();
     }
     
+    private ItemStack getDisplayedPrimary() {
+        ItemStack inSlot = this.menu.getSlot(0).getItem();
+        if (!inSlot.isEmpty()) return inSlot;
+        return findWeaponInInventory(PRIMARY_WEAPON_IDS);
+    }
+
+    private ItemStack getDisplayedSidearm() {
+        ItemStack inSlot = this.menu.getSlot(1).getItem();
+        if (!inSlot.isEmpty()) return inSlot;
+        return findWeaponInInventory(SIDEARM_WEAPON_IDS);
+    }
+
+    private ItemStack findWeaponInInventory(String[] weaponIds) {
+        if (Minecraft.getInstance().player == null) return ItemStack.EMPTY;
+        Inventory inv = Minecraft.getInstance().player.getInventory();
+        
+        for (int i = 0; i < inv.getContainerSize(); i++) {
+            ItemStack stack = inv.getItem(i);
+            if (!stack.isEmpty()) {
+                net.minecraft.resources.ResourceLocation loc = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(stack.getItem());
+                if (loc != null) {
+                    String id = loc.toString();
+                    for (String weaponId : weaponIds) {
+                        if (weaponId.equals(id)) {
+                            return stack;
+                        }
+                    }
+                }
+            }
+        }
+        return ItemStack.EMPTY;
+    }
+
     // --- MAIN LOADOUT TEXT ---
     private void renderLoadoutLabels(GuiGraphics guiGraphics) {
         guiGraphics.drawString(this.font, "LOADOUT", 20, 6, 0xFFFFFF, false);
 
-        // Fetch actual item names from the inventory slots
-        ItemStack primaryStack = this.menu.getSlot(0).getItem();
+        ItemStack primaryStack = getDisplayedPrimary();
         String primaryName = primaryStack.isEmpty() ? "UNARMED" : primaryStack.getHoverName().getString().toUpperCase();
         
-        ItemStack secondaryStack = this.menu.getSlot(1).getItem();
+        ItemStack secondaryStack = getDisplayedSidearm();
         String secondaryName = secondaryStack.isEmpty() ? "UNARMED" : secondaryStack.getHoverName().getString().toUpperCase();
 
         drawSmallText(guiGraphics, "WEAPONS", 20, 26, 0.65f, 0xFFAAAAAA);
+        
+        // Primary Loadout Box Content
         drawSmallText(guiGraphics, "PRIMARY", 26, 68, 0.55f, 0xFF7A818C);
         drawSmallText(guiGraphics, primaryName, 26, 74, 0.75f, 0xFFD2D6DE);
+        if (!primaryStack.isEmpty()) {
+            guiGraphics.pose().pushPose();
+            guiGraphics.pose().translate(110, 44, 100); 
+            guiGraphics.pose().scale(2.5f, 2.5f, 1.0f); 
+            guiGraphics.renderItem(primaryStack, 0, 0);
+            guiGraphics.pose().popPose();
+        }
         
+        // Side Arm Loadout Box Content
         drawSmallText(guiGraphics, "SIDE ARM", 26, 113, 0.55f, 0xFF7A818C);
         drawSmallText(guiGraphics, secondaryName, 26, 119, 0.75f, 0xFFD2D6DE);
+        if (!secondaryStack.isEmpty()) {
+            guiGraphics.pose().pushPose();
+            guiGraphics.pose().translate(110, 89, 100); 
+            guiGraphics.pose().scale(2.5f, 2.5f, 1.0f); 
+            guiGraphics.renderItem(secondaryStack, 0, 0);
+            guiGraphics.pose().popPose();
+        }
         
+        // Tactical Loadout Box Content
         drawSmallText(guiGraphics, "LONG TACTICAL", 26, 158, 0.55f, 0xFF7A818C);
         drawSmallText(guiGraphics, "MIRRORGUN", 26, 164, 0.75f, 0xFFD2D6DE);
 
+        // Armor & Munitions Header
         drawSmallText(guiGraphics, "ARMOR & MUNITIONS", 20, 190, 0.65f, 0xFFAAAAAA);
         drawSmallText(guiGraphics, "VEST | ", 26, 243, 0.55f, 0xFF7A818C);
         drawSmallText(guiGraphics, "13 SLOTS", 26 + (int)(this.font.width("VEST | ") * 0.55f), 243, 0.55f, 0xFFD62929);
@@ -444,11 +502,65 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
         drawSmallText(guiGraphics, "ANTI-FLASH GOGGLES", 106, 390, 0.75f, 0xFFD2D6DE);
     }
 
-    // --- GUNSMITH TEXT ---
-    private void renderGunsmithLabels(GuiGraphics guiGraphics, int mouseX, int mouseY) {
+    // --- WEAPON SELECTION TEXT ---
+    private void renderWeaponSelectionLabels(GuiGraphics guiGraphics, int mouseX, int mouseY, int trueWidth, int trueHeight) {
         drawSmallText(guiGraphics, "< WEAPON BUILD", 20, 25, 0.75f, 0xFFFFFF);
         
-        // Primary vs Side Arm Weapon Switch Tabs
+        String title = this.showPrimaryWeaponTab ? "PRIMARY" : "SIDE ARM";
+        String subtitle = this.showPrimaryWeaponTab ? "ASSAULT RIFLE" : "PISTOL";
+        
+        drawSmallText(guiGraphics, title, 20, 55, 1.1f, 0xFFFFFF); 
+        drawSmallText(guiGraphics, subtitle, 20, 75, 0.65f, 0xFFD62929); 
+
+        ItemStack[] weaponPool = this.showPrimaryWeaponTab ? this.primaryWeaponStacks : this.sidearmWeaponStacks;
+        String[] idPool = this.showPrimaryWeaponTab ? PRIMARY_WEAPON_IDS : SIDEARM_WEAPON_IDS;
+        int numBoxes = weaponPool.length;
+
+        int currentY = 100 - (int)this.scrollOffset;
+        int leftX = 26;
+        
+        ItemStack previewStack = this.showPrimaryWeaponTab ? getDisplayedPrimary() : getDisplayedSidearm(); // Default
+
+        guiGraphics.enableScissor(0, 90, 240, trueHeight);
+        for (int i = 0; i < numBoxes; i++) {
+            int y = currentY + (i * 45);
+            
+            // Highlight & update right-side preview if mouse hovers over box
+            if (mouseY >= y && mouseY <= y + 40 && mouseX >= 20 && mouseX <= 220) {
+                if (weaponPool[i] != null && !weaponPool[i].isEmpty()) {
+                    previewStack = weaponPool[i]; 
+                }
+                guiGraphics.fill(21, y + 1, 219, y + 39, 0xFF3E4249); // Hover effect
+            }
+            
+            if (weaponPool[i] != null && !weaponPool[i].isEmpty()) {
+                String gunName = weaponPool[i].getHoverName().getString().toUpperCase();
+                drawSmallText(guiGraphics, gunName, leftX + 45, y + 16, 0.7f, 0xFFFFFFFF);
+            } else {
+                // If ID didn't resolve, still show the text of what it was supposed to be
+                String rawName = idPool[i].replace("pointblank:", "").toUpperCase();
+                drawSmallText(guiGraphics, rawName + " (MISSING)", leftX + 45, y + 16, 0.65f, 0xFF555555);
+            }
+        }
+        guiGraphics.disableScissor();
+
+        // --- MASSIVE HOVER PREVIEW ON THE RIGHT SIDE ---
+        if (!previewStack.isEmpty()) {
+            guiGraphics.pose().pushPose();
+            int rightCenterX = 240 + (trueWidth - 240) / 2;
+            int rightCenterY = trueHeight / 2 - 40; 
+            
+            guiGraphics.pose().translate(rightCenterX - 40, rightCenterY, 100); 
+            guiGraphics.pose().scale(6.0f, 6.0f, 1.0f); 
+            guiGraphics.renderItem(previewStack, 0, 0);
+            guiGraphics.pose().popPose();
+        }
+    }
+
+    // --- GUNSMITH TEXT ---
+    private void renderGunsmithLabels(GuiGraphics guiGraphics) {
+        drawSmallText(guiGraphics, "< WEAPON BUILD", 20, 25, 0.75f, 0xFFFFFF);
+        
         drawSmallText(guiGraphics, "PRIMARY", 20, 75, 0.85f, this.showPrimaryWeaponTab ? 0xFFFFFFFF : 0xFF7A818C);
         drawSmallText(guiGraphics, "SIDE ARM", 100, 75, 0.85f, !this.showPrimaryWeaponTab ? 0xFFFFFFFF : 0xFF7A818C);
         
@@ -464,140 +576,92 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
 
         guiGraphics.enableScissor(0, 90, 240, guiGraphics.guiHeight());
         
-        if (this.inWeaponSelection) {
-            // WEAPON SELECTION LIST LABELS (11 or 12 Boxes)
-            int numBoxes = this.showPrimaryWeaponTab ? 11 : 12;
-            java.util.List<Integer> weaponSlots = getAvailableWeaponSlots();
-            Inventory inv = Minecraft.getInstance().player.getInventory();
-            
-            ItemStack previewStack = this.menu.getSlot(this.showPrimaryWeaponTab ? 0 : 1).getItem(); // Default to equipped
-            
-            for (int i = 0; i < numBoxes; i++) {
-                if (i < weaponSlots.size()) {
-                    ItemStack stack = inv.getItem(weaponSlots.get(i));
-                    String name = stack.getHoverName().getString().toUpperCase();
-                    
-                    // Track if this specific box is being hovered to show preview
-                    if (mouseY >= currentY && mouseY <= currentY + 40 && mouseX >= 20 && mouseX <= 220) {
-                        previewStack = stack; 
-                        guiGraphics.fill(21, currentY + 1, 219, currentY + 39, 0xFF3E4249); // Lighter hover effect
-                    }
-                    
-                    drawSmallText(guiGraphics, name, leftX + 5, currentY + 6, 0.55f, 0xFFFFFFFF);
-                    
-                    // Large item 3D preview inside the 200x40 box
-                    guiGraphics.pose().pushPose();
-                    guiGraphics.pose().translate(leftX + 70, currentY + 8, 100);
-                    guiGraphics.pose().scale(2.5f, 2.5f, 1.0f);
-                    guiGraphics.renderItem(stack, 0, 0);
-                    guiGraphics.pose().popPose();
-                } else {
-                    drawSmallText(guiGraphics, "EMPTY SLOT", leftX + 60, currentY + 16, 0.65f, 0xFF555555);
-                }
-                currentY += 45;
-            }
-            guiGraphics.disableScissor();
-
-            // --- MASSIVE HOVER PREVIEW ON THE RIGHT SIDE ---
-            if (!previewStack.isEmpty()) {
-                guiGraphics.pose().pushPose();
-                int rightCenterX = 240 + (guiGraphics.guiWidth() - 240) / 2;
-                int rightCenterY = guiGraphics.guiHeight() / 2 - 40; 
-                
-                guiGraphics.pose().translate(rightCenterX - 40, rightCenterY, 100); 
-                guiGraphics.pose().scale(6.0f, 6.0f, 1.0f); 
-                guiGraphics.renderItem(previewStack, 0, 0);
-                guiGraphics.pose().popPose();
-            }
-
+        drawSmallText(guiGraphics, "WEAPON", leftX, currentY + 50, 0.45f, 0xFF7A818C);
+        drawSmallText(guiGraphics, "CURRENT", leftX, currentY + 58, 0.65f, 0xFFD2D6DE);
+        
+        ItemStack weaponStack = this.showPrimaryWeaponTab ? getDisplayedPrimary() : getDisplayedSidearm();
+        if (!weaponStack.isEmpty()) {
+            guiGraphics.pose().pushPose();
+            guiGraphics.pose().translate(110, currentY + 8, 100); 
+            guiGraphics.pose().scale(3.5f, 3.5f, 1.0f); 
+            guiGraphics.renderItem(weaponStack, 0, 0);
+            guiGraphics.pose().popPose();
         } else {
-            // NORMAL GUNSMITH LABELS
-            drawSmallText(guiGraphics, "WEAPON", leftX, currentY + 50, 0.45f, 0xFF7A818C);
-            drawSmallText(guiGraphics, "CURRENT", leftX, currentY + 58, 0.65f, 0xFFD2D6DE);
-            
-            ItemStack weaponStack = this.menu.getSlot(this.showPrimaryWeaponTab ? 0 : 1).getItem();
-            if (!weaponStack.isEmpty()) {
-                guiGraphics.pose().pushPose();
-                guiGraphics.pose().translate(110, currentY + 8, 100); 
-                guiGraphics.pose().scale(3.5f, 3.5f, 1.0f); 
-                guiGraphics.renderItem(weaponStack, 0, 0);
-                guiGraphics.pose().popPose();
-            } else {
-                drawSmallText(guiGraphics, "NO WEAPON EQUIPPED", 90, currentY + 32, 0.55f, 0xFF555555);
-            }
-
-            currentY += 75;
-
-            currentY += 5; 
-            drawSmallText(guiGraphics, "ATTACHMENTS", leftX, currentY + 6, 0.65f, 0xFF7A818C);
-            currentY += 25;
-
-            int numCoreAttachments = this.showPrimaryWeaponTab ? 5 : 3;
-            String[] boxCats = this.showPrimaryWeaponTab 
-                    ? new String[]{"OPTIC", "BARREL", "MUZZLE", "UNDERBARREL", "LASER"}
-                    : new String[]{"OPTIC", "MUZZLE", "LASER"};
-            String[] boxNames = this.showPrimaryWeaponTab
-                    ? new String[]{"EXPS3 HOLOGRAPHIC", "10.3\" CQB BARREL", "SUREFIRE SOCOM556", "MAGPUL RVG", "PEQ-15"}
-                    : new String[]{"RMR RED DOT", "SILENCERCO OMEGA", "TLR-7 G"};
-
-            for (int i = 0; i < numCoreAttachments; i++) {
-                drawSmallText(guiGraphics, boxCats[i], leftX, currentY + 24, 0.45f, 0xFF7A818C);
-                drawSmallText(guiGraphics, boxNames[i], leftX, currentY + 32, 0.65f, 0xFFD2D6DE);
-                currentY += 45;
-            }
-
-            int tabY = currentY + 10;
-            drawSmallText(guiGraphics, "AMMUNITION", leftX, tabY + 6, 0.55f, this.showAmmunitionTab ? 0xFFFFFFFF : 0xFF7A818C);
-            drawSmallText(guiGraphics, "DEPLOYABLE", 116, tabY + 6, 0.55f, !this.showAmmunitionTab ? 0xFFFFFFFF : 0xFF7A818C);
-            currentY = tabY + 20;
-
-            if (this.showAmmunitionTab) {
-                String[] primaryCats = {"MAGAZINE", "AMMUNITION"};
-                String[] primaryNames = {"PMAG 30RND", "5.56X45MM NATO"};
-                String[] sidearmCats = {"MAGAZINE", "AMMUNITION"};
-                String[] sidearmNames = {"G19 MAG", "9X19MM PARABELLUM"};
-                
-                drawSmallText(guiGraphics, "PRIMARY AMMUNITION", leftX, currentY + 6, 0.65f, 0xFF7A818C);
-                currentY += 16;
-                for (int i = 0; i < primaryCats.length; i++) {
-                    drawSmallText(guiGraphics, primaryCats[i], leftX, currentY + 8, 0.45f, 0xFF7A818C);
-                    drawSmallText(guiGraphics, primaryNames[i], leftX, currentY + 18, 0.65f, 0xFFFFFFFF);
-                    currentY += 31;
-                }
-
-                currentY += 10; 
-                drawSmallText(guiGraphics, "SIDEARM AMMUNITION", leftX, currentY + 6, 0.65f, 0xFF7A818C);
-                currentY += 16;
-                for (int i = 0; i < sidearmCats.length; i++) {
-                    drawSmallText(guiGraphics, sidearmCats[i], leftX, currentY + 8, 0.45f, 0xFF7A818C);
-                    drawSmallText(guiGraphics, sidearmNames[i], leftX, currentY + 18, 0.65f, 0xFFFFFFFF);
-                    currentY += 31;
-                }
-            } else {
-                String[] grenadeCats = {"GRENADE", "GRENADE", "GRENADE", "GRENADE"};
-                String[] grenadeNames = {"9-BANG FLASH GRENADE", "CS GAS", "FLASHBANGS", "STINGER"};
-                String[] tacticalCats = {"TACTICAL", "TACTICAL", "TACTICAL", "TACTICAL", "TACTICAL"};
-                String[] tacticalNames = {"C2", "LOCKPICK GUN", "PEPPER SPRAY", "TASER", "WEDGE"};
-                
-                drawSmallText(guiGraphics, "GRENADE", leftX, currentY + 6, 0.65f, 0xFF7A818C);
-                currentY += 16;
-                for (int i = 0; i < grenadeCats.length; i++) {
-                    drawSmallText(guiGraphics, grenadeCats[i], leftX, currentY + 8, 0.45f, 0xFF7A818C);
-                    drawSmallText(guiGraphics, grenadeNames[i], leftX, currentY + 18, 0.65f, 0xFFFFFFFF);
-                    currentY += 31;
-                }
-
-                currentY += 10; 
-                drawSmallText(guiGraphics, "TACTICAL", leftX, currentY + 6, 0.65f, 0xFF7A818C);
-                currentY += 16;
-                for (int i = 0; i < tacticalCats.length; i++) {
-                    drawSmallText(guiGraphics, tacticalCats[i], leftX, currentY + 8, 0.45f, 0xFF7A818C);
-                    drawSmallText(guiGraphics, tacticalNames[i], leftX, currentY + 18, 0.65f, 0xFFFFFFFF);
-                    currentY += 31;
-                }
-            }
-
-            guiGraphics.disableScissor();
+            drawSmallText(guiGraphics, "NO WEAPON EQUIPPED", 90, currentY + 32, 0.55f, 0xFF555555);
         }
+
+        currentY += 75;
+
+        currentY += 5; 
+        drawSmallText(guiGraphics, "ATTACHMENTS", leftX, currentY + 6, 0.65f, 0xFF7A818C);
+        currentY += 25;
+
+        int numCoreAttachments = this.showPrimaryWeaponTab ? 5 : 3;
+        String[] boxCats = this.showPrimaryWeaponTab 
+                ? new String[]{"OPTIC", "BARREL", "MUZZLE", "UNDERBARREL", "LASER"}
+                : new String[]{"OPTIC", "MUZZLE", "LASER"};
+        String[] boxNames = this.showPrimaryWeaponTab
+                ? new String[]{"EXPS3 HOLOGRAPHIC", "10.3\" CQB BARREL", "SUREFIRE SOCOM556", "MAGPUL RVG", "PEQ-15"}
+                : new String[]{"RMR RED DOT", "SILENCERCO OMEGA", "TLR-7 G"};
+
+        // ALIGNED ATTACHMENT TEXT (Full Width Boxes)
+        for (int i = 0; i < numCoreAttachments; i++) {
+            drawSmallText(guiGraphics, boxCats[i], leftX, currentY + 24, 0.45f, 0xFF7A818C);
+            drawSmallText(guiGraphics, boxNames[i], leftX, currentY + 32, 0.65f, 0xFFD2D6DE);
+            currentY += 45; 
+        }
+
+        int tabY = currentY + 10;
+        drawSmallText(guiGraphics, "AMMUNITION", leftX, tabY + 6, 0.55f, this.showAmmunitionTab ? 0xFFFFFFFF : 0xFF7A818C);
+        drawSmallText(guiGraphics, "DEPLOYABLE", 116, tabY + 6, 0.55f, !this.showAmmunitionTab ? 0xFFFFFFFF : 0xFF7A818C);
+        currentY = tabY + 20;
+
+        if (this.showAmmunitionTab) {
+            String[] primaryCats = {"MAGAZINE", "AMMUNITION"};
+            String[] primaryNames = {"PMAG 30RND", "5.56X45MM NATO"};
+            String[] sidearmCats = {"MAGAZINE", "AMMUNITION"};
+            String[] sidearmNames = {"G19 MAG", "9X19MM PARABELLUM"};
+            
+            drawSmallText(guiGraphics, "PRIMARY AMMUNITION", leftX, currentY + 6, 0.65f, 0xFF7A818C);
+            currentY += 16;
+            for (int i = 0; i < primaryCats.length; i++) {
+                drawSmallText(guiGraphics, primaryCats[i], leftX, currentY + 8, 0.45f, 0xFF7A818C);
+                drawSmallText(guiGraphics, primaryNames[i], leftX, currentY + 18, 0.65f, 0xFFFFFFFF);
+                currentY += 31;
+            }
+
+            currentY += 10; 
+            drawSmallText(guiGraphics, "SIDEARM AMMUNITION", leftX, currentY + 6, 0.65f, 0xFF7A818C);
+            currentY += 16;
+            for (int i = 0; i < sidearmCats.length; i++) {
+                drawSmallText(guiGraphics, sidearmCats[i], leftX, currentY + 8, 0.45f, 0xFF7A818C);
+                drawSmallText(guiGraphics, sidearmNames[i], leftX, currentY + 18, 0.65f, 0xFFFFFFFF);
+                currentY += 31;
+            }
+        } else {
+            String[] grenadeCats = {"GRENADE", "GRENADE", "GRENADE", "GRENADE"};
+            String[] grenadeNames = {"9-BANG FLASH GRENADE", "CS GAS", "FLASHBANGS", "STINGER"};
+            String[] tacticalCats = {"TACTICAL", "TACTICAL", "TACTICAL", "TACTICAL", "TACTICAL"};
+            String[] tacticalNames = {"C2", "LOCKPICK GUN", "PEPPER SPRAY", "TASER", "WEDGE"};
+            
+            drawSmallText(guiGraphics, "GRENADE", leftX, currentY + 6, 0.65f, 0xFF7A818C);
+            currentY += 16;
+            for (int i = 0; i < grenadeCats.length; i++) {
+                drawSmallText(guiGraphics, grenadeCats[i], leftX, currentY + 8, 0.45f, 0xFF7A818C);
+                drawSmallText(guiGraphics, grenadeNames[i], leftX, currentY + 18, 0.65f, 0xFFFFFFFF);
+                currentY += 31;
+            }
+
+            currentY += 10; 
+            drawSmallText(guiGraphics, "TACTICAL", leftX, currentY + 6, 0.65f, 0xFF7A818C);
+            currentY += 16;
+            for (int i = 0; i < tacticalCats.length; i++) {
+                drawSmallText(guiGraphics, tacticalCats[i], leftX, currentY + 8, 0.45f, 0xFF7A818C);
+                drawSmallText(guiGraphics, tacticalNames[i], leftX, currentY + 18, 0.65f, 0xFFFFFFFF);
+                currentY += 31;
+            }
+        }
+
+        guiGraphics.disableScissor();
     }
 }
