@@ -119,12 +119,9 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
 
                     int menuSlotIndex = this.showPrimaryWeaponTab ? 0 : 1; 
                     
-                    // LASER-TARGET THE OLD GHOST GUN IN INVENTORY TO DELETE IT
-                    int oldInvIndex = findExactWeaponSlotInInventory(currentEquipped);
-                    
-                    // Send String ID and Old Slot to Server securely
+                    // Send String ID to Server 
                     com.k1ngtle.taticalsuit.network.ModNetworking.CHANNEL.sendToServer(
-                            new com.k1ngtle.taticalsuit.network.EquipWeaponPacket(menuSlotIndex, idPool[i], oldInvIndex)
+                            new com.k1ngtle.taticalsuit.network.EquipWeaponPacket(menuSlotIndex, idPool[i])
                     );
                     this.inWeaponSelection = false; 
                     this.scrollOffset = 0f;
@@ -249,7 +246,7 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
     protected void renderTooltip(GuiGraphics guiGraphics, int mouseX, int mouseY) {
         if (!this.inGunsmith && !this.inWeaponSelection) {
             if (this.hoveredSlot != null && this.hoveredSlot.x == 180 && (this.hoveredSlot.y == 54 || this.hoveredSlot.y == 99 || this.hoveredSlot.y == 144)) {
-                return;
+                return; // Hide tooltips for the invisible vanilla slots
             }
         }
         super.renderTooltip(guiGraphics, mouseX, mouseY);
@@ -260,7 +257,7 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
         guiGraphics.fill(0, 0, 240, trueHeight, 0xFF121212);
         guiGraphics.fill(20, 16, 220, 18, 0xFFD62929);
 
-        // BOXES RESTORED: These are the backgrounds for the Primary, Sidearm, and Tactical loadout slots!
+        // BOXES RESTORED: The primary, sidearm, and tactical boxes are visible again!
         drawCleanBox(guiGraphics, 20, 40, 200, 45);  
         drawCleanBox(guiGraphics, 20, 85, 200, 45);  
         drawCleanBox(guiGraphics, 20, 130, 200, 45); 
@@ -531,19 +528,6 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
             }
         }
         return ItemStack.EMPTY;
-    }
-
-    // SEARCHES THE INVENTORY TO FIND THE SLOT INDEX OF THE FAKED GUN TO TELL THE PACKET TO DELETE IT
-    private int findExactWeaponSlotInInventory(ItemStack targetStack) {
-        if (targetStack == null || targetStack.isEmpty() || Minecraft.getInstance().player == null) return -1;
-        Inventory inv = Minecraft.getInstance().player.getInventory();
-        for (int i = 0; i < inv.getContainerSize(); i++) {
-            ItemStack stack = inv.getItem(i);
-            if (!stack.isEmpty() && stack.getItem() == targetStack.getItem()) {
-                return i;
-            }
-        }
-        return -1;
     }
 
     // --- MAIN LOADOUT TEXT ---
