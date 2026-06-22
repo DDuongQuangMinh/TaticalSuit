@@ -216,6 +216,17 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
         renderLoadoutLabels(guiGraphics);
     }
 
+    @Override
+    protected void renderTooltip(GuiGraphics guiGraphics, int mouseX, int mouseY) {
+        // Prevent ghost tooltips from showing up when hovering over the hidden vanilla slots
+        if (!this.inGunsmith && !this.inWeaponSelection) {
+            if (this.hoveredSlot != null && this.hoveredSlot.x == 180 && (this.hoveredSlot.y == 54 || this.hoveredSlot.y == 99)) {
+                return;
+            }
+        }
+        super.renderTooltip(guiGraphics, mouseX, mouseY);
+    }
+
     // --- MAIN LOADOUT BACKGROUND ---
     private void renderLoadoutBg(GuiGraphics guiGraphics, int trueWidth, int trueHeight, int mouseX, int mouseY) {
         guiGraphics.fill(0, 0, 240, trueHeight, 0xFF121212);
@@ -244,6 +255,7 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
         drawCleanBox(guiGraphics, 100, 345, 120, 55); 
         guiGraphics.fill(100, 372, 220, 373, 0xFF2E3136); 
 
+        // --- THE COLOSSAL OPERATOR MODEL IS BACK! ---
         if (Minecraft.getInstance().player != null) {
             int openSpaceCenter = 240 + (trueWidth - 240) / 2; 
             int operatorScale = 260; 
@@ -438,6 +450,12 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
 
     // --- MAIN LOADOUT TEXT ---
     private void renderLoadoutLabels(GuiGraphics guiGraphics) {
+        
+        // PATCH: Cover up the vanilla 16x16 item renders so they don't overlap our 2.5x scaled 3D models!
+        // These coords precisely target the space occupied by the vanilla Item slots.
+        guiGraphics.fill(179, 53, 197, 71, 0xFF0B0C0E); // Cover Primary Slot
+        guiGraphics.fill(179, 98, 197, 116, 0xFF0B0C0E); // Cover Sidearm Slot
+
         guiGraphics.drawString(this.font, "LOADOUT", 20, 6, 0xFFFFFF, false);
 
         ItemStack primaryStack = getDisplayedPrimary();
@@ -604,10 +622,10 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
                 ? new String[]{"EXPS3 HOLOGRAPHIC", "10.3\" CQB BARREL", "SUREFIRE SOCOM556", "MAGPUL RVG", "PEQ-15"}
                 : new String[]{"RMR RED DOT", "SILENCERCO OMEGA", "TLR-7 G"};
 
-        // ALIGNED ATTACHMENT TEXT (Full Width Boxes)
+        // ALIGNED ATTACHMENT TEXT (Centered perfectly inside the 200x40 boxes)
         for (int i = 0; i < numCoreAttachments; i++) {
-            drawSmallText(guiGraphics, boxCats[i], leftX, currentY + 24, 0.45f, 0xFF7A818C);
-            drawSmallText(guiGraphics, boxNames[i], leftX, currentY + 32, 0.65f, 0xFFD2D6DE);
+            drawSmallText(guiGraphics, boxCats[i], leftX, currentY + 12, 0.45f, 0xFF7A818C);
+            drawSmallText(guiGraphics, boxNames[i], leftX, currentY + 22, 0.65f, 0xFFD2D6DE);
             currentY += 45; 
         }
 
