@@ -64,38 +64,43 @@ public class WorkbenchMenu extends AbstractContainerMenu {
             ItemStack stack = playerInventory.getItem(i);
             if (stack.isEmpty()) continue;
 
-            String namespace = ForgeRegistries.ITEMS.getKey(stack.getItem()).getNamespace().toLowerCase();
-            String path = ForgeRegistries.ITEMS.getKey(stack.getItem()).getPath().toLowerCase();
+            net.minecraft.resources.ResourceLocation loc = ForgeRegistries.ITEMS.getKey(stack.getItem());
+            if (loc != null) {
+                String namespace = loc.getNamespace().toLowerCase();
+                String path = loc.getPath().toLowerCase();
 
-            if (namespace.equals("pointblank") && !path.contains("mag") && !path.contains("ammo") && !path.contains("grenade")) {
-                
-                boolean isSideArm = path.contains("glock") || path.contains("m1911") || path.contains("deserteagle") || 
-                                    path.contains("m9") || path.contains("p30l") || path.contains("viper");
+                if (namespace.equals("pointblank") && !path.contains("mag") && !path.contains("ammo") && !path.contains("grenade")) {
+                    
+                    boolean isSideArm = path.contains("glock") || path.contains("m1911") || path.contains("deserteagle") || 
+                                        path.contains("m9") || path.contains("p30l") || path.contains("viper") || path.contains("m17") || path.contains("p250") || path.contains("fn509") || path.contains("usp45") || path.contains("fnx45");
 
-                if (!primaryFound && !isSideArm) {
-                    this.inventory.setStackInSlot(0, stack.copy());
-                    playerInventory.setItem(i, ItemStack.EMPTY); 
-                    primaryFound = true;
-                } else if (!sidearmFound && isSideArm) {
-                    this.inventory.setStackInSlot(1, stack.copy());
-                    playerInventory.setItem(i, ItemStack.EMPTY);
-                    sidearmFound = true;
+                    if (!primaryFound && !isSideArm) {
+                        this.inventory.setStackInSlot(0, stack.copy());
+                        playerInventory.setItem(i, ItemStack.EMPTY); 
+                        primaryFound = true;
+                    } else if (!sidearmFound && isSideArm) {
+                        this.inventory.setStackInSlot(1, stack.copy());
+                        playerInventory.setItem(i, ItemStack.EMPTY);
+                        sidearmFound = true;
+                    }
+
+                    if (primaryFound && sidearmFound) break; 
                 }
-
-                if (primaryFound && sidearmFound) break; 
             }
         }
     }
 
-    // --- DYNAMIC INVENTORY CHECKER ---
     public int getMunitionCount() {
         int count = 0;
         for (int i = 0; i < player.getInventory().getContainerSize(); i++) {
             ItemStack stack = player.getInventory().getItem(i);
             if (!stack.isEmpty()) {
-                String itemName = ForgeRegistries.ITEMS.getKey(stack.getItem()).getPath().toLowerCase();
-                if (itemName.contains("mag") || itemName.contains("ammo") || itemName.contains("grenade")) {
-                    count++;
+                net.minecraft.resources.ResourceLocation loc = ForgeRegistries.ITEMS.getKey(stack.getItem());
+                if (loc != null) {
+                    String itemName = loc.getPath().toLowerCase();
+                    if (itemName.contains("mag") || itemName.contains("ammo") || itemName.contains("grenade")) {
+                        count++;
+                    }
                 }
             }
         }
@@ -105,13 +110,42 @@ public class WorkbenchMenu extends AbstractContainerMenu {
     @Override
     public void removed(Player player) {
         super.removed(player);
-        for (int i = 0; i < inventory.getSlots(); i++) {
-            ItemStack stack = inventory.getStackInSlot(i);
-            if (!stack.isEmpty()) {
-                if (!player.getInventory().add(stack)) {
-                    player.drop(stack, false); 
+        
+        if (!player.level().isClientSide()) {
+            
+            // 1. SAFELY CLEAR SLOTS 1 AND 2: 
+            // If they threw dirt in Hotbar slot 1 while the menu was open, we move it somewhere else FIRST.
+            for (int i = 0; i <= 1; i++) {
+                ItemStack existing = player.getInventory().getItem(i);
+                if (!existing.isEmpty()) {
+                    player.getInventory().setItem(i, ItemStack.EMPTY);
+                    if (!player.getInventory().add(existing)) {
+                        player.drop(existing, false);
+                    }
                 }
             }
+
+            // 2. FORCE WEAPONS: Move weapons straight from the UI slots into Hotbar 1 and 2 flawlessly.
+            for (int i = 0; i <= 1; i++) {
+                ItemStack menuGun = inventory.getStackInSlot(i);
+                if (!menuGun.isEmpty()) {
+                    player.getInventory().setItem(i, menuGun); 
+                    inventory.setStackInSlot(i, ItemStack.EMPTY);
+                }
+            }
+            
+            // 3. Normal behavior for armor/munitions/tactical items
+            for (int i = 2; i < inventory.getSlots(); i++) {
+                ItemStack stack = inventory.getStackInSlot(i);
+                if (!stack.isEmpty()) {
+                    if (!player.getInventory().add(stack)) {
+                        player.drop(stack, false); 
+                    }
+                    inventory.setStackInSlot(i, ItemStack.EMPTY);
+                }
+            }
+            
+            player.getInventory().setChanged(); 
         }
     }
 

@@ -8,27 +8,43 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.network.NetworkEvent;
+import net.minecraftforge.registries.ForgeRegistries;
 
-import java.util.Optional;
 import java.util.function.Supplier;
 
 public class EquipWeaponPacket {
 
     private final int menuSlotIndex; 
     private final String weaponId; 
+    private final boolean isAttachment;
+    private final String attachmentCategory;
+
+    public EquipWeaponPacket(int menuSlotIndex, String itemId, boolean isAttachment, String attachmentCategory) {
+        this.menuSlotIndex = menuSlotIndex;
+        this.weaponId = itemId;
+        this.isAttachment = isAttachment;
+        this.attachmentCategory = attachmentCategory;
+    }
 
     public EquipWeaponPacket(int menuSlotIndex, String weaponId) {
-        this.menuSlotIndex = menuSlotIndex;
-        this.weaponId = weaponId;
+        this(menuSlotIndex, weaponId, false, "");
     }
 
     public static void encode(EquipWeaponPacket msg, FriendlyByteBuf buf) {
         buf.writeInt(msg.menuSlotIndex);
         buf.writeUtf(msg.weaponId);
+        buf.writeBoolean(msg.isAttachment);
+        if (msg.isAttachment) {
+            buf.writeUtf(msg.attachmentCategory);
+        }
     }
 
     public static EquipWeaponPacket decode(FriendlyByteBuf buf) {
-        return new EquipWeaponPacket(buf.readInt(), buf.readUtf());
+        int slot = buf.readInt();
+        String wId = buf.readUtf();
+        boolean isAtt = buf.readBoolean();
+        String cat = isAtt ? buf.readUtf() : "";
+        return new EquipWeaponPacket(slot, wId, isAtt, cat);
     }
 
     public static void handle(EquipWeaponPacket msg, Supplier<NetworkEvent.Context> ctxSupplier) {
@@ -37,43 +53,48 @@ public class EquipWeaponPacket {
             ServerPlayer player = ctx.getSender();
             if (player != null && player.containerMenu instanceof WorkbenchMenu menu) {
                 
-                ResourceLocation reqLoc = ResourceLocation.parse(msg.weaponId);
-                Optional<Item> optionalItem = net.minecraft.core.registries.BuiltInRegistries.ITEM.getOptional(reqLoc);
+                boolean isPrimary = msg.menuSlotIndex == 0;
                 
-                if (optionalItem.isPresent()) {
-                    Item requestedItem = optionalItem.get();
-                    boolean isPrimary = msg.menuSlotIndex == 0;
+                // --- BUG 4 FIX (ATTACHMENTS FAILING) ---
+                if (msg.isAttachment) {
+                    // CRUCIAL: We MUST use .copy() so Minecraft detects it as a new object. 
+                    // Otherwise, it thinks the slot didn't change and refuses to sync the GUI!
+                    ItemStack weaponToMod = menu.getSlot(msg.menuSlotIndex).getItem().copy();
                     
-                    // Slot 1 is Index 0 (Primary), Slot 2 is Index 1 (Sidearm)
-                    int targetHotbarSlot = isPrimary ? 0 : 1; 
+                    if (!weaponToMod.isEmpty()) {
+                        if (msg.weaponId.equals("NONE")) {
+                            weaponToMod.getOrCreateTag().remove(msg.attachmentCategory);
+                        } else {
+                            weaponToMod.getOrCreateTag().putString(msg.attachmentCategory, msg.weaponId);
+                        }
+                        
+                        // Set the newly created copy back into the menu slot
+                        menu.getSlot(msg.menuSlotIndex).set(weaponToMod);
+                        menu.broadcastChanges(); // This now guarantees the client GUI gets the update!
+                    }
+                    return; 
+                }
+
+                // --- BUG 1 & 2 FIX (OLD GUNS AND DUPLICATION) ---
+                ResourceLocation reqLoc = new ResourceLocation(msg.weaponId);
+                Item requestedItem = ForgeRegistries.ITEMS.getValue(reqLoc);
+                
+                if (requestedItem != null && requestedItem != net.minecraft.world.item.Items.AIR) {
                     
+                    ItemStack currentInMenu = menu.getSlot(msg.menuSlotIndex).getItem();
+                    ResourceLocation currentMenuLoc = ForgeRegistries.ITEMS.getKey(currentInMenu.getItem());
+                    
+                    if (currentMenuLoc != null && currentMenuLoc.equals(reqLoc)) return; 
+                    
+                    // Annihilate the old weapon in the UI to prevent overlapping
+                    menu.getSlot(msg.menuSlotIndex).set(ItemStack.EMPTY);
                     ItemStack weaponToEquip = ItemStack.EMPTY;
                     
-                    // 1. CLEAR THE UI SLOTS: 
-                    // We must erase the weapon from the detached Workbench menu slots!
-                    for (int i = 0; i <= 1; i++) {
-                        ItemStack menuStack = menu.getSlot(i).getItem();
-                        if (!menuStack.isEmpty()) {
-                            ResourceLocation menuLoc = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(menuStack.getItem());
-                            if (menuLoc != null && "pointblank".equals(menuLoc.getNamespace())) {
-                                boolean isMenuSidearm = menuLoc.getPath().toLowerCase().contains("glock") || menuLoc.getPath().toLowerCase().contains("m1911") || menuLoc.getPath().toLowerCase().contains("deserteagle") || menuLoc.getPath().toLowerCase().contains("m9") || menuLoc.getPath().toLowerCase().contains("p30l") || menuLoc.getPath().toLowerCase().contains("viper") || menuLoc.getPath().toLowerCase().contains("m17") || menuLoc.getPath().toLowerCase().contains("p250") || menuLoc.getPath().toLowerCase().contains("fn509") || menuLoc.getPath().toLowerCase().contains("usp45") || menuLoc.getPath().toLowerCase().contains("fnx45");
-                                boolean isMenuPrimary = !isMenuSidearm && !menuLoc.getPath().toLowerCase().contains("mag") && !menuLoc.getPath().toLowerCase().contains("ammo") && !menuLoc.getPath().toLowerCase().contains("grenade");
-                                
-                                if ((isPrimary && isMenuPrimary) || (!isPrimary && isMenuSidearm)) {
-                                    if (menuLoc.equals(reqLoc) && weaponToEquip.isEmpty()) {
-                                        weaponToEquip = menuStack.copy(); // Rescue attachments
-                                    }
-                                    menu.getSlot(i).set(ItemStack.EMPTY); // Wipe the ghost!
-                                }
-                            }
-                        }
-                    }
-
-                    // 2. ENFORCER: Scan entire inventory, wipe old weapons of this type to guarantee no duplication.
+                    // DEEP SCAN: Eradicate ALL existing guns of this type from the player's inventory
                     for (int i = 0; i < player.getInventory().getContainerSize(); i++) {
                         ItemStack invStack = player.getInventory().getItem(i);
                         if (!invStack.isEmpty()) {
-                            ResourceLocation invLoc = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(invStack.getItem());
+                            ResourceLocation invLoc = ForgeRegistries.ITEMS.getKey(invStack.getItem());
                             if (invLoc != null && "pointblank".equals(invLoc.getNamespace())) {
                                 String path = invLoc.getPath().toLowerCase();
                                 boolean isInvSidearm = path.contains("glock") || path.contains("m1911") || path.contains("deserteagle") || path.contains("m9") || path.contains("p30l") || path.contains("viper") || path.contains("m17") || path.contains("p250") || path.contains("fn509") || path.contains("usp45") || path.contains("fnx45");
@@ -81,52 +102,29 @@ public class EquipWeaponPacket {
                                 
                                 if ((isPrimary && isInvPrimary) || (!isPrimary && isInvSidearm)) {
                                     if (invLoc.equals(reqLoc) && weaponToEquip.isEmpty()) {
-                                        weaponToEquip = invStack.copy(); // Rescue attachments
+                                        weaponToEquip = invStack.copy(); // Rescue the gun if they already have it
                                     }
-                                    player.getInventory().setItem(i, ItemStack.EMPTY); // Wipe from bag to prevent hoarding!
                                     
-                                    // INSTANT CLIENT SYNC: Tell the client we deleted this item!
-                                    int syncSlotId = -1;
-                                    if (i >= 0 && i <= 8) syncSlotId = 36 + i; // Hotbar slots (0-8) are mapped to 36-44 in InventoryMenu
-                                    else if (i >= 9 && i <= 35) syncSlotId = i; // Main inventory slots (9-35) are mapped to 9-35
+                                    // Physically delete the old gun from the player's inventory
+                                    player.getInventory().setItem(i, ItemStack.EMPTY); 
                                     
-                                    if (syncSlotId != -1) {
-                                        player.connection.send(new ClientboundContainerSetSlotPacket(
-                                            player.inventoryMenu.containerId,
-                                            player.inventoryMenu.getStateId(),
-                                            syncSlotId,
-                                            ItemStack.EMPTY
-                                        ));
-                                    }
+                                    // Send a sync packet so the client's GUI visually removes the old gun instantly
+                                    int syncSlotId = (i >= 0 && i <= 8) ? 36 + i : i; 
+                                    player.connection.send(new ClientboundContainerSetSlotPacket(
+                                        player.inventoryMenu.containerId, player.inventoryMenu.getStateId(),
+                                        syncSlotId, ItemStack.EMPTY
+                                    ));
                                 }
                             }
                         }
                     }
                     
-                    if (weaponToEquip.isEmpty()) {
-                        weaponToEquip = new ItemStack(requestedItem);
-                    }
+                    if (weaponToEquip.isEmpty()) weaponToEquip = new ItemStack(requestedItem);
                     
-                    // 3. FORCE DIRECTLY INTO HOTBAR SLOT 1 OR 2
-                    ItemStack existingInTarget = player.getInventory().getItem(targetHotbarSlot);
-                    if (!existingInTarget.isEmpty() && existingInTarget.getItem() != requestedItem) {
-                        // If there is an unrelated item (like dirt or food) in slot 1 or 2, move it to a free slot safely
-                        player.getInventory().setItem(targetHotbarSlot, ItemStack.EMPTY);
-                        player.getInventory().add(existingInTarget);
-                        player.inventoryMenu.broadcastChanges(); // Broadcast changes for the randomly placed item
-                    }
-                    
-                    // Place the gun explicitly in Hotbar Slot 1 (index 0) or Slot 2 (index 1)
-                    player.getInventory().setItem(targetHotbarSlot, weaponToEquip);
-                    
-                    // INSTANT CLIENT SYNC: Push the newly created gun explicitly to the client!
-                    // This forces the GUI to update itself instantly without needing to close the menu.
-                    player.connection.send(new ClientboundContainerSetSlotPacket(
-                        player.inventoryMenu.containerId,
-                        player.inventoryMenu.getStateId(),
-                        36 + targetHotbarSlot,
-                        weaponToEquip
-                    ));
+                    // We ONLY set the new gun in the active Menu slot. 
+                    // Do NOT set it in the Hotbar here. The WorkbenchMenu#removed event will handle that cleanly.
+                    menu.getSlot(msg.menuSlotIndex).set(weaponToEquip);
+                    menu.broadcastChanges(); 
                 }
             }
         });
