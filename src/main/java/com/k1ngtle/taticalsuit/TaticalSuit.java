@@ -1,6 +1,7 @@
 package com.k1ngtle.taticalsuit;
 
 import com.k1ngtle.taticalsuit.client.renderer.WorkbenchRenderer;
+import com.k1ngtle.taticalsuit.network.ModNetworking;
 import com.k1ngtle.taticalsuit.registry.ModBlockEntities;
 import com.k1ngtle.taticalsuit.registry.ModBlocks;
 import com.k1ngtle.taticalsuit.registry.ModCreativeTabs;
@@ -32,6 +33,9 @@ public class TaticalSuit {
         // Add this new line for your Creative Tab!
         ModCreativeTabs.CREATIVE_MODE_TABS.register(modEventBus);
         ModMenuTypes.MENUS.register(modEventBus);
+
+        // Register our network packets (e.g. weapon equip from the Workbench GUI)
+        ModNetworking.register();
 
         MinecraftForge.EVENT_BUS.register(this);
     }

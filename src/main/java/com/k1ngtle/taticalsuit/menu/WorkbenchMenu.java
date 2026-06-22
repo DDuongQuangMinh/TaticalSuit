@@ -76,6 +76,44 @@ public class WorkbenchMenu extends AbstractContainerMenu {
     }
 
     @Override
+    public void removed(Player player) {
+        super.removed(player);
+        // FIX: "Gun is not present to the menu after re-open". 
+        // Because the Menu's inventory is temporary (no block entity), closing the UI 
+        // would wipe all items inside the menu to the void! 
+        // We now safely drop them back into your inventory or the ground when closing.
+        for (int i = 0; i < inventory.getSlots(); i++) {
+            ItemStack stack = inventory.getStackInSlot(i);
+            if (!stack.isEmpty()) {
+                if (!player.getInventory().add(stack)) {
+                    player.drop(stack, false); // If inventory is full, drop it on the ground
+                }
+            }
+        }
+    }
+
+    /**
+     * Returns the item currently sitting in the Primary (0) or Side Arm (1)
+     * weapon slot, so callers (like EquipWeaponPacket) can know what was
+     * equipped before a swap.
+     */
+    public ItemStack getWeaponSlotItem(int slotIndex) {
+        if (slotIndex != 0 && slotIndex != 1) return ItemStack.EMPTY;
+        return inventory.getStackInSlot(slotIndex);
+    }
+
+    /**
+     * Server-authoritative setter used by EquipWeaponPacket to place a weapon
+     * picked from the Weapon Selection catalog into the Primary (0) or
+     * Side Arm (1) slot.
+     */
+    public void setWeaponSlot(int slotIndex, ItemStack stack) {
+        if (slotIndex != 0 && slotIndex != 1) return;
+        inventory.setStackInSlot(slotIndex, stack);
+        this.broadcastChanges(); // Pushes the updated slot contents to the client
+    }
+
+    @Override
     public ItemStack quickMoveStack(Player playerIn, int index) {
         return ItemStack.EMPTY; 
     }
