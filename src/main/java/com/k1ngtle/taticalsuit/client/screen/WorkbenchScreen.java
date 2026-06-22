@@ -14,7 +14,7 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
     private boolean isDraggingModel = false;
     private float playerRotation = 0f;
     
-    // UI State Trackers (REMOVED STATIC: Fixes the ESC reopen layout desync bug!)
+    // UI State Trackers
     private boolean inGunsmith = false; 
     private boolean showAmmunitionTab = true; 
     private boolean showPrimaryWeaponTab = true; 
@@ -139,6 +139,7 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
                         default -> this.editingAttachmentCategory.toLowerCase();
                     };
 
+                    // Send packet to Server - let the Server and Hotbar handle the NBT sync perfectly
                     com.k1ngtle.taticalsuit.network.ModNetworking.CHANNEL.sendToServer(
                             new com.k1ngtle.taticalsuit.network.EquipWeaponPacket(menuSlotIndex, idPool[i], true, nbtCategory)
                     );
@@ -176,6 +177,8 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
                     }
 
                     int menuSlotIndex = this.showPrimaryWeaponTab ? 0 : 1; 
+
+                    // Send packet to Server - let the Menu and Server synchronize to keep native attachments
                     com.k1ngtle.taticalsuit.network.ModNetworking.CHANNEL.sendToServer(
                             new com.k1ngtle.taticalsuit.network.EquipWeaponPacket(menuSlotIndex, idPool[i])
                     );
@@ -389,7 +392,7 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
             
             if (weaponPool[i] != null && !weaponPool[i].isEmpty()) {
                 guiGraphics.pose().pushPose();
-                guiGraphics.pose().translate(30, currentY + 8, 250); 
+                guiGraphics.pose().translate(30, currentY + 8, 250); // High Z-depth
                 guiGraphics.pose().scale(1.8f, 1.8f, 1.0f);
                 guiGraphics.renderItem(weaponPool[i], 0, 0);
                 guiGraphics.pose().popPose();
@@ -621,28 +624,30 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
         return false;
     }
 
+    // STRICT CHECK: Checks Menu Slot First for instant visual synchronization!
     private ItemStack getDisplayedPrimary() {
         if (Minecraft.getInstance().player == null) return ItemStack.EMPTY;
         
-        // FIX BUG 3 (ATTACHMENTS DESYNC): Prioritize checking the Menu Slot First! 
-        // When the server modifies the weapon NBT, it forces an update here instantly.
+        // 1. Check the active Menu Slot first. The Server updates this slot immediately when choosing a gun/attachment.
         ItemStack menuStack = this.menu.getSlot(0).getItem();
         if (isPrimaryWeapon(menuStack)) return menuStack;
         
-        // Fallback checks Hotbar Slot 1 (Useful when menu initially opens and server hasn't synced yet)
+        // 2. Fallback to Hotbar Slot 0
         ItemStack hotbarStack = Minecraft.getInstance().player.getInventory().getItem(0);
         if (isPrimaryWeapon(hotbarStack)) return hotbarStack;
         
         return ItemStack.EMPTY;
     }
 
+    // STRICT CHECK: Checks Menu Slot First for instant visual synchronization!
     private ItemStack getDisplayedSidearm() {
         if (Minecraft.getInstance().player == null) return ItemStack.EMPTY;
         
-        // FIX BUG 3: Prioritize Menu Slot for Sidearm
+        // 1. Check the active Menu Slot first.
         ItemStack menuStack = this.menu.getSlot(1).getItem();
         if (isSidearmWeapon(menuStack)) return menuStack;
         
+        // 2. Fallback to Hotbar Slot 1
         ItemStack hotbarStack = Minecraft.getInstance().player.getInventory().getItem(1);
         if (isSidearmWeapon(hotbarStack)) return hotbarStack;
         

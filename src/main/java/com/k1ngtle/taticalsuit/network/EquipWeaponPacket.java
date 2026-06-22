@@ -55,10 +55,8 @@ public class EquipWeaponPacket {
                 
                 boolean isPrimary = msg.menuSlotIndex == 0;
                 
-                // --- BUG 4 FIX (ATTACHMENTS FAILING) ---
+                // --- ATTACHMENT MODIFICATION LOGIC ---
                 if (msg.isAttachment) {
-                    // CRUCIAL: We MUST use .copy() so Minecraft detects it as a new object. 
-                    // Otherwise, it thinks the slot didn't change and refuses to sync the GUI!
                     ItemStack weaponToMod = menu.getSlot(msg.menuSlotIndex).getItem().copy();
                     
                     if (!weaponToMod.isEmpty()) {
@@ -68,14 +66,19 @@ public class EquipWeaponPacket {
                             weaponToMod.getOrCreateTag().putString(msg.attachmentCategory, msg.weaponId);
                         }
                         
-                        // Set the newly created copy back into the menu slot
                         menu.getSlot(msg.menuSlotIndex).set(weaponToMod);
-                        menu.broadcastChanges(); // This now guarantees the client GUI gets the update!
+                        menu.broadcastChanges(); 
+
+                        // FIX: Force explicit sync for Forge SlotItemHandler
+                        player.connection.send(new ClientboundContainerSetSlotPacket(
+                            menu.containerId, menu.incrementStateId(),
+                            msg.menuSlotIndex, weaponToMod
+                        ));
                     }
                     return; 
                 }
 
-                // --- BUG 1 & 2 FIX (OLD GUNS AND DUPLICATION) ---
+                // --- WEAPON SWAPPING LOGIC ---
                 ResourceLocation reqLoc = new ResourceLocation(msg.weaponId);
                 Item requestedItem = ForgeRegistries.ITEMS.getValue(reqLoc);
                 
@@ -86,11 +89,17 @@ public class EquipWeaponPacket {
                     
                     if (currentMenuLoc != null && currentMenuLoc.equals(reqLoc)) return; 
                     
-                    // Annihilate the old weapon in the UI to prevent overlapping
+                    // Safely return current gun to inventory to prevent deletion!
+                    if (!currentInMenu.isEmpty()) {
+                        if (!player.getInventory().add(currentInMenu.copy())) {
+                            player.drop(currentInMenu.copy(), false);
+                        }
+                    }
                     menu.getSlot(msg.menuSlotIndex).set(ItemStack.EMPTY);
+
                     ItemStack weaponToEquip = ItemStack.EMPTY;
                     
-                    // DEEP SCAN: Eradicate ALL existing guns of this type from the player's inventory
+                    // Scan inventory to rescue customized gun
                     for (int i = 0; i < player.getInventory().getContainerSize(); i++) {
                         ItemStack invStack = player.getInventory().getItem(i);
                         if (!invStack.isEmpty()) {
@@ -102,13 +111,10 @@ public class EquipWeaponPacket {
                                 
                                 if ((isPrimary && isInvPrimary) || (!isPrimary && isInvSidearm)) {
                                     if (invLoc.equals(reqLoc) && weaponToEquip.isEmpty()) {
-                                        weaponToEquip = invStack.copy(); // Rescue the gun if they already have it
+                                        weaponToEquip = invStack.copy(); 
                                     }
-                                    
-                                    // Physically delete the old gun from the player's inventory
                                     player.getInventory().setItem(i, ItemStack.EMPTY); 
                                     
-                                    // Send a sync packet so the client's GUI visually removes the old gun instantly
                                     int syncSlotId = (i >= 0 && i <= 8) ? 36 + i : i; 
                                     player.connection.send(new ClientboundContainerSetSlotPacket(
                                         player.inventoryMenu.containerId, player.inventoryMenu.getStateId(),
@@ -121,10 +127,14 @@ public class EquipWeaponPacket {
                     
                     if (weaponToEquip.isEmpty()) weaponToEquip = new ItemStack(requestedItem);
                     
-                    // We ONLY set the new gun in the active Menu slot. 
-                    // Do NOT set it in the Hotbar here. The WorkbenchMenu#removed event will handle that cleanly.
                     menu.getSlot(msg.menuSlotIndex).set(weaponToEquip);
                     menu.broadcastChanges(); 
+
+                    // FIX: Force explicit sync to send the rescued attachments to the GUI instantly!
+                    player.connection.send(new ClientboundContainerSetSlotPacket(
+                        menu.containerId, menu.incrementStateId(),
+                        msg.menuSlotIndex, weaponToEquip
+                    ));
                 }
             }
         });
