@@ -18,10 +18,10 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
     private boolean inGunsmith = false; 
     private boolean showAmmunitionTab = true; 
     
-    // 0=AR, 1=BR, 2=PDW, 3=SMG, 4=Shotgun, 5=Sniper, 6=Sidearm
+    // 0=AR, 1=BR, 2=LMG, 3=PDW, 4=SMG, 5=Shotgun, 6=Sniper, 7=Launcher, 8=Sidearm
     private int currentWeaponTab = 0; 
     private static final String[] SHORT_TAB_NAMES = {
-        "AR", "BR", "PDW", "SMG", "SHOTGUN", "SNIPER"
+        "AR", "BR", "LMG", "PDW", "SMG", "SHOTGUN", "SNIPER", "LAUNCHER"
     };
     
     private boolean inWeaponSelection = false; 
@@ -47,6 +47,10 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
             "pointblank:xm7", "pointblank:g36c", "pointblank:g36k"
     };
 
+    private static final String[] LMG_IDS = new String[]{
+            "pointblank:aughbar", "pointblank:lamg", "pointblank:mk48", "pointblank:m249", "pointblank:m134minigun"
+    };
+
     private static final String[] PDW_IDS = new String[]{
             "pointblank:ar57", "pointblank:p90", "pointblank:m950", "pointblank:tmp", "pointblank:mp7"
     };
@@ -64,6 +68,10 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
             "pointblank:sl8", "pointblank:mk14ebr", "pointblank:uar10", "pointblank:wa2000",
             "pointblank:xm3", "pointblank:c14", "pointblank:l96a1", "pointblank:ballista",
             "pointblank:gm6lynx", "pointblank:star15"
+    };
+
+    private static final String[] LAUNCHER_IDS = new String[]{
+            "pointblank:smaw", "pointblank:at4", "pointblank:javelin", "pointblank:m32mgl"
     };
 
     private static final String[] SIDEARM_WEAPON_IDS = new String[]{
@@ -134,10 +142,12 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
 
     private ItemStack[] assaultRifleStacks;
     private ItemStack[] battleRifleStacks;
+    private ItemStack[] lmgStacks;
     private ItemStack[] pdwStacks;
     private ItemStack[] smgStacks;
     private ItemStack[] shotgunStacks;
     private ItemStack[] sniperRifleStacks;
+    private ItemStack[] launcherStacks;
     private ItemStack[] sidearmWeaponStacks;
 
     public WorkbenchScreen(WorkbenchMenu menu, Inventory inventory, Component title) {
@@ -162,10 +172,12 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
 
         this.assaultRifleStacks = resolveStacks(ASSAULT_RIFLE_IDS);
         this.battleRifleStacks = resolveStacks(BATTLE_RIFLE_IDS);
+        this.lmgStacks = resolveStacks(LMG_IDS);
         this.pdwStacks = resolveStacks(PDW_IDS);
         this.smgStacks = resolveStacks(SMG_IDS);
         this.shotgunStacks = resolveStacks(SHOTGUN_IDS);
         this.sniperRifleStacks = resolveStacks(SNIPER_RIFLE_IDS);
+        this.launcherStacks = resolveStacks(LAUNCHER_IDS);
         this.sidearmWeaponStacks = resolveStacks(SIDEARM_WEAPON_IDS);
     }
 
@@ -191,11 +203,13 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
         return switch (this.currentWeaponTab) {
             case 0 -> ASSAULT_RIFLE_IDS;
             case 1 -> BATTLE_RIFLE_IDS;
-            case 2 -> PDW_IDS;
-            case 3 -> SMG_IDS;
-            case 4 -> SHOTGUN_IDS;
-            case 5 -> SNIPER_RIFLE_IDS;
-            case 6 -> SIDEARM_WEAPON_IDS;
+            case 2 -> LMG_IDS;
+            case 3 -> PDW_IDS;
+            case 4 -> SMG_IDS;
+            case 5 -> SHOTGUN_IDS;
+            case 6 -> SNIPER_RIFLE_IDS;
+            case 7 -> LAUNCHER_IDS;
+            case 8 -> SIDEARM_WEAPON_IDS;
             default -> ASSAULT_RIFLE_IDS;
         };
     }
@@ -204,11 +218,13 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
         return switch (this.currentWeaponTab) {
             case 0 -> assaultRifleStacks;
             case 1 -> battleRifleStacks;
-            case 2 -> pdwStacks;
-            case 3 -> smgStacks;
-            case 4 -> shotgunStacks;
-            case 5 -> sniperRifleStacks;
-            case 6 -> sidearmWeaponStacks;
+            case 2 -> lmgStacks;
+            case 3 -> pdwStacks;
+            case 4 -> smgStacks;
+            case 5 -> shotgunStacks;
+            case 6 -> sniperRifleStacks;
+            case 7 -> launcherStacks;
+            case 8 -> sidearmWeaponStacks;
             default -> assaultRifleStacks;
         };
     }
@@ -244,7 +260,7 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
                     if (System.currentTimeMillis() - this.lastClickTime < 500) return true;
                     this.lastClickTime = System.currentTimeMillis();
 
-                    int menuSlotIndex = (this.currentWeaponTab == 6) ? 1 : 0; 
+                    int menuSlotIndex = (this.currentWeaponTab == 8) ? 1 : 0; 
                     
                     String nbtCategory = switch (this.editingAttachmentCategory) {
                         case "OPTIC" -> "scope";
@@ -286,11 +302,13 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
                 return true;
             }
 
-            // --- 6 HORIZONTAL TAB SCROLLER FOR PRIMARIES ---
-            if (pMouseY >= 70 && pMouseY <= 85 && this.currentWeaponTab != 6) {
-                int currentX = 20;
-                for (int i = 0; i < 6; i++) {
-                    int tabWidth = (i == 4 || i == 5) ? 34 : 33; // Perfectly divides 200px width
+            // --- 8 HORIZONTAL TAB SCROLLER FOR PRIMARIES ---
+            if (pMouseY >= 70 && pMouseY <= 85 && this.currentWeaponTab != 8) {
+                int currentX = 8;
+                // Expanded widths to add more gaps between AR, BR, LMG, PDW, SMG
+                int[] tabWidths = {20, 20, 25, 25, 25, 38, 35, 44};
+                for (int i = 0; i < 8; i++) {
+                    int tabWidth = tabWidths[i];
                     if (pMouseX >= currentX && pMouseX <= currentX + tabWidth - 1) {
                         this.currentWeaponTab = i;
                         this.scrollOffset = 0f;
@@ -309,7 +327,7 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
                     if (System.currentTimeMillis() - this.lastClickTime < 500) return true;
                     this.lastClickTime = System.currentTimeMillis();
                     
-                    ItemStack currentEquipped = (this.currentWeaponTab == 6) ? getDisplayedSidearm() : getDisplayedPrimary();
+                    ItemStack currentEquipped = (this.currentWeaponTab == 8) ? getDisplayedSidearm() : getDisplayedPrimary();
                     if (!currentEquipped.isEmpty()) {
                         net.minecraft.resources.ResourceLocation currentLoc = net.minecraftforge.registries.ForgeRegistries.ITEMS.getKey(currentEquipped.getItem());
                         if (currentLoc != null && currentLoc.toString().equals(idPool[i])) {
@@ -319,7 +337,7 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
                         }
                     }
 
-                    int menuSlotIndex = (this.currentWeaponTab == 6) ? 1 : 0; 
+                    int menuSlotIndex = (this.currentWeaponTab == 8) ? 1 : 0; 
 
                     // OPTIMISTIC CLIENT UPDATE: Rescue the gun from inventory so we KEEP its native attachments!
                     ItemStack optimisticStack = ItemStack.EMPTY;
@@ -365,11 +383,11 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
             // --- RESTORED: PRIMARY vs SIDE ARM TOGGLE ---
             if (pMouseY >= 70 && pMouseY <= 90) {
                 if (pMouseX >= 20 && pMouseX <= 90) {
-                    if (this.currentWeaponTab == 6) this.currentWeaponTab = 0; // Default back to AR
+                    if (this.currentWeaponTab == 8) this.currentWeaponTab = 0; // Default back to AR
                     this.scrollOffset = 0f; 
                     return true;
                 } else if (pMouseX > 90 && pMouseX <= 180) {
-                    this.currentWeaponTab = 6; // Lock onto sidearm
+                    this.currentWeaponTab = 8; // Lock onto sidearm
                     this.scrollOffset = 0f; 
                     return true;
                 }
@@ -382,8 +400,8 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
                 return true;
             }
 
-            int numCoreAttachments = (this.currentWeaponTab == 6) ? 3 : 5;
-            String[] boxCats = (this.currentWeaponTab == 6) 
+            int numCoreAttachments = (this.currentWeaponTab == 8) ? 3 : 5;
+            String[] boxCats = (this.currentWeaponTab == 8) 
                     ? new String[]{"OPTIC", "MUZZLE", "LASER"} 
                     : new String[]{"OPTIC", "BARREL", "MUZZLE", "UNDERBARREL", "LASER"};
 
@@ -416,14 +434,14 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
                 this.inGunsmith = true;
                 this.scrollOffset = 0f; 
                 this.showAmmunitionTab = true; 
-                if (this.currentWeaponTab == 6) this.currentWeaponTab = 0; // Return to primary if currently sidearm
+                if (this.currentWeaponTab == 8) this.currentWeaponTab = 0; // Return to primary if currently sidearm
                 return true;
             }
             if (pMouseX >= 20 && pMouseX <= 220 && pMouseY >= 85 && pMouseY <= 130) {
                 this.inGunsmith = true;
                 this.scrollOffset = 0f; 
                 this.showAmmunitionTab = true; 
-                this.currentWeaponTab = 6; // Instantly lock onto Sidearm category
+                this.currentWeaponTab = 8; // Instantly lock onto Sidearm category
                 return true;
             }
             if (pMouseX >= 240) {
@@ -629,7 +647,7 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
                 ? (20 + 16 + (numPrimary * 31) + 10 + 16 + (numSidearm * 31)) 
                 : (20 + 16 + (numGrenade * 31) + 10 + 16 + (numTactical * 31));
                 
-        int numCoreAttachments = (this.currentWeaponTab == 6) ? 3 : 5; 
+        int numCoreAttachments = (this.currentWeaponTab == 8) ? 3 : 5; 
         
         int listHeight = 75 + 30 + (numCoreAttachments * 45) + 35 + dynamicItemsHeight; 
         
@@ -777,7 +795,7 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
         if (loc == null) return false;
         String id = loc.toString();
         
-        String[][] allPrimary = {ASSAULT_RIFLE_IDS, BATTLE_RIFLE_IDS, PDW_IDS, SMG_IDS, SHOTGUN_IDS, SNIPER_RIFLE_IDS};
+        String[][] allPrimary = {ASSAULT_RIFLE_IDS, BATTLE_RIFLE_IDS, LMG_IDS, PDW_IDS, SMG_IDS, SHOTGUN_IDS, SNIPER_RIFLE_IDS, LAUNCHER_IDS};
         for (String[] pool : allPrimary) {
             for (String wId : pool) {
                 if (wId.equals(id)) return true;
@@ -936,10 +954,12 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
     private void renderWeaponSelectionLabels(GuiGraphics guiGraphics, int mouseX, int mouseY, int trueWidth, int trueHeight) {
         drawSmallText(guiGraphics, "< WEAPON BUILD", 20, 25, 0.75f, 0xFFFFFF);
         
-        if (this.currentWeaponTab != 6) {
-            int currentX = 20;
-            for (int i = 0; i < 6; i++) {
-                int tabWidth = (i == 4 || i == 5) ? 34 : 33;
+        if (this.currentWeaponTab != 8) {
+            int currentX = 8;
+            // Expanded widths to add more gaps between AR, BR, LMG, PDW, SMG
+            int[] tabWidths = {20, 20, 25, 25, 25, 38, 35, 44};
+            for (int i = 0; i < 8; i++) {
+                int tabWidth = tabWidths[i];
                 
                 String name = SHORT_TAB_NAMES[i];
                 float scale = 0.55f;
@@ -968,7 +988,7 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
         int currentY = 100 - (int)this.scrollOffset;
         int leftX = 26;
         
-        ItemStack previewStack = (this.currentWeaponTab == 6) ? getDisplayedSidearm() : getDisplayedPrimary(); 
+        ItemStack previewStack = (this.currentWeaponTab == 8) ? getDisplayedSidearm() : getDisplayedPrimary(); 
 
         guiGraphics.enableScissor(0, 90, 240, trueHeight);
         for (int i = 0; i < numBoxes; i++) {
@@ -1006,7 +1026,7 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
     private void renderGunsmithLabels(GuiGraphics guiGraphics) {
         drawSmallText(guiGraphics, "< WEAPON BUILD", 20, 25, 0.75f, 0xFFFFFF);
         
-        boolean isPrimary = (this.currentWeaponTab != 6);
+        boolean isPrimary = (this.currentWeaponTab != 8);
         drawSmallText(guiGraphics, "PRIMARY", 20, 75, 0.85f, isPrimary ? 0xFFFFFFFF : 0xFF7A818C);
         drawSmallText(guiGraphics, "SIDE ARM", 100, 75, 0.85f, !isPrimary ? 0xFFFFFFFF : 0xFF7A818C);
         
@@ -1025,7 +1045,7 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
         drawSmallText(guiGraphics, "WEAPON", leftX, currentY + 50, 0.45f, 0xFF7A818C);
         drawSmallText(guiGraphics, "CURRENT", leftX, currentY + 58, 0.65f, 0xFFD2D6DE);
         
-        ItemStack weaponStack = (this.currentWeaponTab == 6) ? getDisplayedSidearm() : getDisplayedPrimary();
+        ItemStack weaponStack = (this.currentWeaponTab == 8) ? getDisplayedSidearm() : getDisplayedPrimary();
         if (!weaponStack.isEmpty()) {
             guiGraphics.pose().pushPose();
             guiGraphics.pose().translate(110, currentY + 8, 350.0F); 
@@ -1042,8 +1062,8 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
         drawSmallText(guiGraphics, "ATTACHMENTS", leftX, currentY + 6, 0.65f, 0xFF7A818C);
         currentY += 25;
 
-        int numCoreAttachments = (this.currentWeaponTab == 6) ? 3 : 5;
-        String[] boxCats = (this.currentWeaponTab == 6) 
+        int numCoreAttachments = (this.currentWeaponTab == 8) ? 3 : 5;
+        String[] boxCats = (this.currentWeaponTab == 8) 
                 ? new String[]{"OPTIC", "MUZZLE", "LASER"} 
                 : new String[]{"OPTIC", "BARREL", "MUZZLE", "UNDERBARREL", "LASER"};
 
