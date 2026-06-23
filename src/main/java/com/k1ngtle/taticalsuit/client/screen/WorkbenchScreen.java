@@ -45,7 +45,32 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
     };
 
     // --- ATTACHMENT POOLS ---
-    private static final String[] OPTIC_IDS = {"NONE", "pointblank:eotech", "pointblank:aimpoint", "pointblank:acog", "pointblank:rmr"};
+    // EXPANDED OPTIC POOL
+    private static final String[] OPTIC_IDS = {
+            "NONE", 
+            "pointblank:moa", 
+            "pointblank:delta", 
+            "pointblank:operatorreflex", 
+            "pointblank:holographic",
+            "pointblank:holographic_em",
+            "pointblank:holographic558",
+            "pointblank:aimpoint",
+            "pointblank:aimpoint_t2",
+            "pointblank:srs",
+            "pointblank:rspec",
+            "pointblank:acog",
+            "pointblank:specter",
+            "pointblank:hamr",
+            "pointblank:hi_red",
+            "pointblank:eaglescope",
+            "pointblank:spear",
+            "pointblank:spearblack",
+            "pointblank:hawk_scope",
+            "pointblank:wolf_scope",
+            "pointblank:drake_scope",
+            "pointblank:precision_scope",
+    };
+    
     private static final String[] BARREL_IDS = {"NONE", "pointblank:long_barrel", "pointblank:short_barrel"};
     private static final String[] MUZZLE_IDS = {"NONE", "pointblank:silencer", "pointblank:osprey", "pointblank:compensator"};
     private static final String[] UNDERBARREL_IDS = {"NONE", "pointblank:vertical_grip", "pointblank:angled_grip", "pointblank:bipod"};
@@ -139,6 +164,20 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
                         default -> this.editingAttachmentCategory.toLowerCase();
                     };
 
+                    // OPTIMISTIC CLIENT UPDATE: Render the attachment instantly!
+                    ItemStack currentWeapon = this.menu.getSlot(menuSlotIndex).getItem().copy();
+                    if (currentWeapon.isEmpty() && Minecraft.getInstance().player != null) {
+                        currentWeapon = Minecraft.getInstance().player.getInventory().getItem(menuSlotIndex).copy();
+                    }
+                    if (!currentWeapon.isEmpty()) {
+                        if (idPool[i].equals("NONE")) {
+                            currentWeapon.getOrCreateTag().remove(nbtCategory);
+                        } else {
+                            currentWeapon.getOrCreateTag().putString(nbtCategory, idPool[i]);
+                        }
+                        this.menu.getSlot(menuSlotIndex).set(currentWeapon);
+                    }
+
                     // Send packet to Server - let the Server and Hotbar handle the NBT sync perfectly
                     com.k1ngtle.taticalsuit.network.ModNetworking.CHANNEL.sendToServer(
                             new com.k1ngtle.taticalsuit.network.EquipWeaponPacket(menuSlotIndex, idPool[i], true, nbtCategory)
@@ -178,7 +217,33 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
 
                     int menuSlotIndex = this.showPrimaryWeaponTab ? 0 : 1; 
 
-                    // Send packet to Server - let the Menu and Server synchronize to keep native attachments
+                    // OPTIMISTIC CLIENT UPDATE: Rescue the gun from inventory so we KEEP its native attachments!
+                    ItemStack optimisticStack = ItemStack.EMPTY;
+                    if (Minecraft.getInstance().player != null) {
+                        for (int j = 0; j < Minecraft.getInstance().player.getInventory().getContainerSize(); j++) {
+                            ItemStack invStack = Minecraft.getInstance().player.getInventory().getItem(j);
+                            if (!invStack.isEmpty()) {
+                                net.minecraft.resources.ResourceLocation invLoc = net.minecraftforge.registries.ForgeRegistries.ITEMS.getKey(invStack.getItem());
+                                if (invLoc != null && invLoc.toString().equals(idPool[i])) {
+                                    optimisticStack = invStack.copy();
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    
+                    if (optimisticStack.isEmpty()) {
+                        net.minecraft.world.item.Item newItem = net.minecraftforge.registries.ForgeRegistries.ITEMS.getValue(new net.minecraft.resources.ResourceLocation(idPool[i]));
+                        if (newItem != null && newItem != net.minecraft.world.item.Items.AIR) {
+                            optimisticStack = new ItemStack(newItem);
+                        }
+                    }
+                    
+                    if (!optimisticStack.isEmpty()) {
+                        this.menu.getSlot(menuSlotIndex).set(optimisticStack);
+                    }
+
+                    // Send packet to Server - let the Hotbar sync naturally to keep native attachments
                     com.k1ngtle.taticalsuit.network.ModNetworking.CHANNEL.sendToServer(
                             new com.k1ngtle.taticalsuit.network.EquipWeaponPacket(menuSlotIndex, idPool[i])
                     );
@@ -624,30 +689,28 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
         return false;
     }
 
-    // STRICT CHECK: Checks Menu Slot First for instant visual synchronization!
     private ItemStack getDisplayedPrimary() {
         if (Minecraft.getInstance().player == null) return ItemStack.EMPTY;
         
-        // 1. Check the active Menu Slot first. The Server updates this slot immediately when choosing a gun/attachment.
+        // 1. Check Menu Slot FIRST to get instant visual synchronization 
         ItemStack menuStack = this.menu.getSlot(0).getItem();
         if (isPrimaryWeapon(menuStack)) return menuStack;
         
-        // 2. Fallback to Hotbar Slot 0
+        // 2. Fallback to hotbar slot 0
         ItemStack hotbarStack = Minecraft.getInstance().player.getInventory().getItem(0);
         if (isPrimaryWeapon(hotbarStack)) return hotbarStack;
         
         return ItemStack.EMPTY;
     }
 
-    // STRICT CHECK: Checks Menu Slot First for instant visual synchronization!
     private ItemStack getDisplayedSidearm() {
         if (Minecraft.getInstance().player == null) return ItemStack.EMPTY;
         
-        // 1. Check the active Menu Slot first.
+        // 1. Check Menu Slot FIRST to get instant visual synchronization 
         ItemStack menuStack = this.menu.getSlot(1).getItem();
         if (isSidearmWeapon(menuStack)) return menuStack;
         
-        // 2. Fallback to Hotbar Slot 1
+        // 2. Fallback to hotbar slot 1
         ItemStack hotbarStack = Minecraft.getInstance().player.getInventory().getItem(1);
         if (isSidearmWeapon(hotbarStack)) return hotbarStack;
         

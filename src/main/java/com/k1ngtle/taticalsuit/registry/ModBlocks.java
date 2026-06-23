@@ -2,6 +2,8 @@ package com.k1ngtle.taticalsuit.registry;
 
 import com.k1ngtle.taticalsuit.TaticalSuit;
 import com.k1ngtle.taticalsuit.block.WorkbenchBlock;
+import com.k1ngtle.taticalsuit.item.custom.WorkbenchItem;
+
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.level.block.Block;
@@ -21,5 +23,5 @@ public class ModBlocks {
 
     // Register the Item to place the block
     public static final RegistryObject<Item> WORKBENCH_ITEM = ITEMS.register("workbench", 
-            () -> new BlockItem(WORKBENCH.get(), new Item.Properties()));
+            () -> new WorkbenchItem(WORKBENCH.get(), new Item.Properties()));
 }
