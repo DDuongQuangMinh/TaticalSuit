@@ -97,36 +97,18 @@ public class EquipWeaponPacket {
                         String vpbCategoryName = msg.attachmentCategory; // already "scope","muzzle","underbarrel","rail" etc.
 
                         if (msg.weaponId.equals("NONE")) {
-                            // Remove from "sa"
                             saTag.remove(vpbCategoryName);
 
-                            // Remove matching entry from "as" list by finding same category
-                            // VPB identifies category via the attachment item's own AttachmentCategory;
-                            // we remove any entry whose id resolves to an item in this category.
-                            // Simplest correct approach: remove any entry whose id was previously
-                            // set for this category (we track it in "sa" before removing above).
-                            // Since we already cleared sa, we rebuild "as" without the removed item.
                             net.minecraft.nbt.ListTag newAsList = new net.minecraft.nbt.ListTag();
                             for (int k = 0; k < asList.size(); k++) {
                                 net.minecraft.nbt.CompoundTag entry = asList.getCompound(k);
                                 String entryId = entry.getString("id");
-                                // If this entry's id was the one mapped to our category, skip it
-                                // We can detect this by checking if the old sa value matches
-                                // (The old sa value was already removed, so we stored it before removal)
-                                // Instead, keep all entries that don't belong to this category:
-                                // Re-check via ForgeRegistries if the item is in the same category
                                 ResourceLocation entryLoc = new ResourceLocation(entryId.isEmpty() ? "minecraft:air" : entryId);
                                 Item entryItem = ForgeRegistries.ITEMS.getValue(entryLoc);
-                                if (entryItem != null && entryItem != net.minecraft.world.item.Items.AIR) {
-                                    // Keep the entry only if it's NOT in the category we're clearing
-                                    // We check by seeing if its path contains category-related keywords
-                                    String entryPath = entryLoc.getPath().toLowerCase();
-                                    boolean isThisCategory = isItemInCategory(entryPath, vpbCategoryName);
-                                    if (!isThisCategory) {
-                                        newAsList.add(entry);
-                                    }
+                                if (entryItem != null && entryItem != net.minecraft.world.item.Items.AIR
+                                        && !isItemInCategory(entryItem, vpbCategoryName)) {
+                                    newAsList.add(entry);
                                 }
-                                // If item is unknown/air, skip it (stale entry)
                             }
                             asList = newAsList;
 
@@ -134,36 +116,24 @@ public class EquipWeaponPacket {
                             Item attItem = ForgeRegistries.ITEMS.getValue(new ResourceLocation(msg.weaponId));
                             if (attItem != null && attItem != net.minecraft.world.item.Items.AIR) {
 
-                                // --- Update "sa": put the ResourceLocation string keyed by category name ---
                                 saTag.putString(vpbCategoryName, msg.weaponId);
 
-                                // --- Update "as": remove old entry for this category, add new one ---
+                                // Rebuild "as": keep every entry NOT in this category, then append the new one
                                 net.minecraft.nbt.ListTag newAsList = new net.minecraft.nbt.ListTag();
                                 for (int k = 0; k < asList.size(); k++) {
                                     net.minecraft.nbt.CompoundTag entry = asList.getCompound(k);
                                     String entryId = entry.getString("id");
                                     ResourceLocation entryLoc = new ResourceLocation(entryId.isEmpty() ? "minecraft:air" : entryId);
                                     Item entryItem = ForgeRegistries.ITEMS.getValue(entryLoc);
-                                    if (entryItem != null && entryItem != net.minecraft.world.item.Items.AIR) {
-                                        String entryPath = entryLoc.getPath().toLowerCase();
-                                        if (!isItemInCategory(entryPath, vpbCategoryName)) {
-                                            newAsList.add(entry);
-                                        }
-                                        // else: drop the old entry for this category — we're replacing it
+                                    if (entryItem != null && entryItem != net.minecraft.world.item.Items.AIR
+                                            && !isItemInCategory(entryItem, vpbCategoryName)) {
+                                        newAsList.add(entry);
                                     }
+                                    // entry whose item IS in this category is dropped — we're replacing it
                                 }
-                                // Add new entry: { "id": "pointblank:moa_sight", "rmv": true }
                                 net.minecraft.nbt.CompoundTag newEntry = new net.minecraft.nbt.CompoundTag();
                                 newEntry.putString("id", msg.weaponId);
-                                newEntry.putBoolean("rmv", true); // removeable = true for player-chosen attachments
-                                // Optionally merge the attachment item's own tag data (for items that carry extra NBT)
-                                ItemStack attStack = new ItemStack(attItem);
-                                if (attStack.hasTag()) {
-                                    net.minecraft.nbt.CompoundTag attTag = attStack.getTag();
-                                    for (String key : attTag.getAllKeys()) {
-                                        newEntry.put(key, attTag.get(key).copy());
-                                    }
-                                }
+                                newEntry.putBoolean("rmv", true);
                                 newAsList.add(newEntry);
                                 asList = newAsList;
                             }
@@ -250,28 +220,15 @@ public class EquipWeaponPacket {
     }
 
     /**
-     * Determines if an attachment item's registry path belongs to a given VPB category name.
-     * VPB category names: "scope", "muzzle", "underbarrel", "rail", "stock", "magazine", "skin"
+     * Returns true if the given Item belongs to the specified VPB category.
+     * Uses AttachmentItem.getCategory().getName() directly — the authoritative VPB API.
+     * This is exact and never has false matches, unlike keyword heuristics.
      */
-    private static boolean isItemInCategory(String itemPath, String vpbCategoryName) {
-        return switch (vpbCategoryName) {
-            case "scope" -> itemPath.contains("scope") || itemPath.contains("sight") || itemPath.contains("optic")
-                    || itemPath.contains("reflex") || itemPath.contains("holo") || itemPath.contains("acog")
-                    || itemPath.contains("dot") || itemPath.contains("rmr") || itemPath.contains("sro")
-                    || itemPath.contains("micro") || itemPath.contains("deltapoint");
-            case "muzzle" -> itemPath.contains("muzzle") || itemPath.contains("silencer")
-                    || itemPath.contains("suppressor") || itemPath.contains("compensator")
-                    || itemPath.contains("flash") || itemPath.contains("brake");
-            case "underbarrel" -> itemPath.contains("grip") || itemPath.contains("underbarrel")
-                    || itemPath.contains("foregrip") || itemPath.contains("bipod") || itemPath.contains("angled");
-            case "rail" -> itemPath.contains("laser") || itemPath.contains("tactical")
-                    || itemPath.contains("light") || itemPath.contains("peq") || itemPath.contains("flashlight")
-                    || itemPath.contains("tlr") || itemPath.contains("x300");
-            case "stock" -> itemPath.contains("stock") || itemPath.contains("brace") || itemPath.contains("buffer");
-            case "magazine" -> itemPath.contains("mag") || itemPath.contains("magazine")
-                    || itemPath.contains("drum") || itemPath.contains("extended");
-            case "skin" -> itemPath.contains("skin") || itemPath.contains("camo") || itemPath.contains("wrap");
-            default -> false;
-        };
+    public static boolean isItemInCategory(Item item, String vpbCategoryName) {
+        if (item instanceof com.vicmatskiv.pointblank.item.AttachmentItem att) {
+            com.vicmatskiv.pointblank.attachment.AttachmentCategory cat = att.getCategory();
+            return cat != null && vpbCategoryName.equals(cat.getName());
+        }
+        return false;
     }
 }
