@@ -266,8 +266,8 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
                         case "OPTIC" -> "scope";
                         case "BARREL" -> "barrel";
                         case "MUZZLE" -> "muzzle";
-                        case "UNDERBARREL" -> "grip";
-                        case "LASER" -> "laser";
+                        case "UNDERBARREL" -> "underbarrel";
+                        case "LASER" -> "rail";
                         default -> this.editingAttachmentCategory.toLowerCase();
                     };
 
@@ -277,12 +277,24 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
                         currentWeapon = Minecraft.getInstance().player.getInventory().getItem(menuSlotIndex).copy();
                     }
                     if (!currentWeapon.isEmpty()) {
+                        net.minecraft.nbt.CompoundTag attachments = currentWeapon.getOrCreateTagElement("attachments");
                         if (idPool[i].equals("NONE")) {
                             currentWeapon.getOrCreateTag().remove(nbtCategory);
+                            attachments.remove(nbtCategory);
                         } else {
-                            currentWeapon.getOrCreateTag().putString(nbtCategory, idPool[i]);
+                            net.minecraft.world.item.Item attItem = net.minecraftforge.registries.ForgeRegistries.ITEMS.getValue(new net.minecraft.resources.ResourceLocation(idPool[i]));
+                            if (attItem != null && attItem != net.minecraft.world.item.Items.AIR) {
+                                net.minecraft.world.item.ItemStack attStack = attItem.getDefaultInstance().copy();
+                                net.minecraft.nbt.CompoundTag attNbt = attStack.save(new net.minecraft.nbt.CompoundTag());
+                                currentWeapon.getOrCreateTag().put(nbtCategory, attNbt); 
+                                attachments.put(nbtCategory, attNbt); 
+                                currentWeapon.getOrCreateTag().putString(nbtCategory + "_id", idPool[i]);
+                            }
                         }
-                        this.menu.getSlot(menuSlotIndex).set(currentWeapon);
+                        if (this.menu instanceof WorkbenchMenu) {
+                            WorkbenchMenu wm = (WorkbenchMenu) this.menu;
+                            wm.broadcastChanges();
+                        }
                     }
 
                     com.k1ngtle.taticalsuit.network.ModNetworking.CHANNEL.sendToServer(
@@ -357,7 +369,7 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
                     if (optimisticStack.isEmpty()) {
                         net.minecraft.world.item.Item newItem = net.minecraftforge.registries.ForgeRegistries.ITEMS.getValue(new net.minecraft.resources.ResourceLocation(idPool[i]));
                         if (newItem != null && newItem != net.minecraft.world.item.Items.AIR) {
-                            optimisticStack = new ItemStack(newItem);
+                            optimisticStack = newItem.getDefaultInstance().copy();
                         }
                     }
                     
@@ -747,7 +759,34 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
             return new AttachmentInfo(ItemStack.EMPTY, "NONE");
         }
 
-        String nbtStr = weaponStack.getTag().toString().toLowerCase();
+        net.minecraft.nbt.CompoundTag tag = weaponStack.getTag();
+        String nbtCategory = switch (category.toUpperCase()) {
+            case "OPTIC" -> "scope";
+            case "BARREL" -> "barrel";
+            case "MUZZLE" -> "muzzle";
+            case "UNDERBARREL" -> "underbarrel";
+            case "LASER" -> "rail";
+            default -> category.toLowerCase();
+        };
+
+        ItemStack foundStack = ItemStack.EMPTY;
+
+        // Try extracting via highly structured ItemStack compounds first (How Point Blank registers attachments)
+        if (tag.contains(nbtCategory, net.minecraft.nbt.Tag.TAG_COMPOUND)) {
+            foundStack = ItemStack.of(tag.getCompound(nbtCategory));
+        } else if (tag.contains("attachments", net.minecraft.nbt.Tag.TAG_COMPOUND)) {
+            net.minecraft.nbt.CompoundTag attTag = tag.getCompound("attachments");
+            if (attTag.contains(nbtCategory, net.minecraft.nbt.Tag.TAG_COMPOUND)) {
+                foundStack = ItemStack.of(attTag.getCompound(nbtCategory));
+            }
+        }
+
+        if (!foundStack.isEmpty() && foundStack.getItem() != net.minecraft.world.item.Items.AIR) {
+            return new AttachmentInfo(foundStack, foundStack.getHoverName().getString().toUpperCase());
+        }
+
+        // Fallback to raw string identifier inspection
+        String nbtStr = tag.toString().toLowerCase();
 
         String[] keywords;
         switch (category.toUpperCase()) {
@@ -778,8 +817,8 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
                 if (matchesCategory) {
                     if (nbtStr.contains(path)) {
                         if (!path.equals(net.minecraftforge.registries.ForgeRegistries.ITEMS.getKey(weaponStack.getItem()).getPath().toLowerCase())) {
-                            ItemStack foundStack = new ItemStack(regItem);
-                            return new AttachmentInfo(foundStack, foundStack.getHoverName().getString().toUpperCase());
+                            ItemStack fallbackStack = new ItemStack(regItem);
+                            return new AttachmentInfo(fallbackStack, fallbackStack.getHoverName().getString().toUpperCase());
                         }
                     }
                 }

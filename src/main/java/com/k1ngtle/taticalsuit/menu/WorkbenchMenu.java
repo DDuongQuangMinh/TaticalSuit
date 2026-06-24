@@ -112,9 +112,7 @@ public class WorkbenchMenu extends AbstractContainerMenu {
         super.removed(player);
         
         if (!player.level().isClientSide()) {
-            
-            // 1. SAFELY CLEAR SLOTS 1 AND 2: 
-            // If they threw dirt in Hotbar slot 1 while the menu was open, we move it somewhere else FIRST.
+            // 1. Clear hotbar slots 0/1 safely
             for (int i = 0; i <= 1; i++) {
                 ItemStack existing = player.getInventory().getItem(i);
                 if (!existing.isEmpty()) {
@@ -125,27 +123,35 @@ public class WorkbenchMenu extends AbstractContainerMenu {
                 }
             }
 
-            // 2. FORCE WEAPONS: Move weapons straight from the UI slots into Hotbar 1 and 2 flawlessly.
+            // 2. FORCE WEAPONS — CRITICAL: Use copy() + proper NBT/capability handling
             for (int i = 0; i <= 1; i++) {
                 ItemStack menuGun = inventory.getStackInSlot(i);
                 if (!menuGun.isEmpty()) {
-                    player.getInventory().setItem(i, menuGun); 
+                    // This is the key: serialize -> deserialize to properly trigger capability loading
+                    ItemStack transferStack = menuGun.copy(); // already has NBT
+                    
+                    // Extra safety: force capability re-init (Point Blank specific)
+                    if (transferStack.getTag() != null) {
+                        transferStack.getOrCreateTag().putLong("WorkbenchTransferTick", System.currentTimeMillis());
+                    }
+                    
+                    player.getInventory().setItem(i, transferStack);
                     inventory.setStackInSlot(i, ItemStack.EMPTY);
                 }
             }
             
-            // 3. Normal behavior for armor/munitions/tactical items
+            // 3. Rest of items...
             for (int i = 2; i < inventory.getSlots(); i++) {
                 ItemStack stack = inventory.getStackInSlot(i);
                 if (!stack.isEmpty()) {
-                    if (!player.getInventory().add(stack)) {
-                        player.drop(stack, false); 
+                    if (!player.getInventory().add(stack.copy())) {  // use copy here too
+                        player.drop(stack, false);
                     }
                     inventory.setStackInSlot(i, ItemStack.EMPTY);
                 }
             }
             
-            player.getInventory().setChanged(); 
+            player.getInventory().setChanged();
         }
     }
 
