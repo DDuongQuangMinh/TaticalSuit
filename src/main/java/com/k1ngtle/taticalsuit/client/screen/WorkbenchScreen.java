@@ -170,30 +170,84 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
         this.currentWeaponTab = 0;
         this.scrollOffset = 0f;
 
-        this.assaultRifleStacks = resolveStacks(ASSAULT_RIFLE_IDS);
-        this.battleRifleStacks = resolveStacks(BATTLE_RIFLE_IDS);
-        this.lmgStacks = resolveStacks(LMG_IDS);
-        this.pdwStacks = resolveStacks(PDW_IDS);
-        this.smgStacks = resolveStacks(SMG_IDS);
-        this.shotgunStacks = resolveStacks(SHOTGUN_IDS);
-        this.sniperRifleStacks = resolveStacks(SNIPER_RIFLE_IDS);
-        this.launcherStacks = resolveStacks(LAUNCHER_IDS);
-        this.sidearmWeaponStacks = resolveStacks(SIDEARM_WEAPON_IDS);
+        this.assaultRifleStacks = resolveStacks(ASSAULT_RIFLE_IDS, "WEAPON");
+        this.battleRifleStacks = resolveStacks(BATTLE_RIFLE_IDS, "WEAPON");
+        this.lmgStacks = resolveStacks(LMG_IDS, "WEAPON");
+        this.pdwStacks = resolveStacks(PDW_IDS, "WEAPON");
+        this.smgStacks = resolveStacks(SMG_IDS, "WEAPON");
+        this.shotgunStacks = resolveStacks(SHOTGUN_IDS, "WEAPON");
+        this.sniperRifleStacks = resolveStacks(SNIPER_RIFLE_IDS, "WEAPON");
+        this.launcherStacks = resolveStacks(LAUNCHER_IDS, "WEAPON");
+        this.sidearmWeaponStacks = resolveStacks(SIDEARM_WEAPON_IDS, "WEAPON");
     }
 
-    private ItemStack[] resolveStacks(String[] ids) {
+    private ItemStack[] resolveStacks(String[] ids, String category) {
         ItemStack[] stacks = new ItemStack[ids.length];
+        
+        String[] keywords;
+        switch (category.toUpperCase()) {
+            case "OPTIC": keywords = new String[]{"scope", "sight", "optic", "reflex", "holo", "acog", "dot", "rmr", "sro", "micro", "deltapoint", "moa", "delta"}; break; 
+            case "UNDERBARREL": keywords = new String[]{"grip", "underbarrel", "foregrip", "bipod", "angled"}; break;
+            case "BARREL": keywords = new String[]{"barrel", "handguard", "choke"}; break;
+            case "MUZZLE": keywords = new String[]{"muzzle", "silencer", "suppressor", "compensator", "flash", "osprey", "omega", "ti_rant", "rotor"}; break;
+            case "LASER": keywords = new String[]{"laser", "tactical", "light", "peq", "flashlight", "tlr", "x300", "surefire", "m600"}; break;
+            default: keywords = new String[]{category.toLowerCase()}; break;
+        }
+
         for (int i = 0; i < ids.length; i++) {
             if (ids[i].equals("NONE")) {
                 stacks[i] = ItemStack.EMPTY;
                 continue;
             }
+            
             net.minecraft.resources.ResourceLocation loc = new net.minecraft.resources.ResourceLocation(ids[i]);
             net.minecraft.world.item.Item item = net.minecraftforge.registries.ForgeRegistries.ITEMS.getValue(loc);
+            
             if (item != null && item != net.minecraft.world.item.Items.AIR) {
                 stacks[i] = new ItemStack(item);
             } else {
-                stacks[i] = ItemStack.EMPTY;
+                // UNIVERSAL FALLBACK: If VPB registered this as a virtual attachment (no 1:1 item),
+                // we scan the registry to grab ANY physical 3D item in the same category as a visual placeholder!
+                ItemStack bestMatch = ItemStack.EMPTY;
+                ItemStack fallback = ItemStack.EMPTY;
+                int longestMatch = 0;
+                String targetId = ids[i].toLowerCase().replace("pointblank:", "");
+                
+                for (net.minecraft.world.item.Item regItem : net.minecraftforge.registries.ForgeRegistries.ITEMS) {
+                    net.minecraft.resources.ResourceLocation regLoc = net.minecraftforge.registries.ForgeRegistries.ITEMS.getKey(regItem);
+                    if (regLoc != null && "pointblank".equals(regLoc.getNamespace())) {
+                        String path = regLoc.getPath().toLowerCase();
+                        
+                        boolean matchesCategory = false;
+                        if (category.equals("WEAPON")) {
+                            matchesCategory = true;
+                        } else {
+                            for (String kw : keywords) {
+                                if (path.contains(kw)) {
+                                    matchesCategory = true;
+                                    break;
+                                }
+                            }
+                        }
+
+                        if (matchesCategory) {
+                            if (fallback.isEmpty()) fallback = new ItemStack(regItem); // Guaranteed placeholder
+                            
+                            if (path.equals(targetId)) {
+                                bestMatch = new ItemStack(regItem);
+                                break;
+                            }
+
+                            if (targetId.contains(path) || path.contains(targetId)) {
+                                if (path.length() > longestMatch) {
+                                    longestMatch = path.length();
+                                    bestMatch = new ItemStack(regItem);
+                                }
+                            }
+                        }
+                    }
+                }
+                stacks[i] = !bestMatch.isEmpty() ? bestMatch : fallback;
             }
         }
         return stacks;
@@ -262,43 +316,78 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
 
                     int menuSlotIndex = (this.currentWeaponTab == 8) ? 1 : 0; 
                     
-                    String nbtCategory = switch (this.editingAttachmentCategory) {
-                        case "OPTIC" -> "scope";
-                        case "BARREL" -> "barrel";
-                        case "MUZZLE" -> "muzzle";
+                    // Map GUI category → VPB category name (must match EquipWeaponPacket)
+                    String vpbCategory = switch (this.editingAttachmentCategory) {
+                        case "OPTIC"       -> "scope";
+                        case "BARREL"      -> "barrel";
+                        case "MUZZLE"      -> "muzzle";
                         case "UNDERBARREL" -> "underbarrel";
-                        case "LASER" -> "rail";
+                        case "LASER"       -> "rail";
+                        case "STOCK"       -> "stock";
+                        case "MAGAZINE"    -> "magazine";
                         default -> this.editingAttachmentCategory.toLowerCase();
                     };
 
-                    // OPTIMISTIC CLIENT UPDATE
+                    // OPTIMISTIC CLIENT UPDATE — write the same "sa"/"as" structure that
+                    // EquipWeaponPacket writes on the server, so getAttachmentInfo() reads
+                    // the correct data instantly before the server round-trip completes.
                     ItemStack currentWeapon = this.menu.getSlot(menuSlotIndex).getItem().copy();
                     if (currentWeapon.isEmpty() && Minecraft.getInstance().player != null) {
                         currentWeapon = Minecraft.getInstance().player.getInventory().getItem(menuSlotIndex).copy();
                     }
                     if (!currentWeapon.isEmpty()) {
-                        net.minecraft.nbt.CompoundTag attachments = currentWeapon.getOrCreateTagElement("attachments");
+                        net.minecraft.nbt.CompoundTag tag = currentWeapon.getOrCreateTag();
+
+                        // Read existing "sa" and "as" (or create empty ones)
+                        net.minecraft.nbt.CompoundTag saTag = tag.contains("sa", net.minecraft.nbt.Tag.TAG_COMPOUND)
+                                ? tag.getCompound("sa").copy() : new net.minecraft.nbt.CompoundTag();
+                        net.minecraft.nbt.ListTag asList = tag.contains("as", net.minecraft.nbt.Tag.TAG_LIST)
+                                ? tag.getList("as", net.minecraft.nbt.Tag.TAG_COMPOUND).copy() : new net.minecraft.nbt.ListTag();
+
                         if (idPool[i].equals("NONE")) {
-                            currentWeapon.getOrCreateTag().remove(nbtCategory);
-                            attachments.remove(nbtCategory);
-                        } else {
-                            net.minecraft.world.item.Item attItem = net.minecraftforge.registries.ForgeRegistries.ITEMS.getValue(new net.minecraft.resources.ResourceLocation(idPool[i]));
-                            if (attItem != null && attItem != net.minecraft.world.item.Items.AIR) {
-                                net.minecraft.world.item.ItemStack attStack = attItem.getDefaultInstance().copy();
-                                net.minecraft.nbt.CompoundTag attNbt = attStack.save(new net.minecraft.nbt.CompoundTag());
-                                currentWeapon.getOrCreateTag().put(nbtCategory, attNbt); 
-                                attachments.put(nbtCategory, attNbt); 
-                                currentWeapon.getOrCreateTag().putString(nbtCategory + "_id", idPool[i]);
+                            saTag.remove(vpbCategory);
+                            // Remove matching entry from "as"
+                            net.minecraft.nbt.ListTag newAs = new net.minecraft.nbt.ListTag();
+                            for (int k = 0; k < asList.size(); k++) {
+                                net.minecraft.nbt.CompoundTag entry = asList.getCompound(k);
+                                String eid = entry.getString("id");
+                                net.minecraft.resources.ResourceLocation eLoc = new net.minecraft.resources.ResourceLocation(eid.isEmpty() ? "minecraft:air" : eid);
+                                net.minecraft.world.item.Item eItem = net.minecraftforge.registries.ForgeRegistries.ITEMS.getValue(eLoc);
+                                if (eItem == null || eItem == net.minecraft.world.item.Items.AIR
+                                        || !isItemInCategory(eLoc.getPath().toLowerCase(), vpbCategory)) {
+                                    if (eItem != null && eItem != net.minecraft.world.item.Items.AIR) newAs.add(entry);
+                                }
                             }
+                            asList = newAs;
+                        } else {
+                            // Update "sa"
+                            saTag.putString(vpbCategory, idPool[i]);
+                            // Rebuild "as": replace old entry for this category, add new one
+                            net.minecraft.nbt.ListTag newAs = new net.minecraft.nbt.ListTag();
+                            for (int k = 0; k < asList.size(); k++) {
+                                net.minecraft.nbt.CompoundTag entry = asList.getCompound(k);
+                                String eid = entry.getString("id");
+                                net.minecraft.resources.ResourceLocation eLoc = new net.minecraft.resources.ResourceLocation(eid.isEmpty() ? "minecraft:air" : eid);
+                                net.minecraft.world.item.Item eItem = net.minecraftforge.registries.ForgeRegistries.ITEMS.getValue(eLoc);
+                                if (eItem != null && eItem != net.minecraft.world.item.Items.AIR
+                                        && !isItemInCategory(eLoc.getPath().toLowerCase(), vpbCategory)) {
+                                    newAs.add(entry);
+                                }
+                            }
+                            net.minecraft.nbt.CompoundTag newEntry = new net.minecraft.nbt.CompoundTag();
+                            newEntry.putString("id", idPool[i]);
+                            newEntry.putBoolean("rmv", true);
+                            newAs.add(newEntry);
+                            asList = newAs;
                         }
-                        if (this.menu instanceof WorkbenchMenu) {
-                            WorkbenchMenu wm = (WorkbenchMenu) this.menu;
-                            wm.broadcastChanges();
-                        }
+
+                        tag.put("sa", saTag);
+                        tag.put("as", asList);
+                        this.menu.getSlot(menuSlotIndex).set(currentWeapon);
                     }
 
                     com.k1ngtle.taticalsuit.network.ModNetworking.CHANNEL.sendToServer(
-                            new com.k1ngtle.taticalsuit.network.EquipWeaponPacket(menuSlotIndex, idPool[i], true, nbtCategory)
+                            new com.k1ngtle.taticalsuit.network.EquipWeaponPacket(menuSlotIndex, idPool[i], true, vpbCategory)
                     );
                     
                     this.inAttachmentSelection = false; 
@@ -317,7 +406,6 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
             // --- 8 HORIZONTAL TAB SCROLLER FOR PRIMARIES ---
             if (pMouseY >= 70 && pMouseY <= 85 && this.currentWeaponTab != 8) {
                 int currentX = 8;
-                // Expanded widths to add more gaps between AR, BR, LMG, PDW, SMG
                 int[] tabWidths = {20, 20, 25, 25, 25, 38, 35, 44};
                 for (int i = 0; i < 8; i++) {
                     int tabWidth = tabWidths[i];
@@ -614,7 +702,7 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
         int visibleHeight = trueHeight - 100;
         
         String[] idPool = getActiveAttachmentPool();
-        ItemStack[] attachmentPool = resolveStacks(idPool);
+        ItemStack[] attachmentPool = resolveStacks(idPool, this.editingAttachmentCategory);
         int numBoxes = attachmentPool.length; 
         int listHeight = numBoxes * 45; 
         
@@ -760,72 +848,95 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
         }
 
         net.minecraft.nbt.CompoundTag tag = weaponStack.getTag();
-        String nbtCategory = switch (category.toUpperCase()) {
-            case "OPTIC" -> "scope";
-            case "BARREL" -> "barrel";
-            case "MUZZLE" -> "muzzle";
+
+        // Map GUI category name → VPB AttachmentCategory.getName() string
+        // These must match exactly what EquipWeaponPacket writes into "sa"
+        String vpbCategory = switch (category.toUpperCase()) {
+            case "OPTIC"       -> "scope";
+            case "BARREL"      -> "barrel";
+            case "MUZZLE"      -> "muzzle";
             case "UNDERBARREL" -> "underbarrel";
-            case "LASER" -> "rail";
+            case "LASER"       -> "rail";
+            case "STOCK"       -> "stock";
+            case "MAGAZINE"    -> "magazine";
             default -> category.toLowerCase();
         };
 
-        ItemStack foundStack = ItemStack.EMPTY;
-
-        // Try extracting via highly structured ItemStack compounds first (How Point Blank registers attachments)
-        if (tag.contains(nbtCategory, net.minecraft.nbt.Tag.TAG_COMPOUND)) {
-            foundStack = ItemStack.of(tag.getCompound(nbtCategory));
-        } else if (tag.contains("attachments", net.minecraft.nbt.Tag.TAG_COMPOUND)) {
-            net.minecraft.nbt.CompoundTag attTag = tag.getCompound("attachments");
-            if (attTag.contains(nbtCategory, net.minecraft.nbt.Tag.TAG_COMPOUND)) {
-                foundStack = ItemStack.of(attTag.getCompound(nbtCategory));
+        // ── PRIMARY PATH: read from VPB's "sa" compound ────────────────────────
+        // "sa" is a CompoundTag where each key is a category name and the value
+        // is the full ResourceLocation string of the equipped attachment item.
+        // This is the authoritative source written by EquipWeaponPacket.
+        if (tag.contains("sa", net.minecraft.nbt.Tag.TAG_COMPOUND)) {
+            net.minecraft.nbt.CompoundTag sa = tag.getCompound("sa");
+            if (sa.contains(vpbCategory, net.minecraft.nbt.Tag.TAG_STRING)) {
+                String rl = sa.getString(vpbCategory);
+                if (!rl.isEmpty()) {
+                    net.minecraft.world.item.Item item = net.minecraftforge.registries.ForgeRegistries.ITEMS
+                            .getValue(new net.minecraft.resources.ResourceLocation(rl));
+                    if (item != null && item != net.minecraft.world.item.Items.AIR) {
+                        ItemStack attStack = new ItemStack(item);
+                        String displayName = rl.contains(":") ? rl.substring(rl.indexOf(':') + 1).replace("_", " ").toUpperCase() : rl.toUpperCase();
+                        return new AttachmentInfo(attStack, displayName);
+                    }
+                }
             }
         }
 
-        if (!foundStack.isEmpty() && foundStack.getItem() != net.minecraft.world.item.Items.AIR) {
-            return new AttachmentInfo(foundStack, foundStack.getHoverName().getString().toUpperCase());
-        }
-
-        // Fallback to raw string identifier inspection
-        String nbtStr = tag.toString().toLowerCase();
-
-        String[] keywords;
-        switch (category.toUpperCase()) {
-            case "OPTIC": keywords = new String[]{"scope", "sight", "optic", "reflex", "holo", "acog", "dot", "rmr", "sro", "micro", "deltapoint"}; break; 
-            case "UNDERBARREL": keywords = new String[]{"grip", "underbarrel", "foregrip", "bipod", "angled"}; break;
-            case "BARREL": keywords = new String[]{"barrel", "handguard", "choke"}; break;
-            case "MUZZLE": keywords = new String[]{"muzzle", "silencer", "suppressor", "compensator", "flash", "osprey", "omega", "ti_rant", "rotor"}; break;
-            case "LASER": keywords = new String[]{"laser", "tactical", "light", "peq", "flashlight", "tlr", "x300", "surefire", "m600"}; break;
-            case "MAGAZINE": keywords = new String[]{"mag", "magazine", "drum", "clip"}; break;
-            case "AMMO": keywords = new String[]{"ammo", "ammunition", "bullet", "nato", "parabellum", "acp", "auto"}; break;
-            default: keywords = new String[]{category.toLowerCase()}; break;
-        }
-
-        for (net.minecraft.world.item.Item regItem : net.minecraftforge.registries.ForgeRegistries.ITEMS) {
-            net.minecraft.resources.ResourceLocation regLoc = net.minecraftforge.registries.ForgeRegistries.ITEMS.getKey(regItem);
-            
-            if (regLoc != null && "pointblank".equals(regLoc.getNamespace())) {
-                String path = regLoc.getPath().toLowerCase();
-                
-                boolean matchesCategory = false;
-                for (String kw : keywords) {
-                    if (path.contains(kw)) {
-                        matchesCategory = true;
-                        break;
-                    }
-                }
-                
-                if (matchesCategory) {
-                    if (nbtStr.contains(path)) {
-                        if (!path.equals(net.minecraftforge.registries.ForgeRegistries.ITEMS.getKey(weaponStack.getItem()).getPath().toLowerCase())) {
-                            ItemStack fallbackStack = new ItemStack(regItem);
-                            return new AttachmentInfo(fallbackStack, fallbackStack.getHoverName().getString().toUpperCase());
-                        }
+        // ── SECONDARY PATH: scan "as" ListTag ──────────────────────────────────
+        // "as" is a ListTag of CompoundTags, each with an "id" string field.
+        // Walk the list and check if any entry belongs to our category.
+        if (tag.contains("as", net.minecraft.nbt.Tag.TAG_LIST)) {
+            net.minecraft.nbt.ListTag asList = tag.getList("as", net.minecraft.nbt.Tag.TAG_COMPOUND);
+            for (int k = 0; k < asList.size(); k++) {
+                net.minecraft.nbt.CompoundTag entry = asList.getCompound(k);
+                String entryId = entry.getString("id");
+                if (entryId.isEmpty()) continue;
+                net.minecraft.resources.ResourceLocation entryLoc =
+                        new net.minecraft.resources.ResourceLocation(entryId);
+                net.minecraft.world.item.Item entryItem =
+                        net.minecraftforge.registries.ForgeRegistries.ITEMS.getValue(entryLoc);
+                if (entryItem != null && entryItem != net.minecraft.world.item.Items.AIR) {
+                    String entryPath = entryLoc.getPath().toLowerCase();
+                    if (isItemInCategory(entryPath, vpbCategory)) {
+                        ItemStack attStack = new ItemStack(entryItem);
+                        String displayName = entryLoc.getPath().replace("_", " ").toUpperCase();
+                        return new AttachmentInfo(attStack, displayName);
                     }
                 }
             }
         }
 
         return new AttachmentInfo(ItemStack.EMPTY, "NONE");
+    }
+
+    /**
+     * Mirrors the same helper in EquipWeaponPacket — determines if an attachment's
+     * registry path belongs to a given VPB category name.
+     * Keep both copies in sync if you add new category keywords.
+     */
+    private static boolean isItemInCategory(String itemPath, String vpbCategoryName) {
+        return switch (vpbCategoryName) {
+            case "scope" -> itemPath.contains("scope") || itemPath.contains("sight") || itemPath.contains("optic")
+                    || itemPath.contains("reflex") || itemPath.contains("holo") || itemPath.contains("acog")
+                    || itemPath.contains("dot") || itemPath.contains("rmr") || itemPath.contains("sro")
+                    || itemPath.contains("micro") || itemPath.contains("deltapoint") || itemPath.contains("specter")
+                    || itemPath.contains("hamr") || itemPath.contains("aimpoint") || itemPath.contains("rspec")
+                    || itemPath.contains("spear") || itemPath.contains("hi_red") || itemPath.contains("srs")
+                    || itemPath.contains("moa");
+            case "muzzle" -> itemPath.contains("muzzle") || itemPath.contains("silencer")
+                    || itemPath.contains("suppressor") || itemPath.contains("compensator")
+                    || itemPath.contains("flash") || itemPath.contains("brake");
+            case "underbarrel" -> itemPath.contains("grip") || itemPath.contains("underbarrel")
+                    || itemPath.contains("foregrip") || itemPath.contains("bipod") || itemPath.contains("angled");
+            case "rail" -> itemPath.contains("laser") || itemPath.contains("tactical")
+                    || itemPath.contains("light") || itemPath.contains("peq") || itemPath.contains("flashlight")
+                    || itemPath.contains("tlr") || itemPath.contains("x300");
+            case "stock" -> itemPath.contains("stock") || itemPath.contains("brace") || itemPath.contains("buffer");
+            case "magazine" -> itemPath.contains("mag") || itemPath.contains("magazine")
+                    || itemPath.contains("drum") || itemPath.contains("extended");
+            case "skin" -> itemPath.contains("skin") || itemPath.contains("camo") || itemPath.contains("wrap");
+            default -> false;
+        };
     }
 
     private boolean isPrimaryWeapon(ItemStack stack) {
@@ -961,7 +1072,7 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
         drawSmallText(guiGraphics, "SELECT MODIFICATION", 20, 75, 0.65f, 0xFFD62929); 
 
         String[] idPool = getActiveAttachmentPool();
-        ItemStack[] attachmentPool = resolveStacks(idPool);
+        ItemStack[] attachmentPool = resolveStacks(idPool, this.editingAttachmentCategory);
         int numBoxes = attachmentPool.length;
 
         int currentY = 100 - (int)this.scrollOffset;
@@ -976,13 +1087,13 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
             }
             
             if (attachmentPool[i] != null && !attachmentPool[i].isEmpty()) {
-                String name = attachmentPool[i].getHoverName().getString().toUpperCase();
-                drawSmallText(guiGraphics, name, leftX + 45, y + 16, 0.7f, 0xFFFFFFFF);
+                String cleanName = idPool[i].replace("pointblank:", "").replace("_", " ").toUpperCase();
+                drawSmallText(guiGraphics, cleanName, leftX + 45, y + 16, 0.7f, 0xFFFFFFFF);
             } else {
                 if (idPool[i].equals("NONE")) {
                     drawSmallText(guiGraphics, "REMOVE ATTACHMENT", leftX + 45, y + 16, 0.7f, 0xFFD62929);
                 } else {
-                    String rawName = idPool[i].replace("pointblank:", "").toUpperCase();
+                    String rawName = idPool[i].replace("pointblank:", "").replace("_", " ").toUpperCase();
                     drawSmallText(guiGraphics, rawName + " (MISSING)", leftX + 45, y + 16, 0.65f, 0xFF555555);
                 }
             }
@@ -1041,10 +1152,10 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
             }
             
             if (weaponPool[i] != null && !weaponPool[i].isEmpty()) {
-                String gunName = weaponPool[i].getHoverName().getString().toUpperCase();
+                String gunName = idPool[i].replace("pointblank:", "").replace("_", " ").toUpperCase();
                 drawSmallText(guiGraphics, gunName, leftX + 45, y + 16, 0.7f, 0xFFFFFFFF);
             } else {
-                String rawName = idPool[i].replace("pointblank:", "").toUpperCase();
+                String rawName = idPool[i].replace("pointblank:", "").replace("_", " ").toUpperCase();
                 drawSmallText(guiGraphics, rawName + " (MISSING)", leftX + 45, y + 16, 0.65f, 0xFF555555);
             }
         }
