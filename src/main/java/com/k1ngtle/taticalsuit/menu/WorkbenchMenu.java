@@ -10,13 +10,12 @@ import net.minecraft.world.inventory.ContainerLevelAccess;
 import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.items.ItemStackHandler;
 import net.minecraftforge.items.SlotItemHandler;
-import net.minecraftforge.registries.ForgeRegistries;
 
 public class WorkbenchMenu extends AbstractContainerMenu {
+
     private final ContainerLevelAccess access;
     private final Player player;
-    
-    private final ItemStackHandler inventory = new ItemStackHandler(14); 
+    final ItemStackHandler inventory = new ItemStackHandler(14);
 
     public WorkbenchMenu(int id, Inventory playerInventory, FriendlyByteBuf extraData) {
         this(id, playerInventory, ContainerLevelAccess.NULL);
@@ -25,151 +24,57 @@ public class WorkbenchMenu extends AbstractContainerMenu {
     public WorkbenchMenu(int id, Inventory playerInventory, ContainerLevelAccess access) {
         super(ModMenuTypes.WORKBENCH_MENU.get(), id);
         this.access = access;
-        this.player = playerInventory.player; 
-
-        // --- SECTION 1: WEAPONS (3 Tabs) ---
-        // MOVED OFF-SCREEN (-1000)! This permanently hides the vanilla boxes and completely stops invisible click-duplication!
-        this.addSlot(new SlotItemHandler(inventory, 0, -1000, -1000));  // Primary Rifle
-        this.addSlot(new SlotItemHandler(inventory, 1, -1000, -1000));  // Secondary Pistol
-        this.addSlot(new SlotItemHandler(inventory, 2, -1000, -1000)); // Melee / Tactical
-
-        // --- SECTION 2: ARMOR & MUNITIONS ---
-        this.addSlot(new SlotItemHandler(inventory, 3, 52, 224)); // Vest Box
-
-        // 9 Munition Slots
-        this.addSlot(new SlotItemHandler(inventory, 4, 22, 289));
-        this.addSlot(new SlotItemHandler(inventory, 5, 42, 289));
-        this.addSlot(new SlotItemHandler(inventory, 6, 62, 289));
-        this.addSlot(new SlotItemHandler(inventory, 7, 82, 289));
-        this.addSlot(new SlotItemHandler(inventory, 8, 102, 289));
-        this.addSlot(new SlotItemHandler(inventory, 9, 129, 289));
-        this.addSlot(new SlotItemHandler(inventory, 10, 149, 289));
-        this.addSlot(new SlotItemHandler(inventory, 11, 169, 289));
-        this.addSlot(new SlotItemHandler(inventory, 12, 196, 289));
-
-        // --- SECTION 3: HEADWEAR ---
-        this.addSlot(new SlotItemHandler(inventory, 13, 52, 364)); // Helmet Box
-
-        // --- AUTO-EQUIP EXISTING WEAPONS ---
+        this.player = playerInventory.player;
+        setupSlots();
         if (!this.player.level().isClientSide()) {
-            this.scanAndEquipWeapons(playerInventory);
+            WeaponScanner.scan(playerInventory, this.inventory);
         }
     }
 
-    private void scanAndEquipWeapons(Inventory playerInventory) {
-        boolean primaryFound = false;
-        boolean sidearmFound = false;
+    private void setupSlots() {
+        // Weapon slots moved off-screen: hides vanilla slot boxes and prevents invisible click-duplication
+        addSlot(new SlotItemHandler(inventory, 0, -1000, -1000)); // Primary
+        addSlot(new SlotItemHandler(inventory, 1, -1000, -1000)); // Sidearm
+        addSlot(new SlotItemHandler(inventory, 2, -1000, -1000)); // Melee / Tactical
 
-        for (int i = 0; i < playerInventory.getContainerSize(); i++) {
-            ItemStack stack = playerInventory.getItem(i);
-            if (stack.isEmpty()) continue;
+        // Armor
+        addSlot(new SlotItemHandler(inventory, 3, 52, 224));      // Vest
 
-            net.minecraft.resources.ResourceLocation loc = ForgeRegistries.ITEMS.getKey(stack.getItem());
-            if (loc != null) {
-                String namespace = loc.getNamespace().toLowerCase();
-                String path = loc.getPath().toLowerCase();
-
-                if (namespace.equals("pointblank") && !path.contains("mag") && !path.contains("ammo") && !path.contains("grenade")) {
-                    
-                    boolean isSideArm = path.contains("glock") || path.contains("m1911") || path.contains("deserteagle") || 
-                                        path.contains("m9") || path.contains("p30l") || path.contains("viper") || path.contains("m17") || path.contains("p250") || path.contains("fn509") || path.contains("usp45") || path.contains("fnx45");
-
-                    if (!primaryFound && !isSideArm) {
-                        this.inventory.setStackInSlot(0, stack.copy());
-                        playerInventory.setItem(i, ItemStack.EMPTY); 
-                        primaryFound = true;
-                    } else if (!sidearmFound && isSideArm) {
-                        this.inventory.setStackInSlot(1, stack.copy());
-                        playerInventory.setItem(i, ItemStack.EMPTY);
-                        sidearmFound = true;
-                    }
-
-                    if (primaryFound && sidearmFound) break; 
-                }
-            }
+        // Munitions (9 slots)
+        int[] munitionX = {22, 42, 62, 82, 102, 129, 149, 169, 196};
+        for (int i = 0; i < munitionX.length; i++) {
+            addSlot(new SlotItemHandler(inventory, 4 + i, munitionX[i], 289));
         }
-    }
 
-    public int getMunitionCount() {
-        int count = 0;
-        for (int i = 0; i < player.getInventory().getContainerSize(); i++) {
-            ItemStack stack = player.getInventory().getItem(i);
-            if (!stack.isEmpty()) {
-                net.minecraft.resources.ResourceLocation loc = ForgeRegistries.ITEMS.getKey(stack.getItem());
-                if (loc != null) {
-                    String itemName = loc.getPath().toLowerCase();
-                    if (itemName.contains("mag") || itemName.contains("ammo") || itemName.contains("grenade")) {
-                        count++;
-                    }
-                }
-            }
-        }
-        return Math.min(count, 13);
+        // Headwear
+        addSlot(new SlotItemHandler(inventory, 13, 52, 364));     // Helmet
     }
 
     @Override
     public void removed(Player player) {
         super.removed(player);
-        
         if (!player.level().isClientSide()) {
-            // 1. Clear hotbar slots 0/1 safely
-            for (int i = 0; i <= 1; i++) {
-                ItemStack existing = player.getInventory().getItem(i);
-                if (!existing.isEmpty()) {
-                    player.getInventory().setItem(i, ItemStack.EMPTY);
-                    if (!player.getInventory().add(existing)) {
-                        player.drop(existing, false);
-                    }
-                }
-            }
-
-            // 2. FORCE WEAPONS — CRITICAL: Use copy() + proper NBT/capability handling
-            for (int i = 0; i <= 1; i++) {
-                ItemStack menuGun = inventory.getStackInSlot(i);
-                if (!menuGun.isEmpty()) {
-                    // This is the key: serialize -> deserialize to properly trigger capability loading
-                    ItemStack transferStack = menuGun.copy(); // already has NBT
-                    
-                    // Extra safety: force capability re-init (Point Blank specific)
-                    if (transferStack.getTag() != null) {
-                        transferStack.getOrCreateTag().putLong("WorkbenchTransferTick", System.currentTimeMillis());
-                    }
-                    
-                    player.getInventory().setItem(i, transferStack);
-                    inventory.setStackInSlot(i, ItemStack.EMPTY);
-                }
-            }
-            
-            // 3. Rest of items...
-            for (int i = 2; i < inventory.getSlots(); i++) {
-                ItemStack stack = inventory.getStackInSlot(i);
-                if (!stack.isEmpty()) {
-                    if (!player.getInventory().add(stack.copy())) {  // use copy here too
-                        player.drop(stack, false);
-                    }
-                    inventory.setStackInSlot(i, ItemStack.EMPTY);
-                }
-            }
-            
-            player.getInventory().setChanged();
+            WeaponScanner.returnToPlayer(player, inventory);
         }
     }
 
     public ItemStack getWeaponSlotItem(int slotIndex) {
-        if (slotIndex != 0 && slotIndex != 1) return ItemStack.EMPTY;
+        if (slotIndex < 0 || slotIndex > 1) return ItemStack.EMPTY;
         return inventory.getStackInSlot(slotIndex);
     }
 
     public void setWeaponSlot(int slotIndex, ItemStack stack) {
-        if (slotIndex != 0 && slotIndex != 1) return;
+        if (slotIndex < 0 || slotIndex > 1) return;
         inventory.setStackInSlot(slotIndex, stack);
-        this.broadcastChanges(); 
+        broadcastChanges();
+    }
+
+    public int getMunitionCount() {
+        return WeaponClassifier.countMunitions(player.getInventory());
     }
 
     @Override
-    public ItemStack quickMoveStack(Player playerIn, int index) {
-        return ItemStack.EMPTY; 
-    }
+    public ItemStack quickMoveStack(Player p, int i) { return ItemStack.EMPTY; }
 
     @Override
     public boolean stillValid(Player player) {

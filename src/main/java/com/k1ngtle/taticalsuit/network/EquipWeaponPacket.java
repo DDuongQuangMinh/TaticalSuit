@@ -178,26 +178,25 @@ public class EquipWeaponPacket {
                     // Scan inventory to rescue customized gun
                     for (int i = 0; i < player.getInventory().getContainerSize(); i++) {
                         ItemStack invStack = player.getInventory().getItem(i);
-                        if (!invStack.isEmpty()) {
-                            ResourceLocation invLoc = ForgeRegistries.ITEMS.getKey(invStack.getItem());
-                            if (invLoc != null && "pointblank".equals(invLoc.getNamespace())) {
-                                String path = invLoc.getPath().toLowerCase();
-                                boolean isInvSidearm = path.contains("glock") || path.contains("m1911") || path.contains("deserteagle") || path.contains("m9") || path.contains("p30l") || path.contains("viper") || path.contains("m17") || path.contains("p250") || path.contains("fn509") || path.contains("usp45") || path.contains("fnx45");
-                                boolean isInvPrimary = !isInvSidearm && !path.contains("mag") && !path.contains("ammo") && !path.contains("grenade");
-                                
-                                if ((isPrimary && isInvPrimary) || (!isPrimary && isInvSidearm)) {
-                                    if (invLoc.equals(reqLoc) && weaponToEquip.isEmpty()) {
-                                        weaponToEquip = invStack.copy(); 
-                                    }
-                                    player.getInventory().setItem(i, ItemStack.EMPTY); 
-                                    
-                                    int syncSlotId = (i >= 0 && i <= 8) ? 36 + i : i; 
-                                    player.connection.send(new ClientboundContainerSetSlotPacket(
-                                        player.inventoryMenu.containerId, player.inventoryMenu.getStateId(),
-                                        syncSlotId, ItemStack.EMPTY
-                                    ));
-                                }
+                        if (invStack.isEmpty()) continue;
+
+                        ResourceLocation invLoc = ForgeRegistries.ITEMS.getKey(invStack.getItem());
+                        if (invLoc == null || !"pointblank".equals(invLoc.getNamespace())) continue;
+
+                        boolean isInvSidearm = com.k1ngtle.taticalsuit.menu.WeaponClassifier.isSidearm(invStack);
+                        boolean isInvPrimary = com.k1ngtle.taticalsuit.menu.WeaponClassifier.isPrimary(invStack);
+
+                        if ((isPrimary && isInvPrimary) || (!isPrimary && isInvSidearm)) {
+                            if (invLoc.equals(reqLoc) && weaponToEquip.isEmpty()) {
+                                weaponToEquip = invStack.copy();
                             }
+                            player.getInventory().setItem(i, ItemStack.EMPTY);
+
+                            int syncSlotId = (i >= 0 && i <= 8) ? 36 + i : i;
+                            player.connection.send(new ClientboundContainerSetSlotPacket(
+                                player.inventoryMenu.containerId, player.inventoryMenu.getStateId(),
+                                syncSlotId, ItemStack.EMPTY
+                            ));
                         }
                     }
                     
