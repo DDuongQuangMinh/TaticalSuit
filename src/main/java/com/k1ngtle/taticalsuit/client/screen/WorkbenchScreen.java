@@ -140,6 +140,24 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
     
     private static final String[] LASER_IDS = {"NONE", "pointblank:peq15", "pointblank:tlr7", "pointblank:flashlight"};
 
+    private static final String[] SIDEARM_OPTIC_IDS = {
+            "NONE", 
+            "pointblank:moa_hg"
+    };
+
+    private static final String[] SIDEARM_MUZZLE_IDS = {
+            "NONE", 
+            "pointblank:p30l_compensator", 
+            "pointblank:smg_suppressor",
+            "pointblank:smg_muzzlebrake",
+    };
+
+    private static final String[] SIDEARM_STOCK_IDS = {
+            "NONE", 
+            "pointblank:m9_stock", 
+            "pointblank:glock_stock"
+    };
+
     private ItemStack[] assaultRifleStacks;
     private ItemStack[] battleRifleStacks;
     private ItemStack[] lmgStacks;
@@ -284,12 +302,15 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
     }
 
     private String[] getActiveAttachmentPool() {
+        boolean isSidearm = this.currentWeaponTab == 8;
+        
         return switch (this.editingAttachmentCategory) {
-            case "OPTIC" -> OPTIC_IDS;
-            case "BARREL" -> BARREL_IDS;
-            case "MUZZLE" -> MUZZLE_IDS;
-            case "UNDERBARREL" -> UNDERBARREL_IDS;
-            case "LASER" -> LASER_IDS;
+            case "OPTIC" -> isSidearm ? SIDEARM_OPTIC_IDS : OPTIC_IDS;
+            case "BARREL" -> isSidearm ? BARREL_IDS : BARREL_IDS; 
+            case "MUZZLE" -> isSidearm ? SIDEARM_MUZZLE_IDS : MUZZLE_IDS;
+            case "UNDERBARREL" -> isSidearm ? new String[]{"NONE"} : UNDERBARREL_IDS; 
+            case "LASER" -> isSidearm ? new String[]{"NONE"} : LASER_IDS;
+            case "STOCK" -> isSidearm ? SIDEARM_STOCK_IDS : new String[]{"NONE"};
             default -> new String[]{"NONE"};
         };
     }
@@ -496,7 +517,7 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
 
             int numCoreAttachments = (this.currentWeaponTab == 8) ? 3 : 5;
             String[] boxCats = (this.currentWeaponTab == 8) 
-                    ? new String[]{"OPTIC", "MUZZLE", "LASER"} 
+                    ? new String[]{"OPTIC", "MUZZLE", "STOCK"} 
                     : new String[]{"OPTIC", "BARREL", "MUZZLE", "UNDERBARREL", "LASER"};
 
             int currentY = 100 - (int)this.scrollOffset + 75 + 30;
@@ -737,12 +758,12 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
         int numGrenade = 4; 
         int numTactical = 5; 
         
+        int numCoreAttachments = (this.currentWeaponTab == 8) ? 3 : 5; 
+        
         int dynamicItemsHeight = this.showAmmunitionTab 
                 ? (20 + 16 + (numPrimary * 31) + 10 + 16 + (numSidearm * 31)) 
                 : (20 + 16 + (numGrenade * 31) + 10 + 16 + (numTactical * 31));
                 
-        int numCoreAttachments = (this.currentWeaponTab == 8) ? 3 : 5; 
-        
         int listHeight = 75 + 30 + (numCoreAttachments * 45) + 35 + dynamicItemsHeight; 
         
         this.maxScroll = Math.max(0f, (float)(listHeight - visibleHeight + 20));
@@ -1164,7 +1185,7 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
 
         int numCoreAttachments = (this.currentWeaponTab == 8) ? 3 : 5;
         String[] boxCats = (this.currentWeaponTab == 8) 
-                ? new String[]{"OPTIC", "MUZZLE", "LASER"} 
+                ? new String[]{"OPTIC", "MUZZLE", "STOCK"} 
                 : new String[]{"OPTIC", "BARREL", "MUZZLE", "UNDERBARREL", "LASER"};
 
         // Extract attachment data
