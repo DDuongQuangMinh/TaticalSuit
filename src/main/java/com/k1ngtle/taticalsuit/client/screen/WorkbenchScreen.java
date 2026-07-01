@@ -330,20 +330,14 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
                 return true;
             }
 
-            int startY = 100 - (int)this.scrollOffset;
-            int numBoxes = "GRENADE".equals(this.editingMunitionCategory) ? 4 : 5;
-            
-            for (int i = 0; i < numBoxes; i++) {
-                int boxY = startY + (i * 45);
-                if (pMouseX >= 20 && pMouseX <= 220 && pMouseY >= boxY && pMouseY <= boxY + 40) {
-                    if (System.currentTimeMillis() - this.lastClickTime < 500) return true;
-                    this.lastClickTime = System.currentTimeMillis();
+            if (pMouseX >= 20 && pMouseX <= 220 && pMouseY >= 90) {
+                if (System.currentTimeMillis() - this.lastClickTime < 500) return true;
+                this.lastClickTime = System.currentTimeMillis();
 
-                    // Temporarily return to loadout when clicking a placeholder munition item
-                    this.inMunitionSelection = false; 
-                    this.scrollOffset = 0f;
-                    return true;
-                }
+                // Temporarily return to loadout when clicking a placeholder munition item
+                this.inMunitionSelection = false; 
+                this.scrollOffset = 0f;
+                return true;
             }
             return true;
         } else if (this.inAttachmentSelection) {
@@ -588,14 +582,8 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
             }
             // Trigger Munition Selection Tab if clicking inside the Munition Slots boundary
             if (pMouseY >= 285 && pMouseY <= 309) {
-                if (pMouseX >= 80 && pMouseX <= 100) { // Slot 4 (Grenades)
+                if (pMouseX >= 20 && pMouseX <= 220) {
                     this.inMunitionSelection = true;
-                    this.editingMunitionCategory = "GRENADE";
-                    this.scrollOffset = 0f;
-                    return true;
-                } else if (pMouseX > 100 && pMouseX <= 120) { // Slot 5 (Tactical)
-                    this.inMunitionSelection = true;
-                    this.editingMunitionCategory = "TACTICAL";
                     this.scrollOffset = 0f;
                     return true;
                 }
@@ -605,7 +593,7 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
             }
             return super.mouseClicked(pMouseX, pMouseY, pButton);
         }
-    } // <--- Added the missing brace here!
+    }
 
     @Override
     public boolean mouseReleased(double pMouseX, double pMouseY, int pButton) {
@@ -804,22 +792,17 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
     }
 
     private void renderMunitionSelectionBg(GuiGraphics guiGraphics, int trueHeight) {
-        int startY = 100;
         int visibleHeight = trueHeight - 100;
         
-        int numBoxes = "GRENADE".equals(this.editingMunitionCategory) ? 4 : 5;
-        int listHeight = numBoxes * 45; 
+        // 3 Headers (20px each), 2 gaps (10px each), 13 total items (35px each)
+        int listHeight = 60 + 20 + (13 * 35); 
         
         this.maxScroll = Math.max(0f, (float)(listHeight - visibleHeight + 20));
         this.scrollOffset = Math.max(0f, Math.min(this.scrollOffset, this.maxScroll));
 
         guiGraphics.enableScissor(0, 90, 240, trueHeight);
-        int currentY = startY - (int)this.scrollOffset;
         
-        for (int i = 0; i < numBoxes; i++) {
-            drawCleanBox(guiGraphics, 20, currentY, 200, 40);
-            currentY += 45;
-        }
+        // Purposely left completely blank to remove the "slot boxes" behind the munitions!
         
         if (this.maxScroll > 0) {
             guiGraphics.fill(225, 100, 227, trueHeight - 20, 0xFF2E3136);
@@ -1223,26 +1206,61 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
 
     private void renderMunitionSelectionLabels(GuiGraphics guiGraphics, int mouseX, int mouseY, int trueWidth, int trueHeight) {
         drawSmallText(guiGraphics, "< LOADOUT", 20, 25, 0.75f, 0xFFFFFF);
-        
-        drawSmallText(guiGraphics, this.editingMunitionCategory, 20, 55, 1.1f, 0xFFFFFF); 
+        drawSmallText(guiGraphics, "MUNITIONS", 20, 55, 1.1f, 0xFFFFFF); 
         drawSmallText(guiGraphics, "SELECT EQUIPMENT", 20, 75, 0.65f, 0xFFD62929); 
 
-        String[] fakeNames = "GRENADE".equals(this.editingMunitionCategory) 
-                ? new String[]{"9-BANG FLASH GRENADE", "CS GAS", "FLASHBANGS", "STINGER"}
-                : new String[]{"C2", "LOCKPICK GUN", "PEPPER SPRAY", "TASER", "WEDGE"};
-        int numBoxes = fakeNames.length;
+        String[] ammoNames = {"5.56X45MM NATO", "9X19MM PARABELLUM", "12 GAUGE BUCKSHOT", ".300 BLACKOUT"};
+        String[] grenadeNames = {"9-BANG FLASH GRENADE", "CS GAS", "FLASHBANGS", "STINGER"};
+        String[] tacticalNames = {"C2", "LOCKPICK GUN", "PEPPER SPRAY", "TASER", "WEDGE"};
 
         int currentY = 100 - (int)this.scrollOffset;
-        int leftX = 26;
+        int leftX = 20;
         
         guiGraphics.enableScissor(0, 90, 240, trueHeight);
-        for (int i = 0; i < numBoxes; i++) {
-            int y = currentY + (i * 45);
-            
-            // Hover highlight disabled as per design
-            drawSmallText(guiGraphics, fakeNames[i], leftX + 45, y + 16, 0.7f, 0xFFFFFFFF);
+        
+        // --- PRIMARY AMMUNITION SECTION ---
+        drawSmallText(guiGraphics, "PRIMARY AMMUNITION", leftX, currentY, 0.65f, 0xFF7A818C);
+        currentY += 20;
+        for (String name : ammoNames) {
+            renderMunitionItem(guiGraphics, name, leftX, currentY, mouseX, mouseY);
+            currentY += 35;
         }
+        
+        currentY += 10; 
+        
+        // --- GRENADE SECTION ---
+        drawSmallText(guiGraphics, "GRENADE", leftX, currentY, 0.65f, 0xFF7A818C);
+        currentY += 20;
+        for (String name : grenadeNames) {
+            renderMunitionItem(guiGraphics, name, leftX, currentY, mouseX, mouseY);
+            currentY += 35;
+        }
+        
+        currentY += 10;
+        
+        // --- TACTICAL SECTION ---
+        drawSmallText(guiGraphics, "TACTICAL", leftX, currentY, 0.65f, 0xFF7A818C);
+        currentY += 20;
+        for (String name : tacticalNames) {
+            renderMunitionItem(guiGraphics, name, leftX, currentY, mouseX, mouseY);
+            currentY += 35;
+        }
+
         guiGraphics.disableScissor();
+    }
+
+    private void renderMunitionItem(GuiGraphics guiGraphics, String name, int x, int y, int mouseX, int mouseY) {
+        boolean isHovered = mouseY >= y && mouseY <= y + 30 && mouseX >= x && mouseX <= x + 200;
+        int textColor = isHovered ? 0xFFFFFFFF : 0xFF7A818C;
+        
+        drawSmallText(guiGraphics, name, x, y + 10, 0.8f, textColor);
+        guiGraphics.fill(x, y + 25, 220, y + 26, 0xFF2E3136);
+        
+        if (isHovered) {
+            int textWidth = this.font.width(name);
+            int scaledWidth = (int)(textWidth * 0.8f);
+            guiGraphics.fill(x, y + 25, x + scaledWidth, y + 26, 0xFFD62929); 
+        }
     }
 
     private void renderGunsmithLabels(GuiGraphics guiGraphics) {
