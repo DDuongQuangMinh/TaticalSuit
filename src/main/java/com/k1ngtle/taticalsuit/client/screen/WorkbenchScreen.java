@@ -26,7 +26,9 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
     
     private boolean inWeaponSelection = false; 
     private boolean inAttachmentSelection = false;
+    private boolean inMunitionSelection = false; // Added Munition State
     private String editingAttachmentCategory = "";
+    private String editingMunitionCategory = "";
     
     // Scroll Trackers
     private float scrollOffset = 0f;
@@ -184,6 +186,8 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
         this.inGunsmith = false;
         this.inWeaponSelection = false;
         this.inAttachmentSelection = false;
+        this.inMunitionSelection = false;
+        this.editingMunitionCategory = "";
         this.showAmmunitionTab = true;
         this.currentWeaponTab = 0;
         this.scrollOffset = 0f;
@@ -319,7 +323,30 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
     public boolean mouseClicked(double pMouseX, double pMouseY, int pButton) {
         if (pButton != 0) return super.mouseClicked(pMouseX, pMouseY, pButton);
         
-        if (this.inAttachmentSelection) {
+        if (this.inMunitionSelection) {
+            if (pMouseX >= 20 && pMouseX <= 100 && pMouseY >= 15 && pMouseY <= 35) {
+                this.inMunitionSelection = false;
+                this.scrollOffset = 0f;
+                return true;
+            }
+
+            int startY = 100 - (int)this.scrollOffset;
+            int numBoxes = "GRENADE".equals(this.editingMunitionCategory) ? 4 : 5;
+            
+            for (int i = 0; i < numBoxes; i++) {
+                int boxY = startY + (i * 45);
+                if (pMouseX >= 20 && pMouseX <= 220 && pMouseY >= boxY && pMouseY <= boxY + 40) {
+                    if (System.currentTimeMillis() - this.lastClickTime < 500) return true;
+                    this.lastClickTime = System.currentTimeMillis();
+
+                    // Temporarily return to loadout when clicking a placeholder munition item
+                    this.inMunitionSelection = false; 
+                    this.scrollOffset = 0f;
+                    return true;
+                }
+            }
+            return true;
+        } else if (this.inAttachmentSelection) {
             if (pMouseX >= 20 && pMouseX <= 100 && pMouseY >= 15 && pMouseY <= 35) {
                 this.inAttachmentSelection = false;
                 this.scrollOffset = 0f;
@@ -559,12 +586,26 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
                 this.currentWeaponTab = 8; // Instantly lock onto Sidearm category
                 return true;
             }
+            // Trigger Munition Selection Tab if clicking inside the Munition Slots boundary
+            if (pMouseY >= 285 && pMouseY <= 309) {
+                if (pMouseX >= 80 && pMouseX <= 100) { // Slot 4 (Grenades)
+                    this.inMunitionSelection = true;
+                    this.editingMunitionCategory = "GRENADE";
+                    this.scrollOffset = 0f;
+                    return true;
+                } else if (pMouseX > 100 && pMouseX <= 120) { // Slot 5 (Tactical)
+                    this.inMunitionSelection = true;
+                    this.editingMunitionCategory = "TACTICAL";
+                    this.scrollOffset = 0f;
+                    return true;
+                }
+            }
             if (pMouseX >= 240) {
                 this.isDraggingModel = true;
             }
             return super.mouseClicked(pMouseX, pMouseY, pButton);
         }
-    }
+    } // <--- Added the missing brace here!
 
     @Override
     public boolean mouseReleased(double pMouseX, double pMouseY, int pButton) {
@@ -574,13 +615,13 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
 
     @Override
     public boolean mouseDragged(double pMouseX, double pMouseY, int pButton, double pDragX, double pDragY) {
-        if ((this.inGunsmith || this.inWeaponSelection || this.inAttachmentSelection) && pMouseX < 240 && pMouseY >= 90) {
+        if ((this.inGunsmith || this.inWeaponSelection || this.inAttachmentSelection || this.inMunitionSelection) && pMouseX < 240 && pMouseY >= 90) {
             this.scrollOffset -= (float) pDragY;
             this.scrollOffset = Math.max(0f, Math.min(this.scrollOffset, this.maxScroll));
             return true;
         }
         
-        if (this.isDraggingModel && !this.inGunsmith && !this.inWeaponSelection && !this.inAttachmentSelection) {
+        if (this.isDraggingModel && !this.inGunsmith && !this.inWeaponSelection && !this.inAttachmentSelection && !this.inMunitionSelection) {
             this.playerRotation += (float) pDragX * 1.5f; 
             return true;
         }
@@ -597,12 +638,27 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
             guiGraphics.fill(0, 0, this.width, this.height, 0xFF070707); 
             this.renderWeaponSelectionBg(guiGraphics, this.height);
             this.renderWeaponSelectionLabels(guiGraphics, mouseX, mouseY, this.width, this.height);
+        } else if (this.inMunitionSelection) {
+            guiGraphics.fill(0, 0, this.width, this.height, 0xFF070707); 
+            this.renderMunitionSelectionBg(guiGraphics, this.height);
+            this.renderMunitionSelectionLabels(guiGraphics, mouseX, mouseY, this.width, this.height);
         } else if (this.inGunsmith) {
             guiGraphics.fill(0, 0, this.width, this.height, 0xFF070707); 
             this.renderGunsmithBg(guiGraphics, this.height);
             this.renderGunsmithLabels(guiGraphics);
         } else {
-            super.render(guiGraphics, mouseX, mouseY, delta);
+            int renderMouseX = mouseX;
+            int renderMouseY = mouseY;
+            
+            // Hide vanilla slot hover highlight for the invisible right-side slots by tricking the renderer
+            if (!this.inGunsmith && !this.inWeaponSelection && !this.inAttachmentSelection && !this.inMunitionSelection) {
+                if (mouseX >= 165 && mouseX <= 195 && mouseY >= 35 && mouseY <= 165) {
+                    renderMouseX = -999;
+                    renderMouseY = -999;
+                }
+            }
+            
+            super.render(guiGraphics, renderMouseX, renderMouseY, delta);
             renderTooltip(guiGraphics, mouseX, mouseY); 
         }
     }
@@ -620,7 +676,7 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
 
     @Override
     protected void renderTooltip(GuiGraphics guiGraphics, int mouseX, int mouseY) {
-        if (!this.inGunsmith && !this.inWeaponSelection && !this.inAttachmentSelection) {
+        if (!this.inGunsmith && !this.inWeaponSelection && !this.inAttachmentSelection && !this.inMunitionSelection) {
             // Intercept tooltips for the invisible slots so they act completely disabled
             if (this.hoveredSlot != null && this.hoveredSlot.x >= 170 && this.hoveredSlot.y >= 40 && this.hoveredSlot.y <= 160) {
                 return;
@@ -641,15 +697,13 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
         drawCleanBox(guiGraphics, 100, 205, 120, 55); 
         guiGraphics.fill(100, 232, 220, 233, 0xFF2E3136); 
 
-        for(int i = 0; i < 5; i++) drawCleanBox(guiGraphics, 20 + (i * 20), 285, 20, 24);
+        // Removed the drawCleanBox generation loop for munition slots, leaving only vertical dividers
         guiGraphics.fill(20, 309, 120, 317, 0xFF2E3136); 
         guiGraphics.fill(123, 285, 124, 317, 0xFF2E3136); 
 
-        for(int i = 0; i < 3; i++) drawCleanBox(guiGraphics, 127 + (i * 20), 285, 20, 24);
         guiGraphics.fill(127, 309, 187, 317, 0xFF2E3136); 
         guiGraphics.fill(190, 285, 191, 317, 0xFF2E3136); 
 
-        drawCleanBox(guiGraphics, 194, 285, 20, 24);
         guiGraphics.fill(194, 309, 214, 317, 0xFF2E3136); 
 
         drawCleanBox(guiGraphics, 20, 345, 80, 55);  
@@ -737,6 +791,33 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
                 guiGraphics.renderItem(attachmentPool[i], 0, 0);
                 guiGraphics.pose().popPose();
             }
+            currentY += 45;
+        }
+        
+        if (this.maxScroll > 0) {
+            guiGraphics.fill(225, 100, 227, trueHeight - 20, 0xFF2E3136);
+            int thumbHeight = Math.max(20, visibleHeight * visibleHeight / listHeight);
+            int thumbY = 100 + (int)((this.scrollOffset / this.maxScroll) * (visibleHeight - 20 - thumbHeight));
+            guiGraphics.fill(224, thumbY, 228, thumbY + thumbHeight, 0xFFD2D6DE);
+        }
+        guiGraphics.disableScissor();
+    }
+
+    private void renderMunitionSelectionBg(GuiGraphics guiGraphics, int trueHeight) {
+        int startY = 100;
+        int visibleHeight = trueHeight - 100;
+        
+        int numBoxes = "GRENADE".equals(this.editingMunitionCategory) ? 4 : 5;
+        int listHeight = numBoxes * 45; 
+        
+        this.maxScroll = Math.max(0f, (float)(listHeight - visibleHeight + 20));
+        this.scrollOffset = Math.max(0f, Math.min(this.scrollOffset, this.maxScroll));
+
+        guiGraphics.enableScissor(0, 90, 240, trueHeight);
+        int currentY = startY - (int)this.scrollOffset;
+        
+        for (int i = 0; i < numBoxes; i++) {
+            drawCleanBox(guiGraphics, 20, currentY, 200, 40);
             currentY += 45;
         }
         
@@ -1053,10 +1134,6 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
         for (int i = 0; i < numBoxes; i++) {
             int y = currentY + (i * 45);
             
-            if (mouseY >= y && mouseY <= y + 40 && mouseX >= 20 && mouseX <= 220) {
-                guiGraphics.fill(21, y + 1, 219, y + 39, 0xFF3E4249); 
-            }
-            
             if (attachmentPool[i] != null && !attachmentPool[i].isEmpty()) {
                 String cleanName = idPool[i].replace("pointblank:", "").replace("_", " ").toUpperCase();
                 drawSmallText(guiGraphics, cleanName, leftX + 45, y + 16, 0.7f, 0xFFFFFFFF);
@@ -1115,11 +1192,11 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
         for (int i = 0; i < numBoxes; i++) {
             int y = currentY + (i * 45);
             
+            // Re-map the preview stack on hover to render off to the right
             if (mouseY >= y && mouseY <= y + 40 && mouseX >= 20 && mouseX <= 220) {
                 if (weaponPool[i] != null && !weaponPool[i].isEmpty()) {
                     previewStack = weaponPool[i]; 
                 }
-                guiGraphics.fill(21, y + 1, 219, y + 39, 0xFF3E4249); 
             }
             
             if (weaponPool[i] != null && !weaponPool[i].isEmpty()) {
@@ -1142,6 +1219,30 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
             guiGraphics.renderItem(previewStack, 0, 0);
             guiGraphics.pose().popPose();
         }
+    }
+
+    private void renderMunitionSelectionLabels(GuiGraphics guiGraphics, int mouseX, int mouseY, int trueWidth, int trueHeight) {
+        drawSmallText(guiGraphics, "< LOADOUT", 20, 25, 0.75f, 0xFFFFFF);
+        
+        drawSmallText(guiGraphics, this.editingMunitionCategory, 20, 55, 1.1f, 0xFFFFFF); 
+        drawSmallText(guiGraphics, "SELECT EQUIPMENT", 20, 75, 0.65f, 0xFFD62929); 
+
+        String[] fakeNames = "GRENADE".equals(this.editingMunitionCategory) 
+                ? new String[]{"9-BANG FLASH GRENADE", "CS GAS", "FLASHBANGS", "STINGER"}
+                : new String[]{"C2", "LOCKPICK GUN", "PEPPER SPRAY", "TASER", "WEDGE"};
+        int numBoxes = fakeNames.length;
+
+        int currentY = 100 - (int)this.scrollOffset;
+        int leftX = 26;
+        
+        guiGraphics.enableScissor(0, 90, 240, trueHeight);
+        for (int i = 0; i < numBoxes; i++) {
+            int y = currentY + (i * 45);
+            
+            // Hover highlight disabled as per design
+            drawSmallText(guiGraphics, fakeNames[i], leftX + 45, y + 16, 0.7f, 0xFFFFFFFF);
+        }
+        guiGraphics.disableScissor();
     }
 
     private void renderGunsmithLabels(GuiGraphics guiGraphics) {
