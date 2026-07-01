@@ -26,9 +26,18 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
     
     private boolean inWeaponSelection = false; 
     private boolean inAttachmentSelection = false;
-    private boolean inMunitionSelection = false; // Added Munition State
+    private boolean inMunitionSelection = false; 
+    private boolean inHeadwearSelection = false; // Added Headwear State
+    
     private String editingAttachmentCategory = "";
     private String editingMunitionCategory = "";
+    private String expandedHeadwearCategory = ""; 
+    
+    // Default Headwear Loadout
+    private String selectedHelmet = "HELMET ONLY";
+    private String selectedMount = "GPNVGS";
+    private String selectedFacewear = "ANTI-FLASH GOGGLES";
+    private String selectedPhosphor = "WHITE PHOSPHOR";
     
     // Scroll Trackers
     private float scrollOffset = 0f;
@@ -187,7 +196,9 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
         this.inWeaponSelection = false;
         this.inAttachmentSelection = false;
         this.inMunitionSelection = false;
+        this.inHeadwearSelection = false;
         this.editingMunitionCategory = "";
+        this.expandedHeadwearCategory = "";
         this.showAmmunitionTab = true;
         this.currentWeaponTab = 0;
         this.scrollOffset = 0f;
@@ -323,7 +334,87 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
     public boolean mouseClicked(double pMouseX, double pMouseY, int pButton) {
         if (pButton != 0) return super.mouseClicked(pMouseX, pMouseY, pButton);
         
-        if (this.inMunitionSelection) {
+        if (this.inHeadwearSelection) {
+            if (pMouseX >= 20 && pMouseX <= 100 && pMouseY >= 15 && pMouseY <= 35) {
+                this.inHeadwearSelection = false;
+                this.scrollOffset = 0f;
+                return true;
+            }
+
+            int currentY = 100 - (int)this.scrollOffset;
+            
+            // --- HELMET LOGIC ---
+            if (pMouseY >= currentY && pMouseY <= currentY + 40 && pMouseX >= 20 && pMouseX <= 220) {
+                this.expandedHeadwearCategory = this.expandedHeadwearCategory.equals("HELMET") ? "" : "HELMET";
+                return true;
+            }
+            currentY += 45;
+            
+            if (this.expandedHeadwearCategory.equals("HELMET")) {
+                String[] list = {"NO HELMET", "HELMET ONLY"};
+                for (String item : list) {
+                    if (pMouseY >= currentY && pMouseY <= currentY + 30 && pMouseX >= 20 && pMouseX <= 220) {
+                        this.selectedHelmet = item;
+                        this.expandedHeadwearCategory = "";
+                        return true;
+                    }
+                    currentY += 35;
+                }
+            }
+            
+            // --- MOUNT LOGIC ---
+            if (pMouseY >= currentY && pMouseY <= currentY + 40 && pMouseX >= 20 && pMouseX <= 220) {
+                this.expandedHeadwearCategory = this.expandedHeadwearCategory.equals("MOUNT") ? "" : "MOUNT";
+                return true;
+            }
+            currentY += 45;
+            
+            if (this.expandedHeadwearCategory.equals("MOUNT")) {
+                String[] list = {"NONE", "NVGS", "GPNVGS"};
+                for (String item : list) {
+                    if (pMouseY >= currentY && pMouseY <= currentY + 30 && pMouseX >= 20 && pMouseX <= 220) {
+                        this.selectedMount = item;
+                        this.expandedHeadwearCategory = "";
+                        return true;
+                    }
+                    currentY += 35;
+                }
+            }
+            
+            if (!this.selectedMount.equals("NONE")) {
+                if (pMouseY >= currentY && pMouseY <= currentY + 40) {
+                    if (pMouseX >= 20 && pMouseX <= 118) {
+                        this.selectedPhosphor = "GREEN PHOSPHOR";
+                        return true;
+                    } else if (pMouseX >= 122 && pMouseX <= 220) {
+                        this.selectedPhosphor = "WHITE PHOSPHOR";
+                        return true;
+                    }
+                }
+                currentY += 45;
+            }
+            
+            // --- FACEWEAR LOGIC ---
+            if (pMouseY >= currentY && pMouseY <= currentY + 40 && pMouseX >= 20 && pMouseX <= 220) {
+                this.expandedHeadwearCategory = this.expandedHeadwearCategory.equals("FACEWEAR") ? "" : "FACEWEAR";
+                return true;
+            }
+            currentY += 45;
+            
+            if (this.expandedHeadwearCategory.equals("FACEWEAR")) {
+                String[] list = {"NONE", "GOGGLES", "GAS MASK"};
+                for (String item : list) {
+                    if (pMouseY >= currentY && pMouseY <= currentY + 30 && pMouseX >= 20 && pMouseX <= 220) {
+                        this.selectedFacewear = item;
+                        this.expandedHeadwearCategory = "";
+                        return true;
+                    }
+                    currentY += 35;
+                }
+            }
+            
+            return true;
+        } else if (this.inMunitionSelection) {
             if (pMouseX >= 20 && pMouseX <= 100 && pMouseY >= 15 && pMouseY <= 35) {
                 this.inMunitionSelection = false;
                 this.scrollOffset = 0f;
@@ -580,14 +671,21 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
                 this.currentWeaponTab = 8; // Instantly lock onto Sidearm category
                 return true;
             }
-            // Trigger Munition Selection Tab if clicking inside the Munition Slots boundary
-            if (pMouseY >= 285 && pMouseY <= 309) {
-                if (pMouseX >= 20 && pMouseX <= 220) {
-                    this.inMunitionSelection = true;
-                    this.scrollOffset = 0f;
-                    return true;
-                }
+            
+            // Trigger Munition Selection Tab
+            if (pMouseY >= 285 && pMouseY <= 309 && pMouseX >= 20 && pMouseX <= 220) {
+                this.inMunitionSelection = true;
+                this.scrollOffset = 0f;
+                return true;
             }
+            
+            // Trigger Headwear Selection Tab
+            if (pMouseY >= 330 && pMouseY <= 400 && pMouseX >= 20 && pMouseX <= 220) {
+                this.inHeadwearSelection = true;
+                this.scrollOffset = 0f;
+                return true;
+            }
+            
             if (pMouseX >= 240) {
                 this.isDraggingModel = true;
             }
@@ -603,13 +701,13 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
 
     @Override
     public boolean mouseDragged(double pMouseX, double pMouseY, int pButton, double pDragX, double pDragY) {
-        if ((this.inGunsmith || this.inWeaponSelection || this.inAttachmentSelection || this.inMunitionSelection) && pMouseX < 240 && pMouseY >= 90) {
+        if ((this.inGunsmith || this.inWeaponSelection || this.inAttachmentSelection || this.inMunitionSelection || this.inHeadwearSelection) && pMouseX < 240 && pMouseY >= 90) {
             this.scrollOffset -= (float) pDragY;
             this.scrollOffset = Math.max(0f, Math.min(this.scrollOffset, this.maxScroll));
             return true;
         }
         
-        if (this.isDraggingModel && !this.inGunsmith && !this.inWeaponSelection && !this.inAttachmentSelection && !this.inMunitionSelection) {
+        if (this.isDraggingModel && !this.inGunsmith && !this.inWeaponSelection && !this.inAttachmentSelection && !this.inMunitionSelection && !this.inHeadwearSelection) {
             this.playerRotation += (float) pDragX * 1.5f; 
             return true;
         }
@@ -630,6 +728,10 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
             guiGraphics.fill(0, 0, this.width, this.height, 0xFF070707); 
             this.renderMunitionSelectionBg(guiGraphics, this.height);
             this.renderMunitionSelectionLabels(guiGraphics, mouseX, mouseY, this.width, this.height);
+        } else if (this.inHeadwearSelection) {
+            guiGraphics.fill(0, 0, this.width, this.height, 0xFF070707); 
+            this.renderHeadwearSelectionBg(guiGraphics, this.height);
+            this.renderHeadwearSelectionLabels(guiGraphics, mouseX, mouseY, this.width, this.height);
         } else if (this.inGunsmith) {
             guiGraphics.fill(0, 0, this.width, this.height, 0xFF070707); 
             this.renderGunsmithBg(guiGraphics, this.height);
@@ -638,9 +740,13 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
             int renderMouseX = mouseX;
             int renderMouseY = mouseY;
             
-            // Hide vanilla slot hover highlight for the invisible right-side slots by tricking the renderer
-            if (!this.inGunsmith && !this.inWeaponSelection && !this.inAttachmentSelection && !this.inMunitionSelection) {
+            // Hide vanilla slot hover highlight for the invisible right-side slots and bottom left layout
+            if (!this.inGunsmith && !this.inWeaponSelection && !this.inAttachmentSelection && !this.inMunitionSelection && !this.inHeadwearSelection) {
                 if (mouseX >= 165 && mouseX <= 195 && mouseY >= 35 && mouseY <= 165) {
+                    renderMouseX = -999;
+                    renderMouseY = -999;
+                } else if (mouseX < 240 && mouseY >= 190) {
+                    // Hide vanilla gray highlights for Armor, Munition, and Headwear slot sections
                     renderMouseX = -999;
                     renderMouseY = -999;
                 }
@@ -664,7 +770,7 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
 
     @Override
     protected void renderTooltip(GuiGraphics guiGraphics, int mouseX, int mouseY) {
-        if (!this.inGunsmith && !this.inWeaponSelection && !this.inAttachmentSelection && !this.inMunitionSelection) {
+        if (!this.inGunsmith && !this.inWeaponSelection && !this.inAttachmentSelection && !this.inMunitionSelection && !this.inHeadwearSelection) {
             // Intercept tooltips for the invisible slots so they act completely disabled
             if (this.hoveredSlot != null && this.hoveredSlot.x >= 170 && this.hoveredSlot.y >= 40 && this.hoveredSlot.y <= 160) {
                 return;
@@ -715,6 +821,58 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
 
             guiGraphics.pose().popPose();
         }
+    }
+
+    private void renderHeadwearSelectionBg(GuiGraphics guiGraphics, int trueHeight) {
+        int visibleHeight = trueHeight - 100;
+        
+        int currentY = 0;
+        currentY += 45; // Helmet box
+        if (this.expandedHeadwearCategory.equals("HELMET")) currentY += 2 * 35;
+        
+        currentY += 45; // Mount box
+        if (this.expandedHeadwearCategory.equals("MOUNT")) currentY += 3 * 35;
+        if (!this.selectedMount.equals("NONE")) {
+            currentY += 45; // Phosphor boxes directly underneath
+        }
+        
+        currentY += 45; // Facewear box
+        if (this.expandedHeadwearCategory.equals("FACEWEAR")) currentY += 3 * 35;
+        
+        int listHeight = currentY + 20;
+        this.maxScroll = Math.max(0f, (float)(listHeight - visibleHeight));
+        this.scrollOffset = Math.max(0f, Math.min(this.scrollOffset, this.maxScroll));
+
+        guiGraphics.enableScissor(0, 90, 240, trueHeight);
+        int drawY = 100 - (int)this.scrollOffset;
+        
+        // HELMET Box
+        drawCleanBox(guiGraphics, 20, drawY, 200, 40);
+        drawY += 45;
+        if (this.expandedHeadwearCategory.equals("HELMET")) drawY += 2 * 35;
+        
+        // MOUNT Box
+        drawCleanBox(guiGraphics, 20, drawY, 200, 40);
+        drawY += 45;
+        if (this.expandedHeadwearCategory.equals("MOUNT")) drawY += 3 * 35;
+        if (!this.selectedMount.equals("NONE")) {
+            drawCleanBox(guiGraphics, 20, drawY, 98, 40);
+            drawCleanBox(guiGraphics, 122, drawY, 98, 40);
+            drawY += 45;
+        }
+        
+        // FACEWEAR Box
+        drawCleanBox(guiGraphics, 20, drawY, 200, 40);
+        drawY += 45;
+        if (this.expandedHeadwearCategory.equals("FACEWEAR")) drawY += 3 * 35;
+        
+        if (this.maxScroll > 0) {
+            guiGraphics.fill(225, 100, 227, trueHeight - 20, 0xFF2E3136);
+            int thumbHeight = Math.max(20, visibleHeight * visibleHeight / listHeight);
+            int thumbY = 100 + (int)((this.scrollOffset / this.maxScroll) * (visibleHeight - 20 - thumbHeight));
+            guiGraphics.fill(224, thumbY, 228, thumbY + thumbHeight, 0xFFD2D6DE);
+        }
+        guiGraphics.disableScissor();
     }
 
     private void renderWeaponSelectionBg(GuiGraphics guiGraphics, int trueHeight) {
@@ -1088,14 +1246,93 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
         drawSmallText(guiGraphics, "AP", 153, 310, 0.55f, 0xFFFFFFFF);
         drawSmallText(guiGraphics, "5", 201, 310, 0.55f, 0xFFFFFFFF);
 
+        // --- HEADWEAR DYNAMIC LABELS ---
         drawSmallText(guiGraphics, "HEADWEAR", 20, 330, 0.65f, 0xFFAAAAAA);
+        
         drawSmallText(guiGraphics, "HELMET", 26, 383, 0.55f, 0xFF7A818C);
-        drawSmallText(guiGraphics, "HELMET ONLY", 26, 389, 0.75f, 0xFFD2D6DE);
+        drawSmallText(guiGraphics, this.selectedHelmet, 26, 389, 0.75f, 0xFFD2D6DE);
+        
         drawSmallText(guiGraphics, "MOUNT | ", 106, 358, 0.55f, 0xFF7A818C);
-        drawSmallText(guiGraphics, "WHITE PHOSPHOR", 106 + (int)(this.font.width("MOUNT | ") * 0.55f), 358, 0.55f, 0xFFD62929);
-        drawSmallText(guiGraphics, "GPNVGS", 106, 364, 0.75f, 0xFFD2D6DE);
+        if (!this.selectedMount.equals("NONE")) {
+            String phosphorTrim = this.selectedPhosphor.equals("WHITE PHOSPHOR") ? "WHITE" : "GREEN";
+            drawSmallText(guiGraphics, phosphorTrim, 106 + (int)(this.font.width("MOUNT | ") * 0.55f), 358, 0.55f, 0xFFD62929);
+        }
+        drawSmallText(guiGraphics, this.selectedMount, 106, 364, 0.75f, 0xFFD2D6DE);
+        
         drawSmallText(guiGraphics, "FACEWEAR", 106, 384, 0.55f, 0xFF7A818C);
-        drawSmallText(guiGraphics, "ANTI-FLASH GOGGLES", 106, 390, 0.75f, 0xFFD2D6DE);
+        drawSmallText(guiGraphics, this.selectedFacewear, 106, 390, 0.75f, 0xFFD2D6DE);
+    }
+
+    private void renderHeadwearSelectionLabels(GuiGraphics guiGraphics, int mouseX, int mouseY, int trueWidth, int trueHeight) {
+        drawSmallText(guiGraphics, "< LOADOUT", 20, 25, 0.75f, 0xFFFFFF);
+        drawSmallText(guiGraphics, "HEADWEAR", 20, 55, 1.1f, 0xFFFFFF); 
+        drawSmallText(guiGraphics, "SELECT EQUIPMENT", 20, 75, 0.65f, 0xFFD62929); 
+
+        int currentY = 100 - (int)this.scrollOffset;
+        int leftX = 26;
+        
+        guiGraphics.enableScissor(0, 90, 240, trueHeight);
+        
+        // --- HELMET SECTION ---
+        drawSmallText(guiGraphics, "HELMET", leftX, currentY + 8, 0.45f, 0xFF7A818C);
+        drawSmallText(guiGraphics, this.selectedHelmet, leftX, currentY + 18, 0.75f, 0xFFFFFFFF);
+        currentY += 45;
+        
+        if (this.expandedHeadwearCategory.equals("HELMET")) {
+            String[] list = {"NO HELMET", "HELMET ONLY"};
+            for (String item : list) {
+                renderTextListItem(guiGraphics, item, 20, currentY, mouseX, mouseY);
+                currentY += 35;
+            }
+        }
+        
+        // --- MOUNT SECTION ---
+        drawSmallText(guiGraphics, "MOUNT", leftX, currentY + 8, 0.45f, 0xFF7A818C);
+        drawSmallText(guiGraphics, this.selectedMount, leftX, currentY + 18, 0.75f, 0xFFFFFFFF);
+        currentY += 45;
+        
+        if (this.expandedHeadwearCategory.equals("MOUNT")) {
+            String[] list = {"NONE", "NVGS", "GPNVGS"};
+            for (String item : list) {
+                renderTextListItem(guiGraphics, item, 20, currentY, mouseX, mouseY);
+                currentY += 35;
+            }
+        }
+        
+        // PHOSPHOR SUB-OPTIONS (Only show if NVGs are active)
+        if (!this.selectedMount.equals("NONE")) {
+            boolean greenHover = mouseY >= currentY && mouseY <= currentY + 40 && mouseX >= 20 && mouseX <= 118;
+            boolean whiteHover = mouseY >= currentY && mouseY <= currentY + 40 && mouseX >= 122 && mouseX <= 220;
+            
+            int greenColor = this.selectedPhosphor.equals("GREEN PHOSPHOR") ? 0xFFD62929 : (greenHover ? 0xFFFFFFFF : 0xFF7A818C);
+            int whiteColor = this.selectedPhosphor.equals("WHITE PHOSPHOR") ? 0xFFD62929 : (whiteHover ? 0xFFFFFFFF : 0xFF7A818C);
+            
+            drawSmallText(guiGraphics, "GREEN", 26, currentY + 10, 0.65f, greenColor);
+            drawSmallText(guiGraphics, "PHOSPHOR", 26, currentY + 22, 0.65f, greenColor);
+            
+            drawSmallText(guiGraphics, "WHITE", 128, currentY + 10, 0.65f, whiteColor);
+            drawSmallText(guiGraphics, "PHOSPHOR", 128, currentY + 22, 0.65f, whiteColor);
+            
+            if (this.selectedPhosphor.equals("GREEN PHOSPHOR")) guiGraphics.fill(20, currentY + 38, 118, currentY + 40, 0xFFD62929);
+            if (this.selectedPhosphor.equals("WHITE PHOSPHOR")) guiGraphics.fill(122, currentY + 38, 220, currentY + 40, 0xFFD62929);
+            
+            currentY += 45;
+        }
+        
+        // --- FACEWEAR SECTION ---
+        drawSmallText(guiGraphics, "FACEWEAR", leftX, currentY + 8, 0.45f, 0xFF7A818C);
+        drawSmallText(guiGraphics, this.selectedFacewear, leftX, currentY + 18, 0.75f, 0xFFFFFFFF);
+        currentY += 45;
+        
+        if (this.expandedHeadwearCategory.equals("FACEWEAR")) {
+            String[] list = {"NONE", "GOGGLES", "GAS MASK"};
+            for (String item : list) {
+                renderTextListItem(guiGraphics, item, 20, currentY, mouseX, mouseY);
+                currentY += 35;
+            }
+        }
+        
+        guiGraphics.disableScissor();
     }
 
     private void renderAttachmentSelectionLabels(GuiGraphics guiGraphics, int mouseX, int mouseY, int trueWidth, int trueHeight) {
@@ -1222,7 +1459,7 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
         drawSmallText(guiGraphics, "PRIMARY AMMUNITION", leftX, currentY, 0.65f, 0xFF7A818C);
         currentY += 20;
         for (String name : ammoNames) {
-            renderMunitionItem(guiGraphics, name, leftX, currentY, mouseX, mouseY);
+            renderTextListItem(guiGraphics, name, leftX, currentY, mouseX, mouseY);
             currentY += 35;
         }
         
@@ -1232,7 +1469,7 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
         drawSmallText(guiGraphics, "GRENADE", leftX, currentY, 0.65f, 0xFF7A818C);
         currentY += 20;
         for (String name : grenadeNames) {
-            renderMunitionItem(guiGraphics, name, leftX, currentY, mouseX, mouseY);
+            renderTextListItem(guiGraphics, name, leftX, currentY, mouseX, mouseY);
             currentY += 35;
         }
         
@@ -1242,14 +1479,14 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
         drawSmallText(guiGraphics, "TACTICAL", leftX, currentY, 0.65f, 0xFF7A818C);
         currentY += 20;
         for (String name : tacticalNames) {
-            renderMunitionItem(guiGraphics, name, leftX, currentY, mouseX, mouseY);
+            renderTextListItem(guiGraphics, name, leftX, currentY, mouseX, mouseY);
             currentY += 35;
         }
 
         guiGraphics.disableScissor();
     }
 
-    private void renderMunitionItem(GuiGraphics guiGraphics, String name, int x, int y, int mouseX, int mouseY) {
+    private void renderTextListItem(GuiGraphics guiGraphics, String name, int x, int y, int mouseX, int mouseY) {
         boolean isHovered = mouseY >= y && mouseY <= y + 30 && mouseX >= x && mouseX <= x + 200;
         int textColor = isHovered ? 0xFFFFFFFF : 0xFF7A818C;
         
