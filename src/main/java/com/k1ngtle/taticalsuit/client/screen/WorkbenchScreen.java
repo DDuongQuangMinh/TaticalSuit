@@ -15,6 +15,7 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
     private float playerRotation = 0f;
     
     // UI State Trackers
+    private boolean inCustomizationTab = false; // Switches between Loadout and Customization main screens
     private boolean inGunsmith = false; 
     private boolean showAmmunitionTab = true; 
     
@@ -29,11 +30,13 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
     private boolean inMunitionSelection = false; 
     private boolean inHeadwearSelection = false;
     private boolean inArmorSelection = false; 
+    private boolean inCustomizationSelection = false; 
     
     private String editingAttachmentCategory = "";
     private String editingMunitionCategory = "";
     private String expandedHeadwearCategory = ""; 
     private String expandedArmorCategory = ""; 
+    private String customizationCategory = "";
     
     // Default Headwear Loadout
     private String selectedHelmet = "HELMET ONLY";
@@ -200,15 +203,20 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
         this.topPos = 0;
         
         // Ensure ALL states are strictly reset when the menu is opened!
+        this.inCustomizationTab = false;
         this.inGunsmith = false;
         this.inWeaponSelection = false;
         this.inAttachmentSelection = false;
         this.inMunitionSelection = false;
         this.inHeadwearSelection = false;
         this.inArmorSelection = false;
+        this.inCustomizationSelection = false;
+        
         this.editingMunitionCategory = "";
         this.expandedHeadwearCategory = "";
         this.expandedArmorCategory = "";
+        this.customizationCategory = "";
+        
         this.showAmmunitionTab = true;
         this.currentWeaponTab = 0;
         this.scrollOffset = 0f;
@@ -344,6 +352,43 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
     public boolean mouseClicked(double pMouseX, double pMouseY, int pButton) {
         if (pButton != 0) return super.mouseClicked(pMouseX, pMouseY, pButton);
         
+        // --- CUSTOMIZATION GRID SELECTION LOGIC ---
+        if (this.inCustomizationTab && this.inCustomizationSelection) {
+            if (pMouseX < 240) {
+                // Clicked back on the left panel, close the right side grid
+                this.inCustomizationSelection = false;
+                this.scrollOffset = 0f;
+                return true;
+            }
+
+            boolean isLargeGrid = this.customizationCategory.equals("SHIRT") || this.customizationCategory.equals("PANTS") || this.customizationCategory.equals("ARMOR");
+            int cols = isLargeGrid ? 3 : 2;
+            int rows = isLargeGrid ? 7 : 6;
+            
+            int gridWidth = (cols * 40) + ((cols - 1) * 10);
+            int startX = 240 + ((this.width - 240) - gridWidth) / 2;
+            int startY = 50 - (int)this.scrollOffset;
+            
+            for (int i = 0; i < (rows * cols); i++) {
+                int col = i % cols;
+                int row = i / cols;
+                int boxX = startX + (col * 50);
+                int boxY = startY + (row * 50);
+                
+                if (pMouseX >= boxX && pMouseX <= boxX + 40 && pMouseY >= boxY && pMouseY <= boxY + 40) {
+                    if (System.currentTimeMillis() - this.lastClickTime < 500) return true;
+                    this.lastClickTime = System.currentTimeMillis();
+                    
+                    // Here is where future equip logic for customization goes.
+                    // For now, close the menu upon selection!
+                    this.inCustomizationSelection = false;
+                    this.scrollOffset = 0f;
+                    return true;
+                }
+            }
+            return true;
+        }
+
         if (this.inArmorSelection) {
             if (pMouseX >= 20 && pMouseX <= 100 && pMouseY >= 15 && pMouseY <= 35) {
                 this.inArmorSelection = false;
@@ -743,40 +788,94 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
             }
             return true; 
         } else {
-            if (pMouseX >= 20 && pMouseX <= 220 && pMouseY >= 40 && pMouseY <= 85) {
-                this.inGunsmith = true;
-                this.scrollOffset = 0f; 
-                this.showAmmunitionTab = true; 
-                if (this.currentWeaponTab == 8) this.currentWeaponTab = 0; // Return to primary if currently sidearm
-                return true;
+            // Main Top Tabs Interception
+            if (pMouseY >= 4 && pMouseY <= 16) {
+                int loadoutWidth = this.font.width("LOADOUT");
+                int customX = 20 + loadoutWidth + this.font.width(" / ");
+                if (pMouseX >= 20 && pMouseX <= 20 + loadoutWidth) {
+                    this.inCustomizationTab = false;
+                    this.inCustomizationSelection = false;
+                    return true;
+                } else if (pMouseX >= customX && pMouseX <= customX + this.font.width("CUSTOMIZATION")) {
+                    this.inCustomizationTab = true;
+                    this.inCustomizationSelection = false;
+                    return true;
+                }
             }
-            if (pMouseX >= 20 && pMouseX <= 220 && pMouseY >= 85 && pMouseY <= 130) {
-                this.inGunsmith = true;
-                this.scrollOffset = 0f; 
-                this.showAmmunitionTab = true; 
-                this.currentWeaponTab = 8; // Instantly lock onto Sidearm category
-                return true;
-            }
-            
-            // Trigger Armor Selection Tab
-            if (pMouseY >= 190 && pMouseY <= 265 && pMouseX >= 20 && pMouseX <= 220) {
-                this.inArmorSelection = true;
-                this.scrollOffset = 0f;
-                return true;
-            }
-            
-            // Trigger Munition Selection Tab
-            if (pMouseY >= 285 && pMouseY <= 309 && pMouseX >= 20 && pMouseX <= 220) {
-                this.inMunitionSelection = true;
-                this.scrollOffset = 0f;
-                return true;
-            }
-            
-            // Trigger Headwear Selection Tab
-            if (pMouseY >= 330 && pMouseY <= 400 && pMouseX >= 20 && pMouseX <= 220) {
-                this.inHeadwearSelection = true;
-                this.scrollOffset = 0f;
-                return true;
+
+            if (this.inCustomizationTab) {
+                int startY = 30;
+                int currentY = startY + 15;
+                
+                // UNIFORM
+                if (pMouseY >= currentY && pMouseY <= currentY + 40) {
+                    if (pMouseX >= 20 && pMouseX <= 115) { this.inCustomizationSelection = true; this.customizationCategory = "SHIRT"; this.scrollOffset = 0f; return true; }
+                    if (pMouseX >= 125 && pMouseX <= 220) { this.inCustomizationSelection = true; this.customizationCategory = "PANTS"; this.scrollOffset = 0f; return true; }
+                }
+                currentY += 45;
+                if (pMouseY >= currentY && pMouseY <= currentY + 40) {
+                    if (pMouseX >= 20 && pMouseX <= 80) { this.inCustomizationSelection = true; this.customizationCategory = "GLOVES"; this.scrollOffset = 0f; return true; }
+                    if (pMouseX >= 90 && pMouseX <= 150) { this.inCustomizationSelection = true; this.customizationCategory = "BOOTS"; this.scrollOffset = 0f; return true; }
+                    if (pMouseX >= 160 && pMouseX <= 220) { this.inCustomizationSelection = true; this.customizationCategory = "BELT"; this.scrollOffset = 0f; return true; }
+                }
+                
+                // TACTICAL GEAR
+                currentY += 60; 
+                if (pMouseY >= currentY && pMouseY <= currentY + 40) {
+                    if (pMouseX >= 20 && pMouseX <= 115) { this.inCustomizationSelection = true; this.customizationCategory = "ARMOR"; this.scrollOffset = 0f; return true; }
+                    if (pMouseX >= 125 && pMouseX <= 220) { this.inCustomizationSelection = true; this.customizationCategory = "HELMET"; this.scrollOffset = 0f; return true; }
+                }
+                currentY += 45;
+                if (pMouseY >= currentY && pMouseY <= currentY + 40) {
+                    if (pMouseX >= 20 && pMouseX <= 80) { this.inCustomizationSelection = true; this.customizationCategory = "FACEWEAR"; this.scrollOffset = 0f; return true; }
+                    if (pMouseX >= 90 && pMouseX <= 150) { this.inCustomizationSelection = true; this.customizationCategory = "NVG"; this.scrollOffset = 0f; return true; }
+                    if (pMouseX >= 160 && pMouseX <= 220) { this.inCustomizationSelection = true; this.customizationCategory = "BALLISTIC MASK"; this.scrollOffset = 0f; return true; }
+                }
+                
+                // ACCESSORIES
+                currentY += 60;
+                if (pMouseY >= currentY && pMouseY <= currentY + 40) {
+                    if (pMouseX >= 20 && pMouseX <= 80) { this.inCustomizationSelection = true; this.customizationCategory = "TATTOO"; this.scrollOffset = 0f; return true; }
+                    if (pMouseX >= 90 && pMouseX <= 150) { this.inCustomizationSelection = true; this.customizationCategory = "EYEWEAR"; this.scrollOffset = 0f; return true; }
+                    if (pMouseX >= 160 && pMouseX <= 220) { this.inCustomizationSelection = true; this.customizationCategory = "WATCH"; this.scrollOffset = 0f; return true; }
+                }
+                
+            } else {
+                if (pMouseX >= 20 && pMouseX <= 220 && pMouseY >= 40 && pMouseY <= 85) {
+                    this.inGunsmith = true;
+                    this.scrollOffset = 0f; 
+                    this.showAmmunitionTab = true; 
+                    if (this.currentWeaponTab == 8) this.currentWeaponTab = 0; // Return to primary if currently sidearm
+                    return true;
+                }
+                if (pMouseX >= 20 && pMouseX <= 220 && pMouseY >= 85 && pMouseY <= 130) {
+                    this.inGunsmith = true;
+                    this.scrollOffset = 0f; 
+                    this.showAmmunitionTab = true; 
+                    this.currentWeaponTab = 8; // Instantly lock onto Sidearm category
+                    return true;
+                }
+                
+                // Trigger Armor Selection Tab
+                if (pMouseY >= 190 && pMouseY <= 265 && pMouseX >= 20 && pMouseX <= 220) {
+                    this.inArmorSelection = true;
+                    this.scrollOffset = 0f;
+                    return true;
+                }
+                
+                // Trigger Munition Selection Tab
+                if (pMouseY >= 285 && pMouseY <= 309 && pMouseX >= 20 && pMouseX <= 220) {
+                    this.inMunitionSelection = true;
+                    this.scrollOffset = 0f;
+                    return true;
+                }
+                
+                // Trigger Headwear Selection Tab
+                if (pMouseY >= 330 && pMouseY <= 400 && pMouseX >= 20 && pMouseX <= 220) {
+                    this.inHeadwearSelection = true;
+                    this.scrollOffset = 0f;
+                    return true;
+                }
             }
             
             if (pMouseX >= 240) {
@@ -794,13 +893,17 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
 
     @Override
     public boolean mouseDragged(double pMouseX, double pMouseY, int pButton, double pDragX, double pDragY) {
-        if ((this.inGunsmith || this.inWeaponSelection || this.inAttachmentSelection || this.inMunitionSelection || this.inHeadwearSelection || this.inArmorSelection) && pMouseX < 240 && pMouseY >= 90) {
+        if (this.inCustomizationSelection && pMouseX >= 240) {
+            this.scrollOffset -= (float) pDragY;
+            this.scrollOffset = Math.max(0f, Math.min(this.scrollOffset, this.maxScroll));
+            return true;
+        } else if ((this.inGunsmith || this.inWeaponSelection || this.inAttachmentSelection || this.inMunitionSelection || this.inHeadwearSelection || this.inArmorSelection) && pMouseX < 240 && pMouseY >= 90) {
             this.scrollOffset -= (float) pDragY;
             this.scrollOffset = Math.max(0f, Math.min(this.scrollOffset, this.maxScroll));
             return true;
         }
         
-        if (this.isDraggingModel && !this.inGunsmith && !this.inWeaponSelection && !this.inAttachmentSelection && !this.inMunitionSelection && !this.inHeadwearSelection && !this.inArmorSelection) {
+        if (this.isDraggingModel && !this.inGunsmith && !this.inWeaponSelection && !this.inAttachmentSelection && !this.inMunitionSelection && !this.inHeadwearSelection && !this.inArmorSelection && !this.inCustomizationSelection) {
             this.playerRotation += (float) pDragX * 1.5f; 
             return true;
         }
@@ -839,13 +942,21 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
             
             // Hide vanilla slot hover highlight for the invisible right-side slots and bottom left layout
             if (!this.inGunsmith && !this.inWeaponSelection && !this.inAttachmentSelection && !this.inMunitionSelection && !this.inHeadwearSelection && !this.inArmorSelection) {
-                if (mouseX >= 165 && mouseX <= 195 && mouseY >= 35 && mouseY <= 165) {
-                    renderMouseX = -999;
-                    renderMouseY = -999;
-                } else if (mouseX < 240 && mouseY >= 190) {
-                    // Hide vanilla gray highlights for Armor, Munition, and Headwear slot sections
-                    renderMouseX = -999;
-                    renderMouseY = -999;
+                if (this.inCustomizationTab) {
+                    // Hide all slot hovers when in customization tab
+                    if (mouseX < 240) {
+                        renderMouseX = -999;
+                        renderMouseY = -999;
+                    }
+                } else {
+                    if (mouseX >= 165 && mouseX <= 195 && mouseY >= 35 && mouseY <= 165) {
+                        renderMouseX = -999;
+                        renderMouseY = -999;
+                    } else if (mouseX < 240 && mouseY >= 190) {
+                        // Hide vanilla gray highlights for Armor, Munition, and Headwear slot sections
+                        renderMouseX = -999;
+                        renderMouseY = -999;
+                    }
                 }
             }
             
@@ -856,12 +967,186 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
     @Override
     protected void renderBg(GuiGraphics guiGraphics, float partialTick, int mouseX, int mouseY) {
         guiGraphics.fill(0, 0, this.width, this.height, 0xFF070707);
-        renderLoadoutBg(guiGraphics, this.width, this.height, mouseX, mouseY);
+        if (this.inCustomizationTab) {
+            renderCustomizationBg(guiGraphics, this.width, this.height, mouseX, mouseY);
+            if (this.inCustomizationSelection) {
+                renderCustomizationGridBg(guiGraphics, this.width, this.height, mouseX, mouseY);
+            }
+        } else {
+            renderLoadoutBg(guiGraphics, this.width, this.height, mouseX, mouseY);
+        }
     }
 
     @Override
     protected void renderLabels(GuiGraphics guiGraphics, int mouseX, int mouseY) {
-        renderLoadoutLabels(guiGraphics);
+        if (!this.inGunsmith && !this.inWeaponSelection && !this.inAttachmentSelection && !this.inMunitionSelection && !this.inHeadwearSelection && !this.inArmorSelection) {
+            
+            int loadoutColor = !this.inCustomizationTab ? 0xFFFFFFFF : 0xFF7A818C;
+            int customColor = this.inCustomizationTab ? 0xFFFFFFFF : 0xFF7A818C;
+            
+            guiGraphics.drawString(this.font, "LOADOUT", 20, 6, loadoutColor, false);
+            
+            int slashX = 20 + this.font.width("LOADOUT") + 4;
+            guiGraphics.drawString(this.font, "/", slashX, 6, 0xFF555555, false);
+            
+            int customX = slashX + this.font.width("/") + 4;
+            guiGraphics.drawString(this.font, "CUSTOMIZATION", customX, 6, customColor, false);
+            
+            if (this.inCustomizationTab) {
+                renderCustomizationLabels(guiGraphics, mouseX, mouseY);
+                if (this.inCustomizationSelection) {
+                    renderCustomizationGridLabels(guiGraphics, mouseX, mouseY, this.width, this.height);
+                }
+            } else {
+                renderLoadoutLabels(guiGraphics);
+            }
+        }
+    }
+
+    private void render3DOperator(GuiGraphics guiGraphics, int trueWidth, int trueHeight) {
+        if (Minecraft.getInstance().player != null) {
+            int openSpaceCenter = 240 + (trueWidth - 240) / 2; 
+            int operatorScale = 260; 
+            int operatorFloorAnchor = trueHeight + 170; 
+
+            guiGraphics.pose().pushPose();
+            guiGraphics.pose().translate(openSpaceCenter, operatorFloorAnchor, 50.0);
+            guiGraphics.pose().mulPose(com.mojang.math.Axis.YP.rotationDegrees(this.playerRotation));
+            guiGraphics.pose().translate(0, 0, -50.0);
+
+            InventoryScreen.renderEntityInInventoryFollowsMouse(
+                    guiGraphics,
+                    0, 0, operatorScale, 0f, 0f, Minecraft.getInstance().player 
+            );
+
+            guiGraphics.pose().popPose();
+        }
+    }
+
+    private void renderCustomizationBg(GuiGraphics guiGraphics, int trueWidth, int trueHeight, int mouseX, int mouseY) {
+        guiGraphics.fill(0, 0, 240, trueHeight, 0xFF121212);
+        guiGraphics.fill(20, 16, 220, 18, 0xFFD62929);
+
+        int startY = 30;
+        
+        // UNIFORM
+        int currentY = startY + 15;
+        drawCleanBox(guiGraphics, 20, currentY, 95, 40);
+        drawCleanBox(guiGraphics, 125, currentY, 95, 40);
+        currentY += 45;
+        drawCleanBox(guiGraphics, 20, currentY, 60, 40);
+        drawCleanBox(guiGraphics, 90, currentY, 60, 40);
+        drawCleanBox(guiGraphics, 160, currentY, 60, 40);
+        
+        // TACTICAL GEAR
+        currentY += 60;
+        drawCleanBox(guiGraphics, 20, currentY, 95, 40);
+        drawCleanBox(guiGraphics, 125, currentY, 95, 40);
+        currentY += 45;
+        drawCleanBox(guiGraphics, 20, currentY, 60, 40);
+        drawCleanBox(guiGraphics, 90, currentY, 60, 40);
+        drawCleanBox(guiGraphics, 160, currentY, 60, 40);
+        
+        // ACCESSORIES
+        currentY += 60;
+        drawCleanBox(guiGraphics, 20, currentY, 60, 40);
+        drawCleanBox(guiGraphics, 90, currentY, 60, 40);
+        drawCleanBox(guiGraphics, 160, currentY, 60, 40);
+
+        render3DOperator(guiGraphics, trueWidth, trueHeight);
+    }
+
+    private void renderCustomizationGridBg(GuiGraphics guiGraphics, int trueWidth, int trueHeight, int mouseX, int mouseY) {
+        guiGraphics.fill(240, 0, trueWidth, trueHeight, 0xCC121212); // Translucent dark background overlaying model
+        
+        boolean isLargeGrid = this.customizationCategory.equals("SHIRT") || this.customizationCategory.equals("PANTS") || this.customizationCategory.equals("ARMOR");
+        int cols = isLargeGrid ? 3 : 2;
+        int rows = isLargeGrid ? 7 : 6;
+        
+        int gridWidth = (cols * 40) + ((cols - 1) * 10);
+        int startX = 240 + ((trueWidth - 240) - gridWidth) / 2;
+        int startY = 50 - (int)this.scrollOffset;
+        
+        int listHeight = (rows * 50); 
+        int visibleHeight = trueHeight - 50;
+        this.maxScroll = Math.max(0f, (float)(listHeight - visibleHeight + 20));
+        this.scrollOffset = Math.max(0f, Math.min(this.scrollOffset, this.maxScroll));
+
+        guiGraphics.enableScissor(240, 40, trueWidth, trueHeight);
+        
+        for (int i = 0; i < (rows * cols); i++) {
+            int col = i % cols;
+            int row = i / cols;
+            int boxX = startX + (col * 50);
+            int boxY = startY + (row * 50);
+            
+            drawCleanBox(guiGraphics, boxX, boxY, 40, 40);
+        }
+        
+        if (this.maxScroll > 0) {
+            int scrollX = startX + gridWidth + 15;
+            guiGraphics.fill(scrollX, 50, scrollX + 2, trueHeight - 20, 0xFF2E3136);
+            int thumbHeight = Math.max(20, visibleHeight * visibleHeight / listHeight);
+            int thumbY = 50 + (int)((this.scrollOffset / this.maxScroll) * (visibleHeight - 20 - thumbHeight));
+            guiGraphics.fill(scrollX - 1, thumbY, scrollX + 3, thumbY + thumbHeight, 0xFFD2D6DE);
+        }
+        guiGraphics.disableScissor();
+    }
+
+    private void renderCustomizationLabels(GuiGraphics guiGraphics, int mouseX, int mouseY) {
+        int startY = 30;
+        
+        // UNIFORM
+        drawSmallText(guiGraphics, "UNIFORM", 20, startY, 0.65f, 0xFFAAAAAA);
+        int currentY = startY + 15;
+        drawSmallText(guiGraphics, "SHIRT", 24, currentY + 4, 0.45f, 0xFF7A818C);
+        drawSmallText(guiGraphics, "PANTS", 129, currentY + 4, 0.45f, 0xFF7A818C);
+        currentY += 45;
+        drawSmallText(guiGraphics, "GLOVES", 24, currentY + 4, 0.45f, 0xFF7A818C);
+        drawSmallText(guiGraphics, "BOOTS", 94, currentY + 4, 0.45f, 0xFF7A818C);
+        drawSmallText(guiGraphics, "BELT", 164, currentY + 4, 0.45f, 0xFF7A818C);
+        
+        // TACTICAL GEAR
+        currentY += 60;
+        drawSmallText(guiGraphics, "TACTICAL GEAR", 20, currentY - 15, 0.65f, 0xFFAAAAAA);
+        drawSmallText(guiGraphics, "ARMOR", 24, currentY + 4, 0.45f, 0xFF7A818C);
+        drawSmallText(guiGraphics, "HELMET", 129, currentY + 4, 0.45f, 0xFF7A818C);
+        currentY += 45;
+        drawSmallText(guiGraphics, "FACEWEAR", 24, currentY + 4, 0.45f, 0xFF7A818C);
+        drawSmallText(guiGraphics, "NVG", 94, currentY + 4, 0.45f, 0xFF7A818C);
+        drawSmallText(guiGraphics, "BALLISTIC MASK", 164, currentY + 4, 0.45f, 0xFF7A818C);
+        
+        // ACCESSORIES
+        currentY += 60;
+        drawSmallText(guiGraphics, "ACCESSORIES", 20, currentY - 15, 0.65f, 0xFFAAAAAA);
+        drawSmallText(guiGraphics, "TATTOO", 24, currentY + 4, 0.45f, 0xFF7A818C);
+        drawSmallText(guiGraphics, "EYEWEAR", 94, currentY + 4, 0.45f, 0xFF7A818C);
+        drawSmallText(guiGraphics, "WATCH", 164, currentY + 4, 0.45f, 0xFF7A818C);
+    }
+
+    private void renderCustomizationGridLabels(GuiGraphics guiGraphics, int mouseX, int mouseY, int trueWidth, int trueHeight) {
+        boolean isLargeGrid = this.customizationCategory.equals("SHIRT") || this.customizationCategory.equals("PANTS") || this.customizationCategory.equals("ARMOR");
+        int cols = isLargeGrid ? 3 : 2;
+        int rows = isLargeGrid ? 7 : 6;
+        
+        int gridWidth = (cols * 40) + ((cols - 1) * 10);
+        int startX = 240 + ((trueWidth - 240) - gridWidth) / 2;
+        int startY = 50 - (int)this.scrollOffset;
+        
+        drawSmallText(guiGraphics, "SELECT " + this.customizationCategory, startX, 20, 0.8f, 0xFFFFFFFF);
+        
+        guiGraphics.enableScissor(240, 40, trueWidth, trueHeight);
+        for (int i = 0; i < (rows * cols); i++) {
+            int col = i % cols;
+            int row = i / cols;
+            int boxX = startX + (col * 50);
+            int boxY = startY + (row * 50);
+            
+            if (mouseX >= boxX && mouseX <= boxX + 40 && mouseY >= boxY && mouseY <= boxY + 40) {
+                guiGraphics.fill(boxX + 1, boxY + 1, boxX + 39, boxY + 39, 0xFF3E4249);
+            }
+        }
+        guiGraphics.disableScissor();
     }
 
     private void renderLoadoutBg(GuiGraphics guiGraphics, int trueWidth, int trueHeight, int mouseX, int mouseY) {
@@ -889,30 +1174,15 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
         drawCleanBox(guiGraphics, 100, 345, 120, 55); 
         guiGraphics.fill(100, 372, 220, 373, 0xFF2E3136); 
 
-        if (Minecraft.getInstance().player != null) {
-            int openSpaceCenter = 240 + (trueWidth - 240) / 2; 
-            int operatorScale = 260; 
-            int operatorFloorAnchor = trueHeight + 170; 
-
-            guiGraphics.pose().pushPose();
-            guiGraphics.pose().translate(openSpaceCenter, operatorFloorAnchor, 50.0);
-            guiGraphics.pose().mulPose(com.mojang.math.Axis.YP.rotationDegrees(this.playerRotation));
-            guiGraphics.pose().translate(0, 0, -50.0);
-
-            InventoryScreen.renderEntityInInventoryFollowsMouse(
-                    guiGraphics,
-                    0, 0, operatorScale, 0f, 0f, Minecraft.getInstance().player 
-            );
-
-            guiGraphics.pose().popPose();
-        }
+        render3DOperator(guiGraphics, trueWidth, trueHeight);
     }
 
     private void renderArmorSelectionBg(GuiGraphics guiGraphics, int trueHeight) {
         int visibleHeight = trueHeight - 100;
         
         int currentY = 0;
-        currentY += 45; // Vest text gap
+        currentY += 20; // Vest header gap
+        currentY += 3 * 35; // Vest list
         
         currentY += 20; // Coverage header
         currentY += 40; // Coverage boxes
@@ -934,7 +1204,8 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
         int drawY = 100 - (int)this.scrollOffset;
         
         // VEST
-        drawY += 45;
+        drawY += 20;
+        drawY += 3 * 35;
         
         // COVERAGE Boxes
         drawY += 20;
@@ -1372,8 +1643,6 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
         guiGraphics.fill(176, 95, 198, 117, 0xFF0B0C0E); 
         guiGraphics.fill(176, 140, 198, 162, 0xFF0B0C0E); 
         guiGraphics.pose().popPose();
-
-        guiGraphics.drawString(this.font, "LOADOUT", 20, 6, 0xFFFFFF, false);
 
         ItemStack primaryStack = getDisplayedPrimary();
         String primaryName = primaryStack.isEmpty() ? "UNARMED" : primaryStack.getHoverName().getString().toUpperCase();
