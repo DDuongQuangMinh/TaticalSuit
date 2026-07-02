@@ -33,7 +33,7 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
     private String editingAttachmentCategory = "";
     private String editingMunitionCategory = "";
     private String expandedHeadwearCategory = ""; 
-    private String expandedArmorCategory = ""; // Added Armor Expand State
+    private String expandedArmorCategory = ""; 
     
     // Default Headwear Loadout
     private String selectedHelmet = "HELMET ONLY";
@@ -354,15 +354,31 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
             int currentY = 100 - (int)this.scrollOffset;
             
             // --- VEST LOGIC ---
-            currentY += 20; 
-            String[] vestList = {"NO ARMOR", "LIGHT ARMOR", "HEAVY ARMOR"};
-            for (String item : vestList) {
-                if (pMouseY >= currentY && pMouseY <= currentY + 30 && pMouseX >= 20 && pMouseX <= 220) {
-                    this.selectedVest = item;
+            if (pMouseY >= currentY && pMouseY <= currentY + 40 && pMouseX >= 20 && pMouseX <= 220) {
+                this.expandedArmorCategory = this.expandedArmorCategory.equals("VEST") ? "" : "VEST";
+                return true;
+            }
+            
+            int vestDropdownY = currentY + 45;
+            
+            if (this.expandedArmorCategory.equals("VEST")) {
+                String[] vestList = {"NO ARMOR", "LIGHT ARMOR", "HEAVY ARMOR", "STAB VEST"};
+                int listY = vestDropdownY;
+                for (String item : vestList) {
+                    if (pMouseY >= listY && pMouseY <= listY + 30 && pMouseX >= 20 && pMouseX <= 220) {
+                        this.selectedVest = item;
+                        this.expandedArmorCategory = "";
+                        return true;
+                    }
+                    listY += 35;
+                }
+                
+                // Block clicks to elements underneath if dropdown is open and clicked
+                if (pMouseY >= vestDropdownY && pMouseY <= listY && pMouseX >= 20 && pMouseX <= 220) {
                     return true;
                 }
-                currentY += 35;
             }
+            currentY += 45;
             
             // --- COVERAGE LOGIC ---
             currentY += 20;
@@ -834,7 +850,6 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
             }
             
             super.render(guiGraphics, renderMouseX, renderMouseY, delta);
-            renderTooltip(guiGraphics, mouseX, mouseY); 
         }
     }
 
@@ -847,17 +862,6 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
     @Override
     protected void renderLabels(GuiGraphics guiGraphics, int mouseX, int mouseY) {
         renderLoadoutLabels(guiGraphics);
-    }
-
-    @Override
-    protected void renderTooltip(GuiGraphics guiGraphics, int mouseX, int mouseY) {
-        if (!this.inGunsmith && !this.inWeaponSelection && !this.inAttachmentSelection && !this.inMunitionSelection && !this.inHeadwearSelection && !this.inArmorSelection) {
-            // Intercept tooltips for the invisible slots so they act completely disabled
-            if (this.hoveredSlot != null && this.hoveredSlot.x >= 170 && this.hoveredSlot.y >= 40 && this.hoveredSlot.y <= 160) {
-                return;
-            }
-        }
-        super.renderTooltip(guiGraphics, mouseX, mouseY);
     }
 
     private void renderLoadoutBg(GuiGraphics guiGraphics, int trueWidth, int trueHeight, int mouseX, int mouseY) {
@@ -908,8 +912,7 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
         int visibleHeight = trueHeight - 100;
         
         int currentY = 0;
-        currentY += 20; // Vest header gap
-        currentY += 3 * 35; // Vest list
+        currentY += 45; // Vest text gap
         
         currentY += 20; // Coverage header
         currentY += 40; // Coverage boxes
@@ -931,8 +934,7 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
         int drawY = 100 - (int)this.scrollOffset;
         
         // VEST
-        drawY += 20;
-        drawY += 3 * 35;
+        drawY += 45;
         
         // COVERAGE Boxes
         drawY += 20;
@@ -1446,20 +1448,22 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
         int currentY = 100 - (int)this.scrollOffset;
         int leftX = 26;
         
+        // Define effective mouse to prevent underlying items lighting up when Vest Dropdown is open
+        int effMouseX = mouseX;
+        int effMouseY = mouseY;
+        if (this.expandedArmorCategory.equals("VEST")) {
+            effMouseX = -999;
+            effMouseY = -999;
+        }
+        
         guiGraphics.enableScissor(0, 90, 240, trueHeight);
         
         // --- VEST SECTION ---
         drawSmallText(guiGraphics, "VEST", 20, currentY + 8, 0.65f, 0xFF7A818C);
-        currentY += 20;
+        drawSmallText(guiGraphics, this.selectedVest, 20, currentY + 18, 0.75f, 0xFFFFFFFF);
         
-        String[] vestList = {"NO ARMOR", "LIGHT ARMOR", "HEAVY ARMOR"};
-        for (String item : vestList) {
-            renderTextListItem(guiGraphics, item, 20, currentY, mouseX, mouseY);
-            if (this.selectedVest.equals(item)) {
-                drawSmallText(guiGraphics, "[EQUIPPED]", 160, currentY + 10, 0.6f, 0xFFD62929);
-            }
-            currentY += 35;
-        }
+        int vestDropdownY = currentY + 45;
+        currentY += 45;
         
         // --- COVERAGE SECTION ---
         drawSmallText(guiGraphics, "COVERAGE", 20, currentY + 8, 0.65f, 0xFF7A818C);
@@ -1469,7 +1473,7 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
         for(int i = 0; i < 4; i++) {
             int boxX = 20 + (i * 50);
             boolean isSelected = this.selectedCoverage.equals(covList[i]);
-            boolean isHovered = mouseY >= currentY && mouseY <= currentY + 30 && mouseX >= boxX && mouseX <= boxX + 45;
+            boolean isHovered = effMouseY >= currentY && effMouseY <= currentY + 30 && effMouseX >= boxX && effMouseX <= boxX + 45;
             
             int color = isSelected ? 0xFFD62929 : (isHovered ? 0xFFFFFFFF : 0xFF7A818C);
             float textScale = (i == 2) ? 0.45f : 0.55f;
@@ -1491,7 +1495,7 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
         for(int i = 0; i < 3; i++) {
             int boxX = 20 + (i * 66);
             boolean isSelected = this.selectedMaterial.equals(matList[i]);
-            boolean isHovered = mouseY >= currentY && mouseY <= currentY + 30 && mouseX >= boxX && mouseX <= boxX + 60;
+            boolean isHovered = effMouseY >= currentY && effMouseY <= currentY + 30 && effMouseX >= boxX && effMouseX <= boxX + 60;
             
             int color = isSelected ? 0xFFD62929 : (isHovered ? 0xFFFFFFFF : 0xFF7A818C);
             int textX = boxX + 12;
@@ -1554,6 +1558,30 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
                 drawSmallText(guiGraphics, tacticalNames[i], 26, currentY + 18, 0.65f, 0xFFFFFFFF);
                 currentY += 31;
             }
+        }
+        
+        // --- DRAW VEST DROPDOWN ON TOP ---
+        if (this.expandedArmorCategory.equals("VEST")) {
+            guiGraphics.pose().pushPose();
+            guiGraphics.pose().translate(0, 0, 150); // Elevate Z-index to cover underlying elements
+            
+            String[] vestList = {"NO ARMOR", "LIGHT ARMOR", "HEAVY ARMOR", "STAB VEST"};
+            int bgHeight = vestList.length * 35 + 10;
+            
+            // Solid dark background to effectively hide the text underneath it
+            guiGraphics.fill(15, vestDropdownY - 5, 235, vestDropdownY + bgHeight, 0xFF121212);
+            
+            int listY = vestDropdownY;
+            for (String item : vestList) {
+                // Use ACTUAL mouseX/Y here so this overlay remains interactive
+                renderTextListItem(guiGraphics, item, 20, listY, mouseX, mouseY); 
+                if (this.selectedVest.equals(item)) {
+                    drawSmallText(guiGraphics, "[EQUIPPED]", 160, listY + 10, 0.6f, 0xFFD62929);
+                }
+                listY += 35;
+            }
+            
+            guiGraphics.pose().popPose();
         }
         
         guiGraphics.disableScissor();
