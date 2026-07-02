@@ -27,17 +27,25 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
     private boolean inWeaponSelection = false; 
     private boolean inAttachmentSelection = false;
     private boolean inMunitionSelection = false; 
-    private boolean inHeadwearSelection = false; // Added Headwear State
+    private boolean inHeadwearSelection = false;
+    private boolean inArmorSelection = false; 
     
     private String editingAttachmentCategory = "";
     private String editingMunitionCategory = "";
     private String expandedHeadwearCategory = ""; 
+    private String expandedArmorCategory = ""; // Added Armor Expand State
     
     // Default Headwear Loadout
     private String selectedHelmet = "HELMET ONLY";
     private String selectedMount = "GPNVGS";
     private String selectedFacewear = "ANTI-FLASH GOGGLES";
     private String selectedPhosphor = "WHITE PHOSPHOR";
+
+    // Default Armor Loadout
+    private String selectedVest = "LIGHT ARMOR";
+    private String selectedMaterial = "STEEL";
+    private String selectedCoverage = "FRONT/BACK";
+    private String selectedAmmunitionDeployable = "13 SLOTS";
     
     // Scroll Trackers
     private float scrollOffset = 0f;
@@ -197,8 +205,10 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
         this.inAttachmentSelection = false;
         this.inMunitionSelection = false;
         this.inHeadwearSelection = false;
+        this.inArmorSelection = false;
         this.editingMunitionCategory = "";
         this.expandedHeadwearCategory = "";
+        this.expandedArmorCategory = "";
         this.showAmmunitionTab = true;
         this.currentWeaponTab = 0;
         this.scrollOffset = 0f;
@@ -334,7 +344,67 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
     public boolean mouseClicked(double pMouseX, double pMouseY, int pButton) {
         if (pButton != 0) return super.mouseClicked(pMouseX, pMouseY, pButton);
         
-        if (this.inHeadwearSelection) {
+        if (this.inArmorSelection) {
+            if (pMouseX >= 20 && pMouseX <= 100 && pMouseY >= 15 && pMouseY <= 35) {
+                this.inArmorSelection = false;
+                this.scrollOffset = 0f;
+                return true;
+            }
+
+            int currentY = 100 - (int)this.scrollOffset;
+            
+            // --- VEST LOGIC ---
+            currentY += 20; 
+            String[] vestList = {"NO ARMOR", "LIGHT ARMOR", "HEAVY ARMOR"};
+            for (String item : vestList) {
+                if (pMouseY >= currentY && pMouseY <= currentY + 30 && pMouseX >= 20 && pMouseX <= 220) {
+                    this.selectedVest = item;
+                    return true;
+                }
+                currentY += 35;
+            }
+            
+            // --- COVERAGE LOGIC ---
+            currentY += 20;
+            if (pMouseY >= currentY && pMouseY <= currentY + 30) {
+                String[] covList = {"NONE", "FRONT", "FRONT/BACK", "FULL"};
+                for(int i = 0; i < 4; i++) {
+                    int boxX = 20 + (i * 50);
+                    if (pMouseX >= boxX && pMouseX <= boxX + 45) {
+                        this.selectedCoverage = covList[i];
+                        return true;
+                    }
+                }
+            }
+            currentY += 40;
+            
+            // --- MATERIAL LOGIC ---
+            currentY += 20; 
+            if (pMouseY >= currentY && pMouseY <= currentY + 30) {
+                String[] matList = {"KEVLAR", "STEEL", "CERAMIC"};
+                for(int i = 0; i < 3; i++) {
+                    int boxX = 20 + (i * 66);
+                    if (pMouseX >= boxX && pMouseX <= boxX + 60) {
+                        this.selectedMaterial = matList[i];
+                        return true;
+                    }
+                }
+            }
+            currentY += 40; 
+
+            // --- AMMUNITION & DEPLOYABLE TABS LOGIC ---
+            if (pMouseY >= currentY && pMouseY <= currentY + 20) {
+                if (pMouseX >= 20 && pMouseX <= 110) {
+                    this.showAmmunitionTab = true;
+                    return true;
+                } else if (pMouseX > 110 && pMouseX <= 220) {
+                    this.showAmmunitionTab = false;
+                    return true;
+                }
+            }
+            
+            return true;
+        } else if (this.inHeadwearSelection) {
             if (pMouseX >= 20 && pMouseX <= 100 && pMouseY >= 15 && pMouseY <= 35) {
                 this.inHeadwearSelection = false;
                 this.scrollOffset = 0f;
@@ -383,10 +453,10 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
             
             if (!this.selectedMount.equals("NONE")) {
                 if (pMouseY >= currentY && pMouseY <= currentY + 40) {
-                    if (pMouseX >= 20 && pMouseX <= 118) {
+                    if (pMouseX >= 20 && pMouseX <= 120) {
                         this.selectedPhosphor = "GREEN PHOSPHOR";
                         return true;
-                    } else if (pMouseX >= 122 && pMouseX <= 220) {
+                    } else if (pMouseX > 120 && pMouseX <= 220) {
                         this.selectedPhosphor = "WHITE PHOSPHOR";
                         return true;
                     }
@@ -672,6 +742,13 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
                 return true;
             }
             
+            // Trigger Armor Selection Tab
+            if (pMouseY >= 190 && pMouseY <= 265 && pMouseX >= 20 && pMouseX <= 220) {
+                this.inArmorSelection = true;
+                this.scrollOffset = 0f;
+                return true;
+            }
+            
             // Trigger Munition Selection Tab
             if (pMouseY >= 285 && pMouseY <= 309 && pMouseX >= 20 && pMouseX <= 220) {
                 this.inMunitionSelection = true;
@@ -701,13 +778,13 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
 
     @Override
     public boolean mouseDragged(double pMouseX, double pMouseY, int pButton, double pDragX, double pDragY) {
-        if ((this.inGunsmith || this.inWeaponSelection || this.inAttachmentSelection || this.inMunitionSelection || this.inHeadwearSelection) && pMouseX < 240 && pMouseY >= 90) {
+        if ((this.inGunsmith || this.inWeaponSelection || this.inAttachmentSelection || this.inMunitionSelection || this.inHeadwearSelection || this.inArmorSelection) && pMouseX < 240 && pMouseY >= 90) {
             this.scrollOffset -= (float) pDragY;
             this.scrollOffset = Math.max(0f, Math.min(this.scrollOffset, this.maxScroll));
             return true;
         }
         
-        if (this.isDraggingModel && !this.inGunsmith && !this.inWeaponSelection && !this.inAttachmentSelection && !this.inMunitionSelection && !this.inHeadwearSelection) {
+        if (this.isDraggingModel && !this.inGunsmith && !this.inWeaponSelection && !this.inAttachmentSelection && !this.inMunitionSelection && !this.inHeadwearSelection && !this.inArmorSelection) {
             this.playerRotation += (float) pDragX * 1.5f; 
             return true;
         }
@@ -724,6 +801,10 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
             guiGraphics.fill(0, 0, this.width, this.height, 0xFF070707); 
             this.renderWeaponSelectionBg(guiGraphics, this.height);
             this.renderWeaponSelectionLabels(guiGraphics, mouseX, mouseY, this.width, this.height);
+        } else if (this.inArmorSelection) {
+            guiGraphics.fill(0, 0, this.width, this.height, 0xFF070707); 
+            this.renderArmorSelectionBg(guiGraphics, this.height);
+            this.renderArmorSelectionLabels(guiGraphics, mouseX, mouseY, this.width, this.height);
         } else if (this.inMunitionSelection) {
             guiGraphics.fill(0, 0, this.width, this.height, 0xFF070707); 
             this.renderMunitionSelectionBg(guiGraphics, this.height);
@@ -741,7 +822,7 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
             int renderMouseY = mouseY;
             
             // Hide vanilla slot hover highlight for the invisible right-side slots and bottom left layout
-            if (!this.inGunsmith && !this.inWeaponSelection && !this.inAttachmentSelection && !this.inMunitionSelection && !this.inHeadwearSelection) {
+            if (!this.inGunsmith && !this.inWeaponSelection && !this.inAttachmentSelection && !this.inMunitionSelection && !this.inHeadwearSelection && !this.inArmorSelection) {
                 if (mouseX >= 165 && mouseX <= 195 && mouseY >= 35 && mouseY <= 165) {
                     renderMouseX = -999;
                     renderMouseY = -999;
@@ -770,7 +851,7 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
 
     @Override
     protected void renderTooltip(GuiGraphics guiGraphics, int mouseX, int mouseY) {
-        if (!this.inGunsmith && !this.inWeaponSelection && !this.inAttachmentSelection && !this.inMunitionSelection && !this.inHeadwearSelection) {
+        if (!this.inGunsmith && !this.inWeaponSelection && !this.inAttachmentSelection && !this.inMunitionSelection && !this.inHeadwearSelection && !this.inArmorSelection) {
             // Intercept tooltips for the invisible slots so they act completely disabled
             if (this.hoveredSlot != null && this.hoveredSlot.x >= 170 && this.hoveredSlot.y >= 40 && this.hoveredSlot.y <= 160) {
                 return;
@@ -823,6 +904,100 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
         }
     }
 
+    private void renderArmorSelectionBg(GuiGraphics guiGraphics, int trueHeight) {
+        int visibleHeight = trueHeight - 100;
+        
+        int currentY = 0;
+        currentY += 20; // Vest header gap
+        currentY += 3 * 35; // Vest list
+        
+        currentY += 20; // Coverage header
+        currentY += 40; // Coverage boxes
+        
+        currentY += 20; // Material header
+        currentY += 40; // Material boxes
+        
+        currentY += 20; // Ammo tabs
+        int dynamicItemsHeight = this.showAmmunitionTab 
+                ? (16 + (2 * 31) + 10 + 16 + (2 * 31)) 
+                : (16 + (4 * 31) + 10 + 16 + (5 * 31));
+        currentY += dynamicItemsHeight;
+        
+        int listHeight = currentY + 20;
+        this.maxScroll = Math.max(0f, (float)(listHeight - visibleHeight));
+        this.scrollOffset = Math.max(0f, Math.min(this.scrollOffset, this.maxScroll));
+
+        guiGraphics.enableScissor(0, 90, 240, trueHeight);
+        int drawY = 100 - (int)this.scrollOffset;
+        
+        // VEST
+        drawY += 20;
+        drawY += 3 * 35;
+        
+        // COVERAGE Boxes
+        drawY += 20;
+        for(int i = 0; i < 4; i++) {
+            drawCleanBox(guiGraphics, 20 + (i * 50), drawY, 45, 30);
+        }
+        drawY += 40;
+        
+        // MATERIAL Boxes
+        drawY += 20;
+        for(int i = 0; i < 3; i++) {
+            drawCleanBox(guiGraphics, 20 + (i * 66), drawY, 60, 30);
+        }
+        drawY += 40;
+
+        // AMMUNITION & DEPLOYABLE BG (Mirrored from Gunsmith)
+        guiGraphics.fill(20, drawY + 14, 220, drawY + 15, 0xFF2E3136); 
+        if (this.showAmmunitionTab) {
+            guiGraphics.fill(20, drawY + 14, 110, drawY + 15, 0xFFD62929); 
+        } else {
+            guiGraphics.fill(110, drawY + 14, 220, drawY + 15, 0xFFD62929); 
+        }
+        drawY += 20; 
+        
+        if (this.showAmmunitionTab) {
+            guiGraphics.fill(20, drawY + 15, 220, drawY + 16, 0xFF2E3136);
+            drawY += 16;
+            for (int i = 0; i < 2; i++) {
+                guiGraphics.fill(20, drawY + 30, 220, drawY + 31, 0xFF2E3136);
+                drawY += 31; 
+            }
+            
+            drawY += 10; 
+            guiGraphics.fill(20, drawY + 15, 220, drawY + 16, 0xFF2E3136);
+            drawY += 16;
+            for (int i = 0; i < 2; i++) {
+                guiGraphics.fill(20, drawY + 30, 220, drawY + 31, 0xFF2E3136);
+                drawY += 31; 
+            }
+        } else {
+            guiGraphics.fill(20, drawY + 15, 220, drawY + 16, 0xFF2E3136);
+            drawY += 16;
+            for (int i = 0; i < 4; i++) {
+                guiGraphics.fill(20, drawY + 30, 220, drawY + 31, 0xFF2E3136);
+                drawY += 31; 
+            }
+
+            drawY += 10; 
+            guiGraphics.fill(20, drawY + 15, 220, drawY + 16, 0xFF2E3136);
+            drawY += 16;
+            for (int i = 0; i < 5; i++) {
+                guiGraphics.fill(20, drawY + 30, 220, drawY + 31, 0xFF2E3136);
+                drawY += 31; 
+            }
+        }
+        
+        if (this.maxScroll > 0) {
+            guiGraphics.fill(225, 100, 227, trueHeight - 20, 0xFF2E3136);
+            int thumbHeight = Math.max(20, visibleHeight * visibleHeight / listHeight);
+            int thumbY = 100 + (int)((this.scrollOffset / this.maxScroll) * (visibleHeight - 20 - thumbHeight));
+            guiGraphics.fill(224, thumbY, 228, thumbY + thumbHeight, 0xFFD2D6DE);
+        }
+        guiGraphics.disableScissor();
+    }
+
     private void renderHeadwearSelectionBg(GuiGraphics guiGraphics, int trueHeight) {
         int visibleHeight = trueHeight - 100;
         
@@ -856,8 +1031,8 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
         drawY += 45;
         if (this.expandedHeadwearCategory.equals("MOUNT")) drawY += 3 * 35;
         if (!this.selectedMount.equals("NONE")) {
-            drawCleanBox(guiGraphics, 20, drawY, 98, 40);
-            drawCleanBox(guiGraphics, 122, drawY, 98, 40);
+            drawCleanBox(guiGraphics, 20, drawY, 100, 40);
+            drawCleanBox(guiGraphics, 120, drawY, 100, 40);
             drawY += 45;
         }
         
@@ -1231,16 +1406,16 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
 
         drawSmallText(guiGraphics, "ARMOR & MUNITIONS", 20, 190, 0.65f, 0xFFAAAAAA);
         drawSmallText(guiGraphics, "VEST | ", 26, 243, 0.55f, 0xFF7A818C);
-        drawSmallText(guiGraphics, "13 SLOTS", 26 + (int)(this.font.width("VEST | ") * 0.55f), 243, 0.55f, 0xFFD62929);
-        drawSmallText(guiGraphics, "LIGHT ARMOR", 26, 249, 0.75f, 0xFFD2D6DE);
+        drawSmallText(guiGraphics, this.selectedAmmunitionDeployable, 26 + (int)(this.font.width("VEST | ") * 0.55f), 243, 0.55f, 0xFFD62929);
+        drawSmallText(guiGraphics, this.selectedVest, 26, 249, 0.75f, 0xFFD2D6DE);
 
         drawSmallText(guiGraphics, "MATERIAL", 106, 218, 0.55f, 0xFF7A818C);
-        drawSmallText(guiGraphics, "STEEL", 106, 224, 0.75f, 0xFFD2D6DE);
+        drawSmallText(guiGraphics, this.selectedMaterial, 106, 224, 0.75f, 0xFFD2D6DE);
         drawSmallText(guiGraphics, "COVERAGE", 106, 244, 0.55f, 0xFF7A818C);
-        drawSmallText(guiGraphics, "FRONT/BACK", 106, 250, 0.75f, 0xFFD2D6DE);
+        drawSmallText(guiGraphics, this.selectedCoverage, 106, 250, 0.75f, 0xFFD2D6DE);
 
         drawSmallText(guiGraphics, "MUNITION SLOTS", 20, 275, 0.65f, 0xFFAAAAAA);
-        drawSmallText(guiGraphics, this.menu.getMunitionCount() + "/13 SLOTS", 165, 275, 0.65f, 0xFFD62929);
+        drawSmallText(guiGraphics, this.menu.getMunitionCount() + "/" + this.selectedAmmunitionDeployable, 165, 275, 0.65f, 0xFFD62929);
 
         drawSmallText(guiGraphics, "AP", 66, 310, 0.55f, 0xFFFFFFFF);
         drawSmallText(guiGraphics, "AP", 153, 310, 0.55f, 0xFFFFFFFF);
@@ -1261,6 +1436,127 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
         
         drawSmallText(guiGraphics, "FACEWEAR", 106, 384, 0.55f, 0xFF7A818C);
         drawSmallText(guiGraphics, this.selectedFacewear, 106, 390, 0.75f, 0xFFD2D6DE);
+    }
+
+    private void renderArmorSelectionLabels(GuiGraphics guiGraphics, int mouseX, int mouseY, int trueWidth, int trueHeight) {
+        drawSmallText(guiGraphics, "< LOADOUT", 20, 25, 0.75f, 0xFFFFFF);
+        drawSmallText(guiGraphics, "ARMOR", 20, 55, 1.1f, 0xFFFFFF); 
+        drawSmallText(guiGraphics, "SELECT EQUIPMENT", 20, 75, 0.65f, 0xFFD62929); 
+
+        int currentY = 100 - (int)this.scrollOffset;
+        int leftX = 26;
+        
+        guiGraphics.enableScissor(0, 90, 240, trueHeight);
+        
+        // --- VEST SECTION ---
+        drawSmallText(guiGraphics, "VEST", 20, currentY + 8, 0.65f, 0xFF7A818C);
+        currentY += 20;
+        
+        String[] vestList = {"NO ARMOR", "LIGHT ARMOR", "HEAVY ARMOR"};
+        for (String item : vestList) {
+            renderTextListItem(guiGraphics, item, 20, currentY, mouseX, mouseY);
+            if (this.selectedVest.equals(item)) {
+                drawSmallText(guiGraphics, "[EQUIPPED]", 160, currentY + 10, 0.6f, 0xFFD62929);
+            }
+            currentY += 35;
+        }
+        
+        // --- COVERAGE SECTION ---
+        drawSmallText(guiGraphics, "COVERAGE", 20, currentY + 8, 0.65f, 0xFF7A818C);
+        currentY += 20;
+        
+        String[] covList = {"NONE", "FRONT", "FRONT/BACK", "FULL"};
+        for(int i = 0; i < 4; i++) {
+            int boxX = 20 + (i * 50);
+            boolean isSelected = this.selectedCoverage.equals(covList[i]);
+            boolean isHovered = mouseY >= currentY && mouseY <= currentY + 30 && mouseX >= boxX && mouseX <= boxX + 45;
+            
+            int color = isSelected ? 0xFFD62929 : (isHovered ? 0xFFFFFFFF : 0xFF7A818C);
+            float textScale = (i == 2) ? 0.45f : 0.55f;
+            int textX = boxX + (i == 2 ? 2 : 8); 
+            
+            drawSmallText(guiGraphics, covList[i], textX, currentY + 12, textScale, color);
+            
+            if (isSelected) {
+                guiGraphics.fill(boxX, currentY + 28, boxX + 45, currentY + 30, 0xFFD62929);
+            }
+        }
+        currentY += 40;
+
+        // --- MATERIAL SECTION ---
+        drawSmallText(guiGraphics, "MATERIAL", 20, currentY + 8, 0.65f, 0xFF7A818C);
+        currentY += 20;
+        
+        String[] matList = {"KEVLAR", "STEEL", "CERAMIC"};
+        for(int i = 0; i < 3; i++) {
+            int boxX = 20 + (i * 66);
+            boolean isSelected = this.selectedMaterial.equals(matList[i]);
+            boolean isHovered = mouseY >= currentY && mouseY <= currentY + 30 && mouseX >= boxX && mouseX <= boxX + 60;
+            
+            int color = isSelected ? 0xFFD62929 : (isHovered ? 0xFFFFFFFF : 0xFF7A818C);
+            int textX = boxX + 12;
+            
+            drawSmallText(guiGraphics, matList[i], textX, currentY + 12, 0.55f, color);
+            
+            if (isSelected) {
+                guiGraphics.fill(boxX, currentY + 28, boxX + 60, currentY + 30, 0xFFD62929);
+            }
+        }
+        currentY += 40;
+
+        // --- AMMUNITION & DEPLOYABLE SECTION ---
+        drawSmallText(guiGraphics, "AMMUNITION", 26, currentY + 6, 0.55f, this.showAmmunitionTab ? 0xFFFFFFFF : 0xFF7A818C);
+        drawSmallText(guiGraphics, "DEPLOYABLE", 116, currentY + 6, 0.55f, !this.showAmmunitionTab ? 0xFFFFFFFF : 0xFF7A818C);
+        currentY += 20;
+
+        if (this.showAmmunitionTab) {
+            String[] primaryCats = {"MAGAZINE", "AMMUNITION"};
+            String[] primaryNames = {"STANDARD MAG", "5.56X45MM NATO"};
+            
+            String[] sidearmCats = {"MAGAZINE", "AMMUNITION"};
+            String[] sidearmNames = {"STANDARD MAG", "9X19MM PARABELLUM"};
+            
+            drawSmallText(guiGraphics, "PRIMARY AMMUNITION", 26, currentY + 6, 0.65f, 0xFF7A818C);
+            currentY += 16;
+            for (int i = 0; i < primaryCats.length; i++) {
+                drawSmallText(guiGraphics, primaryCats[i], 26, currentY + 8, 0.45f, 0xFF7A818C);
+                drawSmallText(guiGraphics, primaryNames[i], 26, currentY + 18, 0.65f, 0xFFFFFFFF);
+                currentY += 31;
+            }
+
+            currentY += 10; 
+            drawSmallText(guiGraphics, "SIDEARM AMMUNITION", 26, currentY + 6, 0.65f, 0xFF7A818C);
+            currentY += 16;
+            for (int i = 0; i < sidearmCats.length; i++) {
+                drawSmallText(guiGraphics, sidearmCats[i], 26, currentY + 8, 0.45f, 0xFF7A818C);
+                drawSmallText(guiGraphics, sidearmNames[i], 26, currentY + 18, 0.65f, 0xFFFFFFFF);
+                currentY += 31;
+            }
+        } else {
+            String[] grenadeCats = {"GRENADE", "GRENADE", "GRENADE", "GRENADE"};
+            String[] grenadeNames = {"9-BANG FLASH GRENADE", "CS GAS", "FLASHBANGS", "STINGER"};
+            String[] tacticalCats = {"TACTICAL", "TACTICAL", "TACTICAL", "TACTICAL", "TACTICAL"};
+            String[] tacticalNames = {"C2", "LOCKPICK GUN", "PEPPER SPRAY", "TASER", "WEDGE"};
+            
+            drawSmallText(guiGraphics, "GRENADE", 26, currentY + 6, 0.65f, 0xFF7A818C);
+            currentY += 16;
+            for (int i = 0; i < grenadeCats.length; i++) {
+                drawSmallText(guiGraphics, grenadeCats[i], 26, currentY + 8, 0.45f, 0xFF7A818C);
+                drawSmallText(guiGraphics, grenadeNames[i], 26, currentY + 18, 0.65f, 0xFFFFFFFF);
+                currentY += 31;
+            }
+
+            currentY += 10; 
+            drawSmallText(guiGraphics, "TACTICAL", 26, currentY + 6, 0.65f, 0xFF7A818C);
+            currentY += 16;
+            for (int i = 0; i < tacticalCats.length; i++) {
+                drawSmallText(guiGraphics, tacticalCats[i], 26, currentY + 8, 0.45f, 0xFF7A818C);
+                drawSmallText(guiGraphics, tacticalNames[i], 26, currentY + 18, 0.65f, 0xFFFFFFFF);
+                currentY += 31;
+            }
+        }
+        
+        guiGraphics.disableScissor();
     }
 
     private void renderHeadwearSelectionLabels(GuiGraphics guiGraphics, int mouseX, int mouseY, int trueWidth, int trueHeight) {
@@ -1301,8 +1597,8 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
         
         // PHOSPHOR SUB-OPTIONS (Only show if NVGs are active)
         if (!this.selectedMount.equals("NONE")) {
-            boolean greenHover = mouseY >= currentY && mouseY <= currentY + 40 && mouseX >= 20 && mouseX <= 118;
-            boolean whiteHover = mouseY >= currentY && mouseY <= currentY + 40 && mouseX >= 122 && mouseX <= 220;
+            boolean greenHover = mouseY >= currentY && mouseY <= currentY + 40 && mouseX >= 20 && mouseX <= 120;
+            boolean whiteHover = mouseY >= currentY && mouseY <= currentY + 40 && mouseX > 120 && mouseX <= 220;
             
             int greenColor = this.selectedPhosphor.equals("GREEN PHOSPHOR") ? 0xFFD62929 : (greenHover ? 0xFFFFFFFF : 0xFF7A818C);
             int whiteColor = this.selectedPhosphor.equals("WHITE PHOSPHOR") ? 0xFFD62929 : (whiteHover ? 0xFFFFFFFF : 0xFF7A818C);
@@ -1310,11 +1606,11 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
             drawSmallText(guiGraphics, "GREEN", 26, currentY + 10, 0.65f, greenColor);
             drawSmallText(guiGraphics, "PHOSPHOR", 26, currentY + 22, 0.65f, greenColor);
             
-            drawSmallText(guiGraphics, "WHITE", 128, currentY + 10, 0.65f, whiteColor);
-            drawSmallText(guiGraphics, "PHOSPHOR", 128, currentY + 22, 0.65f, whiteColor);
+            drawSmallText(guiGraphics, "WHITE", 126, currentY + 10, 0.65f, whiteColor);
+            drawSmallText(guiGraphics, "PHOSPHOR", 126, currentY + 22, 0.65f, whiteColor);
             
-            if (this.selectedPhosphor.equals("GREEN PHOSPHOR")) guiGraphics.fill(20, currentY + 38, 118, currentY + 40, 0xFFD62929);
-            if (this.selectedPhosphor.equals("WHITE PHOSPHOR")) guiGraphics.fill(122, currentY + 38, 220, currentY + 40, 0xFFD62929);
+            if (this.selectedPhosphor.equals("GREEN PHOSPHOR")) guiGraphics.fill(20, currentY + 38, 120, currentY + 40, 0xFFD62929);
+            if (this.selectedPhosphor.equals("WHITE PHOSPHOR")) guiGraphics.fill(120, currentY + 38, 220, currentY + 40, 0xFFD62929);
             
             currentY += 45;
         }
