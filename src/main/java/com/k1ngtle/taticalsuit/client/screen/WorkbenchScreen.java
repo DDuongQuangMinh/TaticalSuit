@@ -354,33 +354,35 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
         
         // --- CUSTOMIZATION GRID SELECTION LOGIC ---
         if (this.inCustomizationTab && this.inCustomizationSelection) {
-            if (pMouseX < 240) {
-                // Clicked back on the left panel, close the right side grid
+            boolean isLargeGrid = this.customizationCategory.equals("SHIRT") || this.customizationCategory.equals("PANTS") || this.customizationCategory.equals("ARMOR");
+            int cols = isLargeGrid ? 3 : 2;
+            int rows = isLargeGrid ? 7 : 6;
+            
+            int panelWidth = isLargeGrid ? 170 : 120;
+            int panelX = this.width - panelWidth;
+
+            if (pMouseX < panelX) {
+                // Clicked outside the right-side grid panel, close it
                 this.inCustomizationSelection = false;
                 this.scrollOffset = 0f;
                 return true;
             }
 
-            boolean isLargeGrid = this.customizationCategory.equals("SHIRT") || this.customizationCategory.equals("PANTS") || this.customizationCategory.equals("ARMOR");
-            int cols = isLargeGrid ? 3 : 2;
-            int rows = isLargeGrid ? 7 : 6;
-            
-            int gridWidth = (cols * 40) + ((cols - 1) * 10);
-            int startX = 240 + ((this.width - 240) - gridWidth) / 2;
+            int gridStartX = panelX + 15;
             int startY = 50 - (int)this.scrollOffset;
             
             for (int i = 0; i < (rows * cols); i++) {
                 int col = i % cols;
                 int row = i / cols;
-                int boxX = startX + (col * 50);
-                int boxY = startY + (row * 50);
+                int boxX = gridStartX + (col * 45); // 40px box + 5px gap
+                int boxY = startY + (row * 45);
                 
                 if (pMouseX >= boxX && pMouseX <= boxX + 40 && pMouseY >= boxY && pMouseY <= boxY + 40) {
                     if (System.currentTimeMillis() - this.lastClickTime < 500) return true;
                     this.lastClickTime = System.currentTimeMillis();
                     
-                    // Here is where future equip logic for customization goes.
-                    // For now, close the menu upon selection!
+                    // Future equipped logic here
+                    
                     this.inCustomizationSelection = false;
                     this.scrollOffset = 0f;
                     return true;
@@ -878,9 +880,16 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
                 }
             }
             
-            if (pMouseX >= 240) {
+            // Allow drag rotation of the model only if clicking the correct active free-space
+            int rightPanelX = this.width;
+            if (this.inCustomizationTab && this.inCustomizationSelection) {
+                boolean isLargeGrid = this.customizationCategory.equals("SHIRT") || this.customizationCategory.equals("PANTS") || this.customizationCategory.equals("ARMOR");
+                rightPanelX = this.width - (isLargeGrid ? 170 : 120);
+            }
+            if (pMouseX >= 240 && pMouseX < rightPanelX) {
                 this.isDraggingModel = true;
             }
+            
             return super.mouseClicked(pMouseX, pMouseY, pButton);
         }
     }
@@ -893,7 +902,13 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
 
     @Override
     public boolean mouseDragged(double pMouseX, double pMouseY, int pButton, double pDragX, double pDragY) {
-        if (this.inCustomizationSelection && pMouseX >= 240) {
+        int rightPanelX = this.width;
+        if (this.inCustomizationTab && this.inCustomizationSelection) {
+            boolean isLargeGrid = this.customizationCategory.equals("SHIRT") || this.customizationCategory.equals("PANTS") || this.customizationCategory.equals("ARMOR");
+            rightPanelX = this.width - (isLargeGrid ? 170 : 120);
+        }
+
+        if (this.inCustomizationSelection && pMouseX >= rightPanelX) {
             this.scrollOffset -= (float) pDragY;
             this.scrollOffset = Math.max(0f, Math.min(this.scrollOffset, this.maxScroll));
             return true;
@@ -903,7 +918,7 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
             return true;
         }
         
-        if (this.isDraggingModel && !this.inGunsmith && !this.inWeaponSelection && !this.inAttachmentSelection && !this.inMunitionSelection && !this.inHeadwearSelection && !this.inArmorSelection && !this.inCustomizationSelection) {
+        if (this.isDraggingModel && pMouseX < rightPanelX && !this.inGunsmith && !this.inWeaponSelection && !this.inAttachmentSelection && !this.inMunitionSelection && !this.inHeadwearSelection && !this.inArmorSelection && !this.inCustomizationSelection) {
             this.playerRotation += (float) pDragX * 1.5f; 
             return true;
         }
@@ -922,15 +937,15 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
             this.renderWeaponSelectionLabels(guiGraphics, mouseX, mouseY, this.width, this.height);
         } else if (this.inArmorSelection) {
             guiGraphics.fill(0, 0, this.width, this.height, 0xFF070707); 
-            this.renderArmorSelectionBg(guiGraphics, this.height);
+            this.renderArmorSelectionBg(guiGraphics, this.width, this.height);
             this.renderArmorSelectionLabels(guiGraphics, mouseX, mouseY, this.width, this.height);
         } else if (this.inMunitionSelection) {
             guiGraphics.fill(0, 0, this.width, this.height, 0xFF070707); 
-            this.renderMunitionSelectionBg(guiGraphics, this.height);
+            this.renderMunitionSelectionBg(guiGraphics, this.width, this.height);
             this.renderMunitionSelectionLabels(guiGraphics, mouseX, mouseY, this.width, this.height);
         } else if (this.inHeadwearSelection) {
             guiGraphics.fill(0, 0, this.width, this.height, 0xFF070707); 
-            this.renderHeadwearSelectionBg(guiGraphics, this.height);
+            this.renderHeadwearSelectionBg(guiGraphics, this.width, this.height);
             this.renderHeadwearSelectionLabels(guiGraphics, mouseX, mouseY, this.width, this.height);
         } else if (this.inGunsmith) {
             guiGraphics.fill(0, 0, this.width, this.height, 0xFF070707); 
@@ -1005,7 +1020,17 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
 
     private void render3DOperator(GuiGraphics guiGraphics, int trueWidth, int trueHeight) {
         if (Minecraft.getInstance().player != null) {
-            int openSpaceCenter = 240 + (trueWidth - 240) / 2; 
+            
+            int rightBound = trueWidth;
+            
+            // If the customization side grid is open, dynamically shift the operator left to stay centered!
+            if (this.inCustomizationTab && this.inCustomizationSelection) {
+                boolean isLargeGrid = this.customizationCategory.equals("SHIRT") || this.customizationCategory.equals("PANTS") || this.customizationCategory.equals("ARMOR");
+                int panelWidth = isLargeGrid ? 170 : 120;
+                rightBound -= panelWidth;
+            }
+            
+            int openSpaceCenter = 240 + (rightBound - 240) / 2; 
             int operatorScale = 260; 
             int operatorFloorAnchor = trueHeight + 170; 
 
@@ -1057,34 +1082,37 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
     }
 
     private void renderCustomizationGridBg(GuiGraphics guiGraphics, int trueWidth, int trueHeight, int mouseX, int mouseY) {
-        guiGraphics.fill(240, 0, trueWidth, trueHeight, 0xCC121212); // Translucent dark background overlaying model
-        
         boolean isLargeGrid = this.customizationCategory.equals("SHIRT") || this.customizationCategory.equals("PANTS") || this.customizationCategory.equals("ARMOR");
         int cols = isLargeGrid ? 3 : 2;
         int rows = isLargeGrid ? 7 : 6;
         
-        int gridWidth = (cols * 40) + ((cols - 1) * 10);
-        int startX = 240 + ((trueWidth - 240) - gridWidth) / 2;
+        int panelWidth = isLargeGrid ? 170 : 120;
+        int panelX = trueWidth - panelWidth;
+        int gridStartX = panelX + 15;
         int startY = 50 - (int)this.scrollOffset;
         
-        int listHeight = (rows * 50); 
+        int listHeight = (rows * 45); 
         int visibleHeight = trueHeight - 50;
         this.maxScroll = Math.max(0f, (float)(listHeight - visibleHeight + 20));
         this.scrollOffset = Math.max(0f, Math.min(this.scrollOffset, this.maxScroll));
 
-        guiGraphics.enableScissor(240, 40, trueWidth, trueHeight);
+        // Draw solid right-side panel
+        guiGraphics.fill(panelX, 0, trueWidth, trueHeight, 0xFF121212);
+        guiGraphics.fill(panelX, 16, trueWidth, 18, 0xFFD62929);
+
+        guiGraphics.enableScissor(panelX, 40, trueWidth, trueHeight);
         
         for (int i = 0; i < (rows * cols); i++) {
             int col = i % cols;
             int row = i / cols;
-            int boxX = startX + (col * 50);
-            int boxY = startY + (row * 50);
+            int boxX = gridStartX + (col * 45);
+            int boxY = startY + (row * 45);
             
             drawCleanBox(guiGraphics, boxX, boxY, 40, 40);
         }
         
         if (this.maxScroll > 0) {
-            int scrollX = startX + gridWidth + 15;
+            int scrollX = trueWidth - 10;
             guiGraphics.fill(scrollX, 50, scrollX + 2, trueHeight - 20, 0xFF2E3136);
             int thumbHeight = Math.max(20, visibleHeight * visibleHeight / listHeight);
             int thumbY = 50 + (int)((this.scrollOffset / this.maxScroll) * (visibleHeight - 20 - thumbHeight));
@@ -1129,18 +1157,19 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
         int cols = isLargeGrid ? 3 : 2;
         int rows = isLargeGrid ? 7 : 6;
         
-        int gridWidth = (cols * 40) + ((cols - 1) * 10);
-        int startX = 240 + ((trueWidth - 240) - gridWidth) / 2;
+        int panelWidth = isLargeGrid ? 170 : 120;
+        int panelX = trueWidth - panelWidth;
+        int gridStartX = panelX + 15;
         int startY = 50 - (int)this.scrollOffset;
         
-        drawSmallText(guiGraphics, "SELECT " + this.customizationCategory, startX, 20, 0.8f, 0xFFFFFFFF);
+        drawSmallText(guiGraphics, "SELECT " + this.customizationCategory, panelX + 15, 25, 0.75f, 0xFFFFFFFF);
         
-        guiGraphics.enableScissor(240, 40, trueWidth, trueHeight);
+        guiGraphics.enableScissor(panelX, 40, trueWidth, trueHeight);
         for (int i = 0; i < (rows * cols); i++) {
             int col = i % cols;
             int row = i / cols;
-            int boxX = startX + (col * 50);
-            int boxY = startY + (row * 50);
+            int boxX = gridStartX + (col * 45);
+            int boxY = startY + (row * 45);
             
             if (mouseX >= boxX && mouseX <= boxX + 40 && mouseY >= boxY && mouseY <= boxY + 40) {
                 guiGraphics.fill(boxX + 1, boxY + 1, boxX + 39, boxY + 39, 0xFF3E4249);
@@ -1177,12 +1206,11 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
         render3DOperator(guiGraphics, trueWidth, trueHeight);
     }
 
-    private void renderArmorSelectionBg(GuiGraphics guiGraphics, int trueHeight) {
+    private void renderArmorSelectionBg(GuiGraphics guiGraphics, int trueWidth, int trueHeight) {
         int visibleHeight = trueHeight - 100;
         
         int currentY = 0;
-        currentY += 20; // Vest header gap
-        currentY += 3 * 35; // Vest list
+        currentY += 45; // Vest header gap
         
         currentY += 20; // Coverage header
         currentY += 40; // Coverage boxes
@@ -1200,12 +1228,14 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
         this.maxScroll = Math.max(0f, (float)(listHeight - visibleHeight));
         this.scrollOffset = Math.max(0f, Math.min(this.scrollOffset, this.maxScroll));
 
+        guiGraphics.fill(0, 0, 240, trueHeight, 0xFF121212);
+        guiGraphics.fill(20, 16, 220, 18, 0xFFD62929);
+
         guiGraphics.enableScissor(0, 90, 240, trueHeight);
         int drawY = 100 - (int)this.scrollOffset;
         
         // VEST
-        drawY += 20;
-        drawY += 3 * 35;
+        drawY += 45;
         
         // COVERAGE Boxes
         drawY += 20;
@@ -1269,9 +1299,11 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
             guiGraphics.fill(224, thumbY, 228, thumbY + thumbHeight, 0xFFD2D6DE);
         }
         guiGraphics.disableScissor();
+
+        render3DOperator(guiGraphics, trueWidth, trueHeight);
     }
 
-    private void renderHeadwearSelectionBg(GuiGraphics guiGraphics, int trueHeight) {
+    private void renderHeadwearSelectionBg(GuiGraphics guiGraphics, int trueWidth, int trueHeight) {
         int visibleHeight = trueHeight - 100;
         
         int currentY = 0;
@@ -1290,6 +1322,9 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
         int listHeight = currentY + 20;
         this.maxScroll = Math.max(0f, (float)(listHeight - visibleHeight));
         this.scrollOffset = Math.max(0f, Math.min(this.scrollOffset, this.maxScroll));
+
+        guiGraphics.fill(0, 0, 240, trueHeight, 0xFF121212);
+        guiGraphics.fill(20, 16, 220, 18, 0xFFD62929);
 
         guiGraphics.enableScissor(0, 90, 240, trueHeight);
         int drawY = 100 - (int)this.scrollOffset;
@@ -1321,6 +1356,8 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
             guiGraphics.fill(224, thumbY, 228, thumbY + thumbHeight, 0xFFD2D6DE);
         }
         guiGraphics.disableScissor();
+
+        render3DOperator(guiGraphics, trueWidth, trueHeight);
     }
 
     private void renderWeaponSelectionBg(GuiGraphics guiGraphics, int trueHeight) {
@@ -1333,6 +1370,9 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
         
         this.maxScroll = Math.max(0f, (float)(listHeight - visibleHeight + 20));
         this.scrollOffset = Math.max(0f, Math.min(this.scrollOffset, this.maxScroll));
+
+        guiGraphics.fill(0, 0, 240, trueHeight, 0xFF121212);
+        guiGraphics.fill(20, 16, 220, 18, 0xFFD62929);
 
         guiGraphics.enableScissor(0, 90, 240, trueHeight);
         int currentY = startY - (int)this.scrollOffset;
@@ -1372,6 +1412,9 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
         this.maxScroll = Math.max(0f, (float)(listHeight - visibleHeight + 20));
         this.scrollOffset = Math.max(0f, Math.min(this.scrollOffset, this.maxScroll));
 
+        guiGraphics.fill(0, 0, 240, trueHeight, 0xFF121212);
+        guiGraphics.fill(20, 16, 220, 18, 0xFFD62929);
+
         guiGraphics.enableScissor(0, 90, 240, trueHeight);
         int currentY = startY - (int)this.scrollOffset;
         
@@ -1397,7 +1440,7 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
         guiGraphics.disableScissor();
     }
 
-    private void renderMunitionSelectionBg(GuiGraphics guiGraphics, int trueHeight) {
+    private void renderMunitionSelectionBg(GuiGraphics guiGraphics, int trueWidth, int trueHeight) {
         int visibleHeight = trueHeight - 100;
         
         // 3 Headers (20px each), 2 gaps (10px each), 13 total items (35px each)
@@ -1405,6 +1448,9 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
         
         this.maxScroll = Math.max(0f, (float)(listHeight - visibleHeight + 20));
         this.scrollOffset = Math.max(0f, Math.min(this.scrollOffset, this.maxScroll));
+
+        guiGraphics.fill(0, 0, 240, trueHeight, 0xFF121212);
+        guiGraphics.fill(20, 16, 220, 18, 0xFFD62929);
 
         guiGraphics.enableScissor(0, 90, 240, trueHeight);
         
@@ -1417,6 +1463,8 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
             guiGraphics.fill(224, thumbY, 228, thumbY + thumbHeight, 0xFFD2D6DE);
         }
         guiGraphics.disableScissor();
+
+        render3DOperator(guiGraphics, trueWidth, trueHeight);
     }
 
     private void renderGunsmithBg(GuiGraphics guiGraphics, int trueHeight) {
@@ -1438,6 +1486,9 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
         
         this.maxScroll = Math.max(0f, (float)(listHeight - visibleHeight + 20));
         this.scrollOffset = Math.max(0f, Math.min(this.scrollOffset, this.maxScroll));
+
+        guiGraphics.fill(0, 0, 240, trueHeight, 0xFF121212);
+        guiGraphics.fill(20, 16, 220, 18, 0xFFD62929);
 
         guiGraphics.enableScissor(0, 90, 240, trueHeight);
         int currentY = startY - (int)this.scrollOffset;
