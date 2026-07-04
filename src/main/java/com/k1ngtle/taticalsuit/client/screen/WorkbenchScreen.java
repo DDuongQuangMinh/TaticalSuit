@@ -151,7 +151,8 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
         String[] ignoreKeywords = {"mag", "drum", "ammo", "bullet", "nato", "parabellum", "buckshot", "acp", 
                                    "scope", "sight", "optic", "reflex", "holo", "acog", "dot", 
                                    "grip", "underbarrel", "barrel", "muzzle", "suppressor", "silencer", 
-                                   "laser", "peq", "flashlight", "stock", "handguard", "compensator", "brake", "choke"};
+                                   "laser", "peq", "flashlight", "stock", "handguard", "compensator", "brake", "choke", 
+                                   "m870modshotgun"};
 
         for (net.minecraft.world.item.Item item : net.minecraftforge.registries.ForgeRegistries.ITEMS) {
             net.minecraft.resources.ResourceLocation loc = net.minecraftforge.registries.ForgeRegistries.ITEMS.getKey(item);
@@ -416,6 +417,7 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
             currentY += 40; 
 
             // --- AMMUNITION & DEPLOYABLE TABS LOGIC ---
+            currentY += 20;
             if (pMouseY >= currentY && pMouseY <= currentY + 20) {
                 if (pMouseX >= 20 && pMouseX <= 110) {
                     this.showAmmunitionTab = true;
@@ -495,7 +497,7 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
             currentY += 45;
             
             if (this.expandedHeadwearCategory.equals("FACEWEAR")) {
-                String[] list = {"NONE", "ANTI-FLASH GOGGLES", "GAS MASK"};
+                String[] list = {"NONE", "GOGGLES", "GAS MASK"};
                 for (String item : list) {
                     if (pMouseY >= currentY && pMouseY <= currentY + 35 && pMouseX >= 20 && pMouseX <= 220) {
                         this.selectedFacewear = item;
@@ -1166,7 +1168,7 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
         int visibleHeight = trueHeight - 100;
         
         int currentY = 0;
-        currentY += 45; // Vest section (collapsed row; expanded dropdown is a z-elevated overlay, doesn't push layout)
+        currentY += 45; // Vest area text gap
         
         currentY += 20; // Coverage header
         currentY += 40; // Coverage boxes
@@ -1184,6 +1186,7 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
         this.maxScroll = Math.max(0f, (float)(listHeight - visibleHeight));
         this.scrollOffset = Math.max(0f, Math.min(this.scrollOffset, this.maxScroll));
 
+        guiGraphics.fill(0, 0, 240, trueHeight, 0xFF000000);
         guiGraphics.fill(20, 16, 220, 18, 0xFFD62929);
 
         guiGraphics.enableScissor(0, 90, 240, trueHeight);
@@ -1262,22 +1265,23 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
         int visibleHeight = trueHeight - 100;
         
         int currentY = 0;
-        currentY += 45; // Helmet box
+        currentY += 45; // Helmet box (now just text)
         if (this.expandedHeadwearCategory.equals("HELMET")) currentY += 2 * 35;
         
-        currentY += 45; // Mount box
+        currentY += 45; // Mount box (now just text)
         if (this.expandedHeadwearCategory.equals("MOUNT")) currentY += 3 * 35;
         if (!this.selectedMount.equals("NONE")) {
-            currentY += 45; // Phosphor boxes directly underneath
+            currentY += 45; // Phosphor boxes text gap
         }
         
-        currentY += 45; // Facewear box
+        currentY += 45; // Facewear text gap
         if (this.expandedHeadwearCategory.equals("FACEWEAR")) currentY += 3 * 35;
         
         int listHeight = currentY + 20;
         this.maxScroll = Math.max(0f, (float)(listHeight - visibleHeight));
         this.scrollOffset = Math.max(0f, Math.min(this.scrollOffset, this.maxScroll));
 
+        guiGraphics.fill(0, 0, 240, trueHeight, 0xFF000000);
         guiGraphics.fill(20, 16, 220, 18, 0xFFD62929);
 
         guiGraphics.enableScissor(0, 90, 240, trueHeight);
@@ -1704,7 +1708,8 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
             String[] vestList = {"NO ARMOR", "LIGHT ARMOR", "HEAVY ARMOR", "STAB VEST"};
             int bgHeight = vestList.length * 35 + 10;
             
-            guiGraphics.fill(15, vestDropdownY - 5, 235, vestDropdownY + bgHeight, 0xFF070707);
+            // Pure Black background to effectively hide the text underneath it
+            guiGraphics.fill(15, vestDropdownY - 5, 235, vestDropdownY + bgHeight, 0xFF000000);
             
             int listY = vestDropdownY;
             for (String item : vestList) {
@@ -1889,14 +1894,83 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
         guiGraphics.disableScissor();
 
         if (!previewStack.isEmpty()) {
-            guiGraphics.pose().pushPose();
-            int rightCenterX = 240 + (trueWidth - 240) / 2;
-            int rightCenterY = trueHeight / 2 - 40; 
+            int infoX = 260;
+            int infoY = 100;
             
-            guiGraphics.pose().translate(rightCenterX - 40, rightCenterY, 350.0F); 
-            guiGraphics.pose().scale(6.0f, 6.0f, 1.0f); 
-            guiGraphics.renderItem(previewStack, 0, 0);
-            guiGraphics.pose().popPose();
+            String gunName = previewStack.getHoverName().getString().toUpperCase();
+            WorkbenchDesign.drawSmallText(guiGraphics, this.font, gunName, infoX, infoY, 1.2f, 0xFFFFFFFF);
+            
+            infoY += 30;
+            WorkbenchDesign.drawSmallText(guiGraphics, this.font, "BRIEF", infoX, infoY, 0.65f, 0xFF7A818C);
+            infoY += 12;
+            
+            String brief1 = "A standardized tactical weapon designed for";
+            String brief2 = "modern combat operations.";
+            String platform = "TACTICAL PLATFORM";
+            String attachments = "OPTIC, BARREL, MUZZLE, UNDERBARREL, LASER";
+            
+            switch (this.currentWeaponTab) {
+                case 0:
+                    brief1 = "A versatile assault rifle providing high fire";
+                    brief2 = "rate and reliable medium range accuracy.";
+                    platform = "ASSAULT RIFLE PLATFORM";
+                    break;
+                case 1:
+                    brief1 = "Heavy hitting battle rifle firing high caliber";
+                    brief2 = "rounds for maximum stopping power.";
+                    platform = "BATTLE RIFLE PLATFORM";
+                    break;
+                case 2:
+                    brief1 = "Light machine gun designed to lay down";
+                    brief2 = "sustained suppressive fire in combat.";
+                    platform = "LMG PLATFORM";
+                    break;
+                case 3:
+                    brief1 = "Personal defense weapon prioritizing mobility";
+                    brief2 = "and high fire rate for close quarters.";
+                    platform = "PDW PLATFORM";
+                    break;
+                case 4:
+                    brief1 = "Submachine gun offering excellent handling";
+                    brief2 = "and extreme fire rate in tight spaces.";
+                    platform = "SMG PLATFORM";
+                    break;
+                case 5:
+                    brief1 = "Devastating close-range scattergun capable";
+                    brief2 = "of breaching doors and clearing rooms.";
+                    platform = "SHOTGUN PLATFORM";
+                    break;
+                case 6:
+                    brief1 = "High-precision marksman rifle designed for";
+                    brief2 = "extreme long-range engagements.";
+                    platform = "SNIPER PLATFORM";
+                    break;
+                case 7:
+                    brief1 = "Anti-armor munition launcher intended to";
+                    brief2 = "destroy heavy vehicles and emplacements.";
+                    platform = "LAUNCHER PLATFORM";
+                    break;
+                case 8:
+                    brief1 = "Compact sidearm providing reliable backup";
+                    brief2 = "firepower when the primary weapon is dry.";
+                    platform = "SIDEARM PLATFORM";
+                    attachments = "OPTIC, MUZZLE, STOCK";
+                    break;
+            }
+            
+            WorkbenchDesign.drawSmallText(guiGraphics, this.font, brief1, infoX, infoY, 0.65f, 0xFFFFFFFF);
+            infoY += 12;
+            WorkbenchDesign.drawSmallText(guiGraphics, this.font, brief2, infoX, infoY, 0.65f, 0xFFFFFFFF);
+            
+            infoY += 25;
+            WorkbenchDesign.drawSmallText(guiGraphics, this.font, "PLATFORM", infoX, infoY, 0.65f, 0xFF7A818C);
+            infoY += 12;
+            WorkbenchDesign.drawSmallText(guiGraphics, this.font, platform, infoX, infoY, 0.65f, 0xFFFFFFFF);
+            
+            infoY += 25;
+            WorkbenchDesign.drawSmallText(guiGraphics, this.font, "ATTACHMENTS", infoX, infoY, 0.65f, 0xFF7A818C);
+            infoY += 12;
+            WorkbenchDesign.drawSmallText(guiGraphics, this.font, attachments, infoX, infoY, 0.65f, 0xFFFFFFFF);
         }
     }
 
