@@ -27,9 +27,6 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
     
     // 0=AR, 1=BR, 2=LMG, 3=PDW, 4=SMG, 5=Shotgun, 6=Sniper, 7=Launcher, 8=Sidearm
     private int currentWeaponTab = 0; 
-    private static final String[] SHORT_TAB_NAMES = {
-        "AR", "BR", "LMG", "PDW", "SMG", "SHOTGUN", "SNIPER", "LAUNCHER"
-    };
     
     private boolean inWeaponSelection = false; 
     private boolean inAttachmentSelection = false;
@@ -337,7 +334,7 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
             for (int i = 0; i < (rows * cols); i++) {
                 int col = i % cols;
                 int row = i / cols;
-                int boxX = gridStartX + (col * 45); 
+                int boxX = gridStartX + (col * 45); // 40px box + 5px gap
                 int boxY = startY + (row * 45);
                 
                 if (pMouseX >= boxX && pMouseX <= boxX + 40 && pMouseY >= boxY && pMouseY <= boxY + 40) {
@@ -370,7 +367,7 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
                 String[] vestList = {"NO ARMOR", "LIGHT ARMOR", "HEAVY ARMOR", "STAB VEST"};
                 int listY = vestDropdownY;
                 for (String item : vestList) {
-                    if (pMouseY >= listY && pMouseY <= listY + 30 && pMouseX >= 20 && pMouseX <= 220) {
+                    if (pMouseY >= listY && pMouseY <= listY + 35 && pMouseX >= 20 && pMouseX <= 220) {
                         this.selectedVest = item;
                         this.expandedArmorCategory = "";
                         return true;
@@ -383,7 +380,7 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
                     return true;
                 }
             } else {
-                if (pMouseY >= currentY && pMouseY <= currentY + 40 && pMouseX >= 20 && pMouseX <= 220) {
+                if (pMouseY >= currentY && pMouseY <= currentY + 30 && pMouseX >= 20 && pMouseX <= 220) {
                     this.expandedArmorCategory = "VEST";
                     return true;
                 }
@@ -449,7 +446,7 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
             if (this.expandedHeadwearCategory.equals("HELMET")) {
                 String[] list = {"NO HELMET", "HELMET ONLY"};
                 for (String item : list) {
-                    if (pMouseY >= currentY && pMouseY <= currentY + 30 && pMouseX >= 20 && pMouseX <= 220) {
+                    if (pMouseY >= currentY && pMouseY <= currentY + 35 && pMouseX >= 20 && pMouseX <= 220) {
                         this.selectedHelmet = item;
                         this.expandedHeadwearCategory = "";
                         return true;
@@ -468,7 +465,7 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
             if (this.expandedHeadwearCategory.equals("MOUNT")) {
                 String[] list = {"NONE", "NVGS", "GPNVGS"};
                 for (String item : list) {
-                    if (pMouseY >= currentY && pMouseY <= currentY + 30 && pMouseX >= 20 && pMouseX <= 220) {
+                    if (pMouseY >= currentY && pMouseY <= currentY + 35 && pMouseX >= 20 && pMouseX <= 220) {
                         this.selectedMount = item;
                         this.expandedHeadwearCategory = "";
                         return true;
@@ -498,9 +495,9 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
             currentY += 45;
             
             if (this.expandedHeadwearCategory.equals("FACEWEAR")) {
-                String[] list = {"NONE", "GOGGLES", "GAS MASK"};
+                String[] list = {"NONE", "ANTI-FLASH GOGGLES", "GAS MASK"};
                 for (String item : list) {
-                    if (pMouseY >= currentY && pMouseY <= currentY + 30 && pMouseX >= 20 && pMouseX <= 220) {
+                    if (pMouseY >= currentY && pMouseY <= currentY + 35 && pMouseX >= 20 && pMouseX <= 220) {
                         this.selectedFacewear = item;
                         this.expandedHeadwearCategory = "";
                         return true;
@@ -977,19 +974,6 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
         }
     }
 
-    private void drawCleanBox(GuiGraphics guiGraphics, int x, int y, int w, int h) {
-        guiGraphics.fill(x, y, x + w, y + h, 0xFF2E3136); 
-        guiGraphics.fill(x + 1, y + 1, x + w - 1, y + h - 1, 0xFF0B0C0E); 
-    }
-
-    private void drawSmallText(GuiGraphics guiGraphics, String text, int x, int y, float scale, int color) {
-        guiGraphics.pose().pushPose();
-        guiGraphics.pose().translate(x, y, 0);
-        guiGraphics.pose().scale(scale, scale, 1.0F);
-        guiGraphics.drawString(this.font, text, 0, 0, color, false);
-        guiGraphics.pose().popPose();
-    }
-
     private void render3DOperator(GuiGraphics guiGraphics, int trueWidth, int trueHeight) {
         if (Minecraft.getInstance().player != null) {
             
@@ -1028,27 +1012,27 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
         
         // UNIFORM
         int currentY = startY + 15;
-        drawCleanBox(guiGraphics, 20, currentY, 95, 40);
-        drawCleanBox(guiGraphics, 125, currentY, 95, 40);
+        WorkbenchDesign.drawCleanBox(guiGraphics, 20, currentY, 95, 40);
+        WorkbenchDesign.drawCleanBox(guiGraphics, 125, currentY, 95, 40);
         currentY += 45;
-        drawCleanBox(guiGraphics, 20, currentY, 60, 40);
-        drawCleanBox(guiGraphics, 90, currentY, 60, 40);
-        drawCleanBox(guiGraphics, 160, currentY, 60, 40);
+        WorkbenchDesign.drawCleanBox(guiGraphics, 20, currentY, 60, 40);
+        WorkbenchDesign.drawCleanBox(guiGraphics, 90, currentY, 60, 40);
+        WorkbenchDesign.drawCleanBox(guiGraphics, 160, currentY, 60, 40);
         
         // TACTICAL GEAR
         currentY += 60;
-        drawCleanBox(guiGraphics, 20, currentY, 95, 40);
-        drawCleanBox(guiGraphics, 125, currentY, 95, 40);
+        WorkbenchDesign.drawCleanBox(guiGraphics, 20, currentY, 95, 40);
+        WorkbenchDesign.drawCleanBox(guiGraphics, 125, currentY, 95, 40);
         currentY += 45;
-        drawCleanBox(guiGraphics, 20, currentY, 60, 40);
-        drawCleanBox(guiGraphics, 90, currentY, 60, 40);
-        drawCleanBox(guiGraphics, 160, currentY, 60, 40);
+        WorkbenchDesign.drawCleanBox(guiGraphics, 20, currentY, 60, 40);
+        WorkbenchDesign.drawCleanBox(guiGraphics, 90, currentY, 60, 40);
+        WorkbenchDesign.drawCleanBox(guiGraphics, 160, currentY, 60, 40);
         
         // ACCESSORIES
         currentY += 60;
-        drawCleanBox(guiGraphics, 20, currentY, 60, 40);
-        drawCleanBox(guiGraphics, 90, currentY, 60, 40);
-        drawCleanBox(guiGraphics, 160, currentY, 60, 40);
+        WorkbenchDesign.drawCleanBox(guiGraphics, 20, currentY, 60, 40);
+        WorkbenchDesign.drawCleanBox(guiGraphics, 90, currentY, 60, 40);
+        WorkbenchDesign.drawCleanBox(guiGraphics, 160, currentY, 60, 40);
 
         render3DOperator(guiGraphics, trueWidth, trueHeight);
     }
@@ -1080,7 +1064,7 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
             int boxX = gridStartX + (col * 45);
             int boxY = startY + (row * 45);
             
-            drawCleanBox(guiGraphics, boxX, boxY, 40, 40);
+            WorkbenchDesign.drawCleanBox(guiGraphics, boxX, boxY, 40, 40);
         }
         
         if (this.maxScroll > 0) {
@@ -1097,31 +1081,31 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
         int startY = 30;
         
         // UNIFORM
-        drawSmallText(guiGraphics, "UNIFORM", 20, startY, 0.65f, 0xFFAAAAAA);
+        WorkbenchDesign.drawSmallText(guiGraphics, this.font, "UNIFORM", 20, startY, 0.65f, 0xFFAAAAAA);
         int currentY = startY + 15;
-        drawSmallText(guiGraphics, "SHIRT", 24, currentY + 4, 0.45f, 0xFF7A818C);
-        drawSmallText(guiGraphics, "PANTS", 129, currentY + 4, 0.45f, 0xFF7A818C);
+        WorkbenchDesign.drawSmallText(guiGraphics, this.font, "SHIRT", 24, currentY + 4, 0.45f, 0xFF7A818C);
+        WorkbenchDesign.drawSmallText(guiGraphics, this.font, "PANTS", 129, currentY + 4, 0.45f, 0xFF7A818C);
         currentY += 45;
-        drawSmallText(guiGraphics, "GLOVES", 24, currentY + 4, 0.45f, 0xFF7A818C);
-        drawSmallText(guiGraphics, "BOOTS", 94, currentY + 4, 0.45f, 0xFF7A818C);
-        drawSmallText(guiGraphics, "BELT", 164, currentY + 4, 0.45f, 0xFF7A818C);
+        WorkbenchDesign.drawSmallText(guiGraphics, this.font, "GLOVES", 24, currentY + 4, 0.45f, 0xFF7A818C);
+        WorkbenchDesign.drawSmallText(guiGraphics, this.font, "BOOTS", 94, currentY + 4, 0.45f, 0xFF7A818C);
+        WorkbenchDesign.drawSmallText(guiGraphics, this.font, "BELT", 164, currentY + 4, 0.45f, 0xFF7A818C);
         
         // TACTICAL GEAR
         currentY += 60;
-        drawSmallText(guiGraphics, "TACTICAL GEAR", 20, currentY - 15, 0.65f, 0xFFAAAAAA);
-        drawSmallText(guiGraphics, "ARMOR", 24, currentY + 4, 0.45f, 0xFF7A818C);
-        drawSmallText(guiGraphics, "HELMET", 129, currentY + 4, 0.45f, 0xFF7A818C);
+        WorkbenchDesign.drawSmallText(guiGraphics, this.font, "TACTICAL GEAR", 20, currentY - 15, 0.65f, 0xFFAAAAAA);
+        WorkbenchDesign.drawSmallText(guiGraphics, this.font, "ARMOR", 24, currentY + 4, 0.45f, 0xFF7A818C);
+        WorkbenchDesign.drawSmallText(guiGraphics, this.font, "HELMET", 129, currentY + 4, 0.45f, 0xFF7A818C);
         currentY += 45;
-        drawSmallText(guiGraphics, "FACEWEAR", 24, currentY + 4, 0.45f, 0xFF7A818C);
-        drawSmallText(guiGraphics, "NVG", 94, currentY + 4, 0.45f, 0xFF7A818C);
-        drawSmallText(guiGraphics, "BALLISTIC MASK", 164, currentY + 4, 0.45f, 0xFF7A818C);
+        WorkbenchDesign.drawSmallText(guiGraphics, this.font, "FACEWEAR", 24, currentY + 4, 0.45f, 0xFF7A818C);
+        WorkbenchDesign.drawSmallText(guiGraphics, this.font, "NVG", 94, currentY + 4, 0.45f, 0xFF7A818C);
+        WorkbenchDesign.drawSmallText(guiGraphics, this.font, "BALLISTIC MASK", 164, currentY + 4, 0.45f, 0xFF7A818C);
         
         // ACCESSORIES
         currentY += 60;
-        drawSmallText(guiGraphics, "ACCESSORIES", 20, currentY - 15, 0.65f, 0xFFAAAAAA);
-        drawSmallText(guiGraphics, "TATTOO", 24, currentY + 4, 0.45f, 0xFF7A818C);
-        drawSmallText(guiGraphics, "EYEWEAR", 94, currentY + 4, 0.45f, 0xFF7A818C);
-        drawSmallText(guiGraphics, "WATCH", 164, currentY + 4, 0.45f, 0xFF7A818C);
+        WorkbenchDesign.drawSmallText(guiGraphics, this.font, "ACCESSORIES", 20, currentY - 15, 0.65f, 0xFFAAAAAA);
+        WorkbenchDesign.drawSmallText(guiGraphics, this.font, "TATTOO", 24, currentY + 4, 0.45f, 0xFF7A818C);
+        WorkbenchDesign.drawSmallText(guiGraphics, this.font, "EYEWEAR", 94, currentY + 4, 0.45f, 0xFF7A818C);
+        WorkbenchDesign.drawSmallText(guiGraphics, this.font, "WATCH", 164, currentY + 4, 0.45f, 0xFF7A818C);
     }
 
     private void renderCustomizationGridLabels(GuiGraphics guiGraphics, int mouseX, int mouseY, int trueWidth, int trueHeight) {
@@ -1134,7 +1118,7 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
         int gridStartX = panelX + 15;
         int startY = 50 - (int)this.scrollOffset;
         
-        drawSmallText(guiGraphics, "SELECT " + this.customizationCategory, panelX + 15, 25, 0.75f, 0xFFFFFFFF);
+        WorkbenchDesign.drawSmallText(guiGraphics, this.font, "SELECT " + this.customizationCategory, panelX + 15, 25, 0.75f, 0xFFFFFFFF);
         
         guiGraphics.enableScissor(panelX, 40, trueWidth, trueHeight);
         for (int i = 0; i < (rows * cols); i++) {
@@ -1154,12 +1138,12 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
         guiGraphics.fill(0, 0, 240, trueHeight, 0xFF121212);
         guiGraphics.fill(20, 16, 220, 18, 0xFFD62929);
 
-        drawCleanBox(guiGraphics, 20, 40, 200, 45);  
-        drawCleanBox(guiGraphics, 20, 85, 200, 45);  
-        drawCleanBox(guiGraphics, 20, 130, 200, 45); 
+        WorkbenchDesign.drawCleanBox(guiGraphics, 20, 40, 200, 45);  
+        WorkbenchDesign.drawCleanBox(guiGraphics, 20, 85, 200, 45);  
+        WorkbenchDesign.drawCleanBox(guiGraphics, 20, 130, 200, 45); 
 
-        drawCleanBox(guiGraphics, 20, 205, 80, 55);  
-        drawCleanBox(guiGraphics, 100, 205, 120, 55); 
+        WorkbenchDesign.drawCleanBox(guiGraphics, 20, 205, 80, 55);  
+        WorkbenchDesign.drawCleanBox(guiGraphics, 100, 205, 120, 55); 
         guiGraphics.fill(100, 232, 220, 233, 0xFF2E3136); 
 
         // Removed the drawCleanBox generation loop for munition slots, leaving only vertical dividers
@@ -1171,8 +1155,8 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
 
         guiGraphics.fill(194, 309, 214, 317, 0xFF2E3136); 
 
-        drawCleanBox(guiGraphics, 20, 345, 80, 55);  
-        drawCleanBox(guiGraphics, 100, 345, 120, 55); 
+        WorkbenchDesign.drawCleanBox(guiGraphics, 20, 345, 80, 55);  
+        WorkbenchDesign.drawCleanBox(guiGraphics, 100, 345, 120, 55); 
         guiGraphics.fill(100, 372, 220, 373, 0xFF2E3136); 
 
         render3DOperator(guiGraphics, trueWidth, trueHeight);
@@ -1182,7 +1166,7 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
         int visibleHeight = trueHeight - 100;
         
         int currentY = 0;
-        currentY += 45; // Vest area
+        currentY += 45; // Vest section (collapsed row; expanded dropdown is a z-elevated overlay, doesn't push layout)
         
         currentY += 20; // Coverage header
         currentY += 40; // Coverage boxes
@@ -1200,7 +1184,6 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
         this.maxScroll = Math.max(0f, (float)(listHeight - visibleHeight));
         this.scrollOffset = Math.max(0f, Math.min(this.scrollOffset, this.maxScroll));
 
-        guiGraphics.fill(0, 0, 240, trueHeight, 0xFF121212);
         guiGraphics.fill(20, 16, 220, 18, 0xFFD62929);
 
         guiGraphics.enableScissor(0, 90, 240, trueHeight);
@@ -1295,29 +1278,28 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
         this.maxScroll = Math.max(0f, (float)(listHeight - visibleHeight));
         this.scrollOffset = Math.max(0f, Math.min(this.scrollOffset, this.maxScroll));
 
-        guiGraphics.fill(0, 0, 240, trueHeight, 0xFF121212);
         guiGraphics.fill(20, 16, 220, 18, 0xFFD62929);
 
         guiGraphics.enableScissor(0, 90, 240, trueHeight);
         int drawY = 100 - (int)this.scrollOffset;
         
         // HELMET Box
-        drawCleanBox(guiGraphics, 20, drawY, 200, 40);
+        WorkbenchDesign.drawCleanBox(guiGraphics, 20, drawY, 200, 40);
         drawY += 45;
         if (this.expandedHeadwearCategory.equals("HELMET")) drawY += 2 * 35;
         
         // MOUNT Box
-        drawCleanBox(guiGraphics, 20, drawY, 200, 40);
+        WorkbenchDesign.drawCleanBox(guiGraphics, 20, drawY, 200, 40);
         drawY += 45;
         if (this.expandedHeadwearCategory.equals("MOUNT")) drawY += 3 * 35;
         if (!this.selectedMount.equals("NONE")) {
-            drawCleanBox(guiGraphics, 20, drawY, 100, 40);
-            drawCleanBox(guiGraphics, 120, drawY, 100, 40);
+            WorkbenchDesign.drawCleanBox(guiGraphics, 20, drawY, 100, 40);
+            WorkbenchDesign.drawCleanBox(guiGraphics, 120, drawY, 100, 40);
             drawY += 45;
         }
         
         // FACEWEAR Box
-        drawCleanBox(guiGraphics, 20, drawY, 200, 40);
+        WorkbenchDesign.drawCleanBox(guiGraphics, 20, drawY, 200, 40);
         drawY += 45;
         if (this.expandedHeadwearCategory.equals("FACEWEAR")) drawY += 3 * 35;
         
@@ -1347,7 +1329,7 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
         int currentY = startY - (int)this.scrollOffset;
         
         for (int i = 0; i < numBoxes; i++) {
-            drawCleanBox(guiGraphics, 20, currentY, 200, 40);
+            WorkbenchDesign.drawCleanBox(guiGraphics, 20, currentY, 200, 40);
             
             if (weaponPool[i] != null && !weaponPool[i].isEmpty()) {
                 guiGraphics.pose().pushPose();
@@ -1367,6 +1349,8 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
             guiGraphics.fill(224, thumbY, 228, thumbY + thumbHeight, 0xFFD2D6DE);
         }
         guiGraphics.disableScissor();
+
+        render3DOperator(guiGraphics, trueWidth, trueHeight);
     }
 
     private void renderAttachmentSelectionBg(GuiGraphics guiGraphics, int trueWidth, int trueHeight) {
@@ -1385,7 +1369,7 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
         int currentY = startY - (int)this.scrollOffset;
         
         for (int i = 0; i < numBoxes; i++) {
-            drawCleanBox(guiGraphics, 20, currentY, 200, 40);
+            WorkbenchDesign.drawCleanBox(guiGraphics, 20, currentY, 200, 40);
             
             if (attachmentPool[i] != null && !attachmentPool[i].isEmpty()) {
                 guiGraphics.pose().pushPose();
@@ -1404,6 +1388,8 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
             guiGraphics.fill(224, thumbY, 228, thumbY + thumbHeight, 0xFFD2D6DE);
         }
         guiGraphics.disableScissor();
+
+        render3DOperator(guiGraphics, trueWidth, trueHeight);
     }
 
     private void renderMunitionSelectionBg(GuiGraphics guiGraphics, int trueWidth, int trueHeight) {
@@ -1426,6 +1412,8 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
             guiGraphics.fill(224, thumbY, 228, thumbY + thumbHeight, 0xFFD2D6DE);
         }
         guiGraphics.disableScissor();
+
+        render3DOperator(guiGraphics, trueWidth, trueHeight);
     }
 
     private void renderGunsmithBg(GuiGraphics guiGraphics, int trueWidth, int trueHeight) {
@@ -1451,7 +1439,7 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
         guiGraphics.enableScissor(0, 90, 240, trueHeight);
         int currentY = startY - (int)this.scrollOffset;
         
-        drawCleanBox(guiGraphics, 20, currentY, 200, 70); 
+        WorkbenchDesign.drawCleanBox(guiGraphics, 20, currentY, 200, 70); 
         currentY += 75;
 
         currentY += 5; 
@@ -1459,7 +1447,7 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
         currentY += 25;
 
         for (int i = 0; i < numCoreAttachments; i++) {
-            drawCleanBox(guiGraphics, 20, currentY, 200, 40);
+            WorkbenchDesign.drawCleanBox(guiGraphics, 20, currentY, 200, 40);
             currentY += 45; 
         }
 
@@ -1512,6 +1500,8 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
             guiGraphics.fill(224, thumbY, 228, thumbY + thumbHeight, 0xFFD2D6DE);
         }
         guiGraphics.disableScissor();
+
+        render3DOperator(guiGraphics, trueWidth, trueHeight);
     }
 
     private void renderLoadoutLabels(GuiGraphics guiGraphics) {
@@ -1528,10 +1518,10 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
         ItemStack secondaryStack = getDisplayedSidearm();
         String secondaryName = secondaryStack.isEmpty() ? "UNARMED" : secondaryStack.getHoverName().getString().toUpperCase();
 
-        drawSmallText(guiGraphics, "WEAPONS", 20, 26, 0.65f, 0xFFAAAAAA);
+        WorkbenchDesign.drawSmallText(guiGraphics, this.font, "WEAPONS", 20, 26, 0.65f, 0xFFAAAAAA);
         
-        drawSmallText(guiGraphics, "PRIMARY", 26, 68, 0.55f, 0xFF7A818C);
-        drawSmallText(guiGraphics, primaryName, 26, 74, 0.75f, 0xFFD2D6DE);
+        WorkbenchDesign.drawSmallText(guiGraphics, this.font, "PRIMARY", 26, 68, 0.55f, 0xFF7A818C);
+        WorkbenchDesign.drawSmallText(guiGraphics, this.font, primaryName, 26, 74, 0.75f, 0xFFD2D6DE);
         if (!primaryStack.isEmpty()) {
             guiGraphics.pose().pushPose();
             guiGraphics.pose().translate(110, 44, 350.0F); 
@@ -1540,8 +1530,8 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
             guiGraphics.pose().popPose();
         }
         
-        drawSmallText(guiGraphics, "SIDE ARM", 26, 113, 0.55f, 0xFF7A818C);
-        drawSmallText(guiGraphics, secondaryName, 26, 119, 0.75f, 0xFFD2D6DE);
+        WorkbenchDesign.drawSmallText(guiGraphics, this.font, "SIDE ARM", 26, 113, 0.55f, 0xFF7A818C);
+        WorkbenchDesign.drawSmallText(guiGraphics, this.font, secondaryName, 26, 119, 0.75f, 0xFFD2D6DE);
         if (!secondaryStack.isEmpty()) {
             guiGraphics.pose().pushPose();
             guiGraphics.pose().translate(110, 89, 350.0F); 
@@ -1550,47 +1540,47 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
             guiGraphics.pose().popPose();
         }
         
-        drawSmallText(guiGraphics, "LONG TACTICAL", 26, 158, 0.55f, 0xFF7A818C);
-        drawSmallText(guiGraphics, "MIRRORGUN", 26, 164, 0.75f, 0xFFD2D6DE);
+        WorkbenchDesign.drawSmallText(guiGraphics, this.font, "LONG TACTICAL", 26, 158, 0.55f, 0xFF7A818C);
+        WorkbenchDesign.drawSmallText(guiGraphics, this.font, "MIRRORGUN", 26, 164, 0.75f, 0xFFD2D6DE);
 
-        drawSmallText(guiGraphics, "ARMOR & MUNITIONS", 20, 190, 0.65f, 0xFFAAAAAA);
-        drawSmallText(guiGraphics, "VEST | ", 26, 243, 0.55f, 0xFF7A818C);
-        drawSmallText(guiGraphics, this.selectedAmmunitionDeployable, 26 + (int)(this.font.width("VEST | ") * 0.55f), 243, 0.55f, 0xFFD62929);
-        drawSmallText(guiGraphics, this.selectedVest, 26, 249, 0.75f, 0xFFD2D6DE);
+        WorkbenchDesign.drawSmallText(guiGraphics, this.font, "ARMOR & MUNITIONS", 20, 190, 0.65f, 0xFFAAAAAA);
+        WorkbenchDesign.drawSmallText(guiGraphics, this.font, "VEST | ", 26, 243, 0.55f, 0xFF7A818C);
+        WorkbenchDesign.drawSmallText(guiGraphics, this.font, this.selectedAmmunitionDeployable, 26 + (int)(this.font.width("VEST | ") * 0.55f), 243, 0.55f, 0xFFD62929);
+        WorkbenchDesign.drawSmallText(guiGraphics, this.font, this.selectedVest, 26, 249, 0.75f, 0xFFD2D6DE);
 
-        drawSmallText(guiGraphics, "MATERIAL", 106, 218, 0.55f, 0xFF7A818C);
-        drawSmallText(guiGraphics, this.selectedMaterial, 106, 224, 0.75f, 0xFFD2D6DE);
-        drawSmallText(guiGraphics, "COVERAGE", 106, 244, 0.55f, 0xFF7A818C);
-        drawSmallText(guiGraphics, this.selectedCoverage, 106, 250, 0.75f, 0xFFD2D6DE);
+        WorkbenchDesign.drawSmallText(guiGraphics, this.font, "MATERIAL", 106, 218, 0.55f, 0xFF7A818C);
+        WorkbenchDesign.drawSmallText(guiGraphics, this.font, this.selectedMaterial, 106, 224, 0.75f, 0xFFD2D6DE);
+        WorkbenchDesign.drawSmallText(guiGraphics, this.font, "COVERAGE", 106, 244, 0.55f, 0xFF7A818C);
+        WorkbenchDesign.drawSmallText(guiGraphics, this.font, this.selectedCoverage, 106, 250, 0.75f, 0xFFD2D6DE);
 
-        drawSmallText(guiGraphics, "MUNITION SLOTS", 20, 275, 0.65f, 0xFFAAAAAA);
-        drawSmallText(guiGraphics, this.menu.getMunitionCount() + "/" + this.selectedAmmunitionDeployable, 165, 275, 0.65f, 0xFFD62929);
+        WorkbenchDesign.drawSmallText(guiGraphics, this.font, "MUNITION SLOTS", 20, 275, 0.65f, 0xFFAAAAAA);
+        WorkbenchDesign.drawSmallText(guiGraphics, this.font, this.menu.getMunitionCount() + "/" + this.selectedAmmunitionDeployable, 165, 275, 0.65f, 0xFFD62929);
 
-        drawSmallText(guiGraphics, "AP", 66, 310, 0.55f, 0xFFFFFFFF);
-        drawSmallText(guiGraphics, "AP", 153, 310, 0.55f, 0xFFFFFFFF);
-        drawSmallText(guiGraphics, "5", 201, 310, 0.55f, 0xFFFFFFFF);
+        WorkbenchDesign.drawSmallText(guiGraphics, this.font, "AP", 66, 310, 0.55f, 0xFFFFFFFF);
+        WorkbenchDesign.drawSmallText(guiGraphics, this.font, "AP", 153, 310, 0.55f, 0xFFFFFFFF);
+        WorkbenchDesign.drawSmallText(guiGraphics, this.font, "5", 201, 310, 0.55f, 0xFFFFFFFF);
 
         // --- HEADWEAR DYNAMIC LABELS ---
-        drawSmallText(guiGraphics, "HEADWEAR", 20, 330, 0.65f, 0xFFAAAAAA);
+        WorkbenchDesign.drawSmallText(guiGraphics, this.font, "HEADWEAR", 20, 330, 0.65f, 0xFFAAAAAA);
         
-        drawSmallText(guiGraphics, "HELMET", 26, 383, 0.55f, 0xFF7A818C);
-        drawSmallText(guiGraphics, this.selectedHelmet, 26, 389, 0.75f, 0xFFD2D6DE);
+        WorkbenchDesign.drawSmallText(guiGraphics, this.font, "HELMET", 26, 383, 0.55f, 0xFF7A818C);
+        WorkbenchDesign.drawSmallText(guiGraphics, this.font, this.selectedHelmet, 26, 389, 0.75f, 0xFFD2D6DE);
         
-        drawSmallText(guiGraphics, "MOUNT | ", 106, 358, 0.55f, 0xFF7A818C);
+        WorkbenchDesign.drawSmallText(guiGraphics, this.font, "MOUNT | ", 106, 358, 0.55f, 0xFF7A818C);
         if (!this.selectedMount.equals("NONE")) {
             String phosphorTrim = this.selectedPhosphor.equals("WHITE PHOSPHOR") ? "WHITE" : "GREEN";
-            drawSmallText(guiGraphics, phosphorTrim, 106 + (int)(this.font.width("MOUNT | ") * 0.55f), 358, 0.55f, 0xFFD62929);
+            WorkbenchDesign.drawSmallText(guiGraphics, this.font, phosphorTrim, 106 + (int)(this.font.width("MOUNT | ") * 0.55f), 358, 0.55f, 0xFFD62929);
         }
-        drawSmallText(guiGraphics, this.selectedMount, 106, 364, 0.75f, 0xFFD2D6DE);
+        WorkbenchDesign.drawSmallText(guiGraphics, this.font, this.selectedMount, 106, 364, 0.75f, 0xFFD2D6DE);
         
-        drawSmallText(guiGraphics, "FACEWEAR", 106, 384, 0.55f, 0xFF7A818C);
-        drawSmallText(guiGraphics, this.selectedFacewear, 106, 390, 0.75f, 0xFFD2D6DE);
+        WorkbenchDesign.drawSmallText(guiGraphics, this.font, "FACEWEAR", 106, 384, 0.55f, 0xFF7A818C);
+        WorkbenchDesign.drawSmallText(guiGraphics, this.font, this.selectedFacewear, 106, 390, 0.75f, 0xFFD2D6DE);
     }
 
     private void renderArmorSelectionLabels(GuiGraphics guiGraphics, int mouseX, int mouseY, int trueWidth, int trueHeight) {
-        drawSmallText(guiGraphics, "< LOADOUT", 20, 25, 0.75f, 0xFFFFFF);
-        drawSmallText(guiGraphics, "ARMOR", 20, 55, 1.1f, 0xFFFFFF); 
-        drawSmallText(guiGraphics, "SELECT EQUIPMENT", 20, 75, 0.65f, 0xFFD62929); 
+        WorkbenchDesign.drawSmallText(guiGraphics, this.font, "< LOADOUT", 20, 25, 0.75f, 0xFFFFFF);
+        WorkbenchDesign.drawSmallText(guiGraphics, this.font, "ARMOR", 20, 55, 1.1f, 0xFFFFFF); 
+        WorkbenchDesign.drawSmallText(guiGraphics, this.font, "SELECT EQUIPMENT", 20, 75, 0.65f, 0xFFD62929); 
 
         int currentY = 100 - (int)this.scrollOffset;
         
@@ -1605,14 +1595,14 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
         guiGraphics.enableScissor(0, 90, 240, trueHeight);
         
         // --- VEST SECTION ---
-        drawSmallText(guiGraphics, "VEST", 20, currentY + 8, 0.65f, 0xFF7A818C);
-        drawSmallText(guiGraphics, this.selectedVest, 20, currentY + 18, 0.75f, 0xFFFFFFFF);
+        WorkbenchDesign.drawSmallText(guiGraphics, this.font, "VEST", 20, currentY + 8, 0.65f, 0xFF7A818C);
+        WorkbenchDesign.drawSmallText(guiGraphics, this.font, this.selectedVest, 20, currentY + 18, 0.75f, 0xFFFFFFFF);
         
         int vestDropdownY = currentY + 45;
         currentY += 45;
         
         // --- COVERAGE SECTION ---
-        drawSmallText(guiGraphics, "COVERAGE", 20, currentY + 8, 0.65f, 0xFF7A818C);
+        WorkbenchDesign.drawSmallText(guiGraphics, this.font, "COVERAGE", 20, currentY + 8, 0.65f, 0xFF7A818C);
         currentY += 20;
         
         String[] covList = {"NONE", "FRONT", "FRONT/BACK", "FULL"};
@@ -1625,7 +1615,7 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
             float textScale = (i == 2) ? 0.45f : 0.55f;
             int textX = boxX + (i == 2 ? 2 : 8); 
             
-            drawSmallText(guiGraphics, covList[i], textX, currentY + 12, textScale, color);
+            WorkbenchDesign.drawSmallText(guiGraphics, this.font, covList[i], textX, currentY + 12, textScale, color);
             
             if (isSelected) {
                 guiGraphics.fill(boxX, currentY + 28, boxX + 45, currentY + 30, 0xFFD62929);
@@ -1634,7 +1624,7 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
         currentY += 40;
 
         // --- MATERIAL SECTION ---
-        drawSmallText(guiGraphics, "MATERIAL", 20, currentY + 8, 0.65f, 0xFF7A818C);
+        WorkbenchDesign.drawSmallText(guiGraphics, this.font, "MATERIAL", 20, currentY + 8, 0.65f, 0xFF7A818C);
         currentY += 20;
         
         String[] matList = {"KEVLAR", "STEEL", "CERAMIC"};
@@ -1646,7 +1636,7 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
             int color = isSelected ? 0xFFD62929 : (isHovered ? 0xFFFFFFFF : 0xFF7A818C);
             int textX = boxX + 12;
             
-            drawSmallText(guiGraphics, matList[i], textX, currentY + 12, 0.55f, color);
+            WorkbenchDesign.drawSmallText(guiGraphics, this.font, matList[i], textX, currentY + 12, 0.55f, color);
             
             if (isSelected) {
                 guiGraphics.fill(boxX, currentY + 28, boxX + 60, currentY + 30, 0xFFD62929);
@@ -1655,8 +1645,8 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
         currentY += 40;
 
         // --- AMMUNITION & DEPLOYABLE SECTION ---
-        drawSmallText(guiGraphics, "AMMUNITION", 26, currentY + 6, 0.55f, this.showAmmunitionTab ? 0xFFFFFFFF : 0xFF7A818C);
-        drawSmallText(guiGraphics, "DEPLOYABLE", 116, currentY + 6, 0.55f, !this.showAmmunitionTab ? 0xFFFFFFFF : 0xFF7A818C);
+        WorkbenchDesign.drawSmallText(guiGraphics, this.font, "AMMUNITION", 26, currentY + 6, 0.55f, this.showAmmunitionTab ? 0xFFFFFFFF : 0xFF7A818C);
+        WorkbenchDesign.drawSmallText(guiGraphics, this.font, "DEPLOYABLE", 116, currentY + 6, 0.55f, !this.showAmmunitionTab ? 0xFFFFFFFF : 0xFF7A818C);
         currentY += 20;
 
         if (this.showAmmunitionTab) {
@@ -1666,20 +1656,20 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
             String[] sidearmCats = {"MAGAZINE", "AMMUNITION"};
             String[] sidearmNames = {"STANDARD MAG", "9X19MM PARABELLUM"};
             
-            drawSmallText(guiGraphics, "PRIMARY AMMUNITION", 26, currentY + 6, 0.65f, 0xFF7A818C);
+            WorkbenchDesign.drawSmallText(guiGraphics, this.font, "PRIMARY AMMUNITION", 26, currentY + 6, 0.65f, 0xFF7A818C);
             currentY += 16;
             for (int i = 0; i < primaryCats.length; i++) {
-                drawSmallText(guiGraphics, primaryCats[i], 26, currentY + 8, 0.45f, 0xFF7A818C);
-                drawSmallText(guiGraphics, primaryNames[i], 26, currentY + 18, 0.65f, 0xFFFFFFFF);
+                WorkbenchDesign.drawSmallText(guiGraphics, this.font, primaryCats[i], 26, currentY + 8, 0.45f, 0xFF7A818C);
+                WorkbenchDesign.drawSmallText(guiGraphics, this.font, primaryNames[i], 26, currentY + 18, 0.65f, 0xFFFFFFFF);
                 currentY += 31;
             }
 
             currentY += 10; 
-            drawSmallText(guiGraphics, "SIDEARM AMMUNITION", 26, currentY + 6, 0.65f, 0xFF7A818C);
+            WorkbenchDesign.drawSmallText(guiGraphics, this.font, "SIDEARM AMMUNITION", 26, currentY + 6, 0.65f, 0xFF7A818C);
             currentY += 16;
             for (int i = 0; i < sidearmCats.length; i++) {
-                drawSmallText(guiGraphics, sidearmCats[i], 26, currentY + 8, 0.45f, 0xFF7A818C);
-                drawSmallText(guiGraphics, sidearmNames[i], 26, currentY + 18, 0.65f, 0xFFFFFFFF);
+                WorkbenchDesign.drawSmallText(guiGraphics, this.font, sidearmCats[i], 26, currentY + 8, 0.45f, 0xFF7A818C);
+                WorkbenchDesign.drawSmallText(guiGraphics, this.font, sidearmNames[i], 26, currentY + 18, 0.65f, 0xFFFFFFFF);
                 currentY += 31;
             }
         } else {
@@ -1688,20 +1678,20 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
             String[] tacticalCats = {"TACTICAL", "TACTICAL", "TACTICAL", "TACTICAL", "TACTICAL"};
             String[] tacticalNames = {"C2", "LOCKPICK GUN", "PEPPER SPRAY", "TASER", "WEDGE"};
             
-            drawSmallText(guiGraphics, "GRENADE", 26, currentY + 6, 0.65f, 0xFF7A818C);
+            WorkbenchDesign.drawSmallText(guiGraphics, this.font, "GRENADE", 26, currentY + 6, 0.65f, 0xFF7A818C);
             currentY += 16;
             for (int i = 0; i < grenadeCats.length; i++) {
-                drawSmallText(guiGraphics, grenadeCats[i], 26, currentY + 8, 0.45f, 0xFF7A818C);
-                drawSmallText(guiGraphics, grenadeNames[i], 26, currentY + 18, 0.65f, 0xFFFFFFFF);
+                WorkbenchDesign.drawSmallText(guiGraphics, this.font, grenadeCats[i], 26, currentY + 8, 0.45f, 0xFF7A818C);
+                WorkbenchDesign.drawSmallText(guiGraphics, this.font, grenadeNames[i], 26, currentY + 18, 0.65f, 0xFFFFFFFF);
                 currentY += 31;
             }
 
             currentY += 10; 
-            drawSmallText(guiGraphics, "TACTICAL", 26, currentY + 6, 0.65f, 0xFF7A818C);
+            WorkbenchDesign.drawSmallText(guiGraphics, this.font, "TACTICAL", 26, currentY + 6, 0.65f, 0xFF7A818C);
             currentY += 16;
             for (int i = 0; i < tacticalCats.length; i++) {
-                drawSmallText(guiGraphics, tacticalCats[i], 26, currentY + 8, 0.45f, 0xFF7A818C);
-                drawSmallText(guiGraphics, tacticalNames[i], 26, currentY + 18, 0.65f, 0xFFFFFFFF);
+                WorkbenchDesign.drawSmallText(guiGraphics, this.font, tacticalCats[i], 26, currentY + 8, 0.45f, 0xFF7A818C);
+                WorkbenchDesign.drawSmallText(guiGraphics, this.font, tacticalNames[i], 26, currentY + 18, 0.65f, 0xFFFFFFFF);
                 currentY += 31;
             }
         }
@@ -1714,15 +1704,14 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
             String[] vestList = {"NO ARMOR", "LIGHT ARMOR", "HEAVY ARMOR", "STAB VEST"};
             int bgHeight = vestList.length * 35 + 10;
             
-            // Solid dark background to effectively hide the text underneath it
-            guiGraphics.fill(15, vestDropdownY - 5, 235, vestDropdownY + bgHeight, 0xFF121212);
+            guiGraphics.fill(15, vestDropdownY - 5, 235, vestDropdownY + bgHeight, 0xFF070707);
             
             int listY = vestDropdownY;
             for (String item : vestList) {
                 // Use ACTUAL mouseX/Y here so this overlay remains interactive
                 renderTextListItem(guiGraphics, item, 20, listY, mouseX, mouseY); 
                 if (this.selectedVest.equals(item)) {
-                    drawSmallText(guiGraphics, "[EQUIPPED]", 160, listY + 10, 0.6f, 0xFFD62929);
+                    WorkbenchDesign.drawSmallText(guiGraphics, this.font, "[EQUIPPED]", 160, listY + 10, 0.6f, 0xFFD62929);
                 }
                 listY += 35;
             }
@@ -1734,9 +1723,9 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
     }
 
     private void renderHeadwearSelectionLabels(GuiGraphics guiGraphics, int mouseX, int mouseY, int trueWidth, int trueHeight) {
-        drawSmallText(guiGraphics, "< LOADOUT", 20, 25, 0.75f, 0xFFFFFF);
-        drawSmallText(guiGraphics, "HEADWEAR", 20, 55, 1.1f, 0xFFFFFF); 
-        drawSmallText(guiGraphics, "SELECT EQUIPMENT", 20, 75, 0.65f, 0xFFD62929); 
+        WorkbenchDesign.drawSmallText(guiGraphics, this.font, "< LOADOUT", 20, 25, 0.75f, 0xFFFFFF);
+        WorkbenchDesign.drawSmallText(guiGraphics, this.font, "HEADWEAR", 20, 55, 1.1f, 0xFFFFFF); 
+        WorkbenchDesign.drawSmallText(guiGraphics, this.font, "SELECT EQUIPMENT", 20, 75, 0.65f, 0xFFD62929); 
 
         int currentY = 100 - (int)this.scrollOffset;
         int leftX = 26;
@@ -1744,8 +1733,8 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
         guiGraphics.enableScissor(0, 90, 240, trueHeight);
         
         // --- HELMET SECTION ---
-        drawSmallText(guiGraphics, "HELMET", leftX, currentY + 8, 0.45f, 0xFF7A818C);
-        drawSmallText(guiGraphics, this.selectedHelmet, leftX, currentY + 18, 0.75f, 0xFFFFFFFF);
+        WorkbenchDesign.drawSmallText(guiGraphics, this.font, "HELMET", leftX, currentY + 12, 0.45f, 0xFF7A818C);
+        WorkbenchDesign.drawSmallText(guiGraphics, this.font, this.selectedHelmet, leftX, currentY + 22, 0.75f, 0xFFFFFFFF);
         currentY += 45;
         
         if (this.expandedHeadwearCategory.equals("HELMET")) {
@@ -1757,8 +1746,8 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
         }
         
         // --- MOUNT SECTION ---
-        drawSmallText(guiGraphics, "MOUNT", leftX, currentY + 8, 0.45f, 0xFF7A818C);
-        drawSmallText(guiGraphics, this.selectedMount, leftX, currentY + 18, 0.75f, 0xFFFFFFFF);
+        WorkbenchDesign.drawSmallText(guiGraphics, this.font, "MOUNT", leftX, currentY + 12, 0.45f, 0xFF7A818C);
+        WorkbenchDesign.drawSmallText(guiGraphics, this.font, this.selectedMount, leftX, currentY + 22, 0.75f, 0xFFFFFFFF);
         currentY += 45;
         
         if (this.expandedHeadwearCategory.equals("MOUNT")) {
@@ -1777,11 +1766,11 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
             int greenColor = this.selectedPhosphor.equals("GREEN PHOSPHOR") ? 0xFFD62929 : (greenHover ? 0xFFFFFFFF : 0xFF7A818C);
             int whiteColor = this.selectedPhosphor.equals("WHITE PHOSPHOR") ? 0xFFD62929 : (whiteHover ? 0xFFFFFFFF : 0xFF7A818C);
             
-            drawSmallText(guiGraphics, "GREEN", 26, currentY + 10, 0.65f, greenColor);
-            drawSmallText(guiGraphics, "PHOSPHOR", 26, currentY + 22, 0.65f, greenColor);
+            WorkbenchDesign.drawSmallText(guiGraphics, this.font, "GREEN", 26, currentY + 10, 0.65f, greenColor);
+            WorkbenchDesign.drawSmallText(guiGraphics, this.font, "PHOSPHOR", 26, currentY + 22, 0.65f, greenColor);
             
-            drawSmallText(guiGraphics, "WHITE", 126, currentY + 10, 0.65f, whiteColor);
-            drawSmallText(guiGraphics, "PHOSPHOR", 126, currentY + 22, 0.65f, whiteColor);
+            WorkbenchDesign.drawSmallText(guiGraphics, this.font, "WHITE", 126, currentY + 10, 0.65f, whiteColor);
+            WorkbenchDesign.drawSmallText(guiGraphics, this.font, "PHOSPHOR", 126, currentY + 22, 0.65f, whiteColor);
             
             if (this.selectedPhosphor.equals("GREEN PHOSPHOR")) guiGraphics.fill(20, currentY + 38, 120, currentY + 40, 0xFFD62929);
             if (this.selectedPhosphor.equals("WHITE PHOSPHOR")) guiGraphics.fill(120, currentY + 38, 220, currentY + 40, 0xFFD62929);
@@ -1790,8 +1779,8 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
         }
         
         // --- FACEWEAR SECTION ---
-        drawSmallText(guiGraphics, "FACEWEAR", leftX, currentY + 8, 0.45f, 0xFF7A818C);
-        drawSmallText(guiGraphics, this.selectedFacewear, leftX, currentY + 18, 0.75f, 0xFFFFFFFF);
+        WorkbenchDesign.drawSmallText(guiGraphics, this.font, "FACEWEAR", leftX, currentY + 12, 0.45f, 0xFF7A818C);
+        WorkbenchDesign.drawSmallText(guiGraphics, this.font, this.selectedFacewear, leftX, currentY + 22, 0.75f, 0xFFFFFFFF);
         currentY += 45;
         
         if (this.expandedHeadwearCategory.equals("FACEWEAR")) {
@@ -1806,12 +1795,12 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
     }
 
     private void renderAttachmentSelectionLabels(GuiGraphics guiGraphics, int mouseX, int mouseY, int trueWidth, int trueHeight) {
-        drawSmallText(guiGraphics, "< ATTACHMENT BUILD", 20, 25, 0.75f, 0xFFFFFF);
+        WorkbenchDesign.drawSmallText(guiGraphics, this.font, "< ATTACHMENT BUILD", 20, 25, 0.75f, 0xFFFFFF);
         
         String title = this.editingAttachmentCategory;
         
-        drawSmallText(guiGraphics, title, 20, 55, 1.1f, 0xFFFFFF); 
-        drawSmallText(guiGraphics, "SELECT MODIFICATION", 20, 75, 0.65f, 0xFFD62929); 
+        WorkbenchDesign.drawSmallText(guiGraphics, this.font, title, 20, 55, 1.1f, 0xFFFFFF); 
+        WorkbenchDesign.drawSmallText(guiGraphics, this.font, "SELECT MODIFICATION", 20, 75, 0.65f, 0xFFD62929); 
 
         String[] idPool = getActiveAttachmentPool();
         ItemStack[] attachmentPool = resolveStacks(idPool, this.editingAttachmentCategory);
@@ -1826,13 +1815,13 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
             
             if (attachmentPool[i] != null && !attachmentPool[i].isEmpty()) {
                 String cleanName = idPool[i].replace("pointblank:", "").replace("_", " ").toUpperCase();
-                drawSmallText(guiGraphics, cleanName, leftX + 45, y + 16, 0.7f, 0xFFFFFFFF);
+                WorkbenchDesign.drawSmallText(guiGraphics, this.font, cleanName, leftX + 45, y + 16, 0.7f, 0xFFFFFFFF);
             } else {
                 if (idPool[i].equals("NONE")) {
-                    drawSmallText(guiGraphics, "REMOVE ATTACHMENT", leftX + 45, y + 16, 0.7f, 0xFFD62929);
+                    WorkbenchDesign.drawSmallText(guiGraphics, this.font, "REMOVE ATTACHMENT", leftX + 45, y + 16, 0.7f, 0xFFD62929);
                 } else {
                     String rawName = idPool[i].replace("pointblank:", "").replace("_", " ").toUpperCase();
-                    drawSmallText(guiGraphics, rawName + " (MISSING)", leftX + 45, y + 16, 0.65f, 0xFF555555);
+                    WorkbenchDesign.drawSmallText(guiGraphics, this.font, rawName + " (MISSING)", leftX + 45, y + 16, 0.65f, 0xFF555555);
                 }
             }
         }
@@ -1840,7 +1829,7 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
     }
 
     private void renderWeaponSelectionLabels(GuiGraphics guiGraphics, int mouseX, int mouseY, int trueWidth, int trueHeight) {
-        drawSmallText(guiGraphics, "< WEAPON BUILD", 20, 25, 0.75f, 0xFFFFFF);
+        WorkbenchDesign.drawSmallText(guiGraphics, this.font, "< WEAPON BUILD", 20, 25, 0.75f, 0xFFFFFF);
         
         if (this.currentWeaponTab != 8) {
             int currentX = 8;
@@ -1856,7 +1845,7 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
                 int textX = currentX + (tabWidth / 2) - (int)((textWidth * scale) / 2);
                 
                 // Draw just the text, no box
-                drawSmallText(guiGraphics, name, textX, 74, scale, textColor);
+                WorkbenchDesign.drawSmallText(guiGraphics, this.font, name, textX, 74, scale, textColor);
                 
                 // Draw bold red underline if this tab is active
                 if (this.currentWeaponTab == i) {
@@ -1866,7 +1855,7 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
                 currentX += tabWidth;
             }
         } else {
-            drawSmallText(guiGraphics, "SIDE ARM", 20, 75, 0.85f, 0xFFD62929);
+            WorkbenchDesign.drawSmallText(guiGraphics, this.font, "SIDE ARM", 20, 75, 0.85f, 0xFFD62929);
         }
 
         ItemStack[] weaponPool = getActiveWeaponStacks();
@@ -1891,10 +1880,10 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
             
             if (weaponPool[i] != null && !weaponPool[i].isEmpty()) {
                 String gunName = idPool[i].replace("pointblank:", "").replace("_", " ").toUpperCase();
-                drawSmallText(guiGraphics, gunName, leftX + 45, y + 16, 0.7f, 0xFFFFFFFF);
+                WorkbenchDesign.drawSmallText(guiGraphics, this.font, gunName, leftX + 45, y + 16, 0.7f, 0xFFFFFFFF);
             } else {
                 String rawName = idPool[i].replace("pointblank:", "").replace("_", " ").toUpperCase();
-                drawSmallText(guiGraphics, rawName + " (MISSING)", leftX + 45, y + 16, 0.65f, 0xFF555555);
+                WorkbenchDesign.drawSmallText(guiGraphics, this.font, rawName + " (MISSING)", leftX + 45, y + 16, 0.65f, 0xFF555555);
             }
         }
         guiGraphics.disableScissor();
@@ -1912,9 +1901,9 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
     }
 
     private void renderMunitionSelectionLabels(GuiGraphics guiGraphics, int mouseX, int mouseY, int trueWidth, int trueHeight) {
-        drawSmallText(guiGraphics, "< LOADOUT", 20, 25, 0.75f, 0xFFFFFF);
-        drawSmallText(guiGraphics, "MUNITIONS", 20, 55, 1.1f, 0xFFFFFF); 
-        drawSmallText(guiGraphics, "SELECT EQUIPMENT", 20, 75, 0.65f, 0xFFD62929); 
+        WorkbenchDesign.drawSmallText(guiGraphics, this.font, "< LOADOUT", 20, 25, 0.75f, 0xFFFFFF);
+        WorkbenchDesign.drawSmallText(guiGraphics, this.font, "MUNITIONS", 20, 55, 1.1f, 0xFFFFFF); 
+        WorkbenchDesign.drawSmallText(guiGraphics, this.font, "SELECT EQUIPMENT", 20, 75, 0.65f, 0xFFD62929); 
 
         String[] ammoNames = {"5.56X45MM NATO", "9X19MM PARABELLUM", "12 GAUGE BUCKSHOT", ".300 BLACKOUT"};
         String[] grenadeNames = {"9-BANG FLASH GRENADE", "CS GAS", "FLASHBANGS", "STINGER"};
@@ -1926,7 +1915,7 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
         guiGraphics.enableScissor(0, 90, 240, trueHeight);
         
         // --- PRIMARY AMMUNITION SECTION ---
-        drawSmallText(guiGraphics, "PRIMARY AMMUNITION", leftX, currentY, 0.65f, 0xFF7A818C);
+        WorkbenchDesign.drawSmallText(guiGraphics, this.font, "PRIMARY AMMUNITION", leftX, currentY, 0.65f, 0xFF7A818C);
         currentY += 20;
         for (String name : ammoNames) {
             renderTextListItem(guiGraphics, name, leftX, currentY, mouseX, mouseY);
@@ -1936,7 +1925,7 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
         currentY += 10; 
         
         // --- GRENADE SECTION ---
-        drawSmallText(guiGraphics, "GRENADE", leftX, currentY, 0.65f, 0xFF7A818C);
+        WorkbenchDesign.drawSmallText(guiGraphics, this.font, "GRENADE", leftX, currentY, 0.65f, 0xFF7A818C);
         currentY += 20;
         for (String name : grenadeNames) {
             renderTextListItem(guiGraphics, name, leftX, currentY, mouseX, mouseY);
@@ -1946,7 +1935,7 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
         currentY += 10;
         
         // --- TACTICAL SECTION ---
-        drawSmallText(guiGraphics, "TACTICAL", leftX, currentY, 0.65f, 0xFF7A818C);
+        WorkbenchDesign.drawSmallText(guiGraphics, this.font, "TACTICAL", leftX, currentY, 0.65f, 0xFF7A818C);
         currentY += 20;
         for (String name : tacticalNames) {
             renderTextListItem(guiGraphics, name, leftX, currentY, mouseX, mouseY);
@@ -1957,10 +1946,10 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
     }
 
     private void renderTextListItem(GuiGraphics guiGraphics, String name, int x, int y, int mouseX, int mouseY) {
-        boolean isHovered = mouseY >= y && mouseY <= y + 30 && mouseX >= x && mouseX <= x + 200;
+        boolean isHovered = mouseY >= y && mouseY <= y + 35 && mouseX >= x && mouseX <= x + 200;
         int textColor = isHovered ? 0xFFFFFFFF : 0xFF7A818C;
         
-        drawSmallText(guiGraphics, name, x, y + 10, 0.8f, textColor);
+        WorkbenchDesign.drawSmallText(guiGraphics, this.font, name, x, y + 10, 0.8f, textColor);
         guiGraphics.fill(x, y + 25, 220, y + 26, 0xFF2E3136);
         
         if (isHovered) {
@@ -1971,11 +1960,11 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
     }
 
     private void renderGunsmithLabels(GuiGraphics guiGraphics) {
-        drawSmallText(guiGraphics, "< WEAPON BUILD", 20, 25, 0.75f, 0xFFFFFF);
+        WorkbenchDesign.drawSmallText(guiGraphics, this.font, "< WEAPON BUILD", 20, 25, 0.75f, 0xFFFFFF);
         
         boolean isPrimary = (this.currentWeaponTab != 8);
-        drawSmallText(guiGraphics, "PRIMARY", 20, 75, 0.85f, isPrimary ? 0xFFFFFFFF : 0xFF7A818C);
-        drawSmallText(guiGraphics, "SIDE ARM", 100, 75, 0.85f, !isPrimary ? 0xFFFFFFFF : 0xFF7A818C);
+        WorkbenchDesign.drawSmallText(guiGraphics, this.font, "PRIMARY", 20, 75, 0.85f, isPrimary ? 0xFFFFFFFF : 0xFF7A818C);
+        WorkbenchDesign.drawSmallText(guiGraphics, this.font, "SIDE ARM", 100, 75, 0.85f, !isPrimary ? 0xFFFFFFFF : 0xFF7A818C);
         
         if (isPrimary) {
             guiGraphics.fill(20, 87, 80, 89, 0xFFD62929); 
@@ -1989,8 +1978,8 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
 
         guiGraphics.enableScissor(0, 90, 240, guiGraphics.guiHeight());
         
-        drawSmallText(guiGraphics, "WEAPON", leftX, currentY + 50, 0.45f, 0xFF7A818C);
-        drawSmallText(guiGraphics, "CURRENT", leftX, currentY + 58, 0.65f, 0xFFD2D6DE);
+        WorkbenchDesign.drawSmallText(guiGraphics, this.font, "WEAPON", leftX, currentY + 50, 0.45f, 0xFF7A818C);
+        WorkbenchDesign.drawSmallText(guiGraphics, this.font, "CURRENT", leftX, currentY + 58, 0.65f, 0xFFD2D6DE);
         
         ItemStack weaponStack = (this.currentWeaponTab == 8) ? getDisplayedSidearm() : getDisplayedPrimary();
         if (!weaponStack.isEmpty()) {
@@ -2000,13 +1989,13 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
             guiGraphics.renderItem(weaponStack, 0, 0);
             guiGraphics.pose().popPose();
         } else {
-            drawSmallText(guiGraphics, "NO WEAPON EQUIPPED", 90, currentY + 32, 0.55f, 0xFF555555);
+            WorkbenchDesign.drawSmallText(guiGraphics, this.font, "NO WEAPON EQUIPPED", 90, currentY + 32, 0.55f, 0xFF555555);
         }
 
         currentY += 75;
 
         currentY += 5; 
-        drawSmallText(guiGraphics, "ATTACHMENTS", leftX, currentY + 6, 0.65f, 0xFF7A818C);
+        WorkbenchDesign.drawSmallText(guiGraphics, this.font, "ATTACHMENTS", leftX, currentY + 6, 0.65f, 0xFF7A818C);
         currentY += 25;
 
         int numCoreAttachments = (this.currentWeaponTab == 8) ? 3 : 5;
@@ -2020,8 +2009,8 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
         }
 
         for (int i = 0; i < numCoreAttachments; i++) {
-            drawSmallText(guiGraphics, boxCats[i], leftX, currentY + 12, 0.45f, 0xFF7A818C);
-            drawSmallText(guiGraphics, attachments[i].name, leftX, currentY + 22, 0.65f, 0xFFD2D6DE);
+            WorkbenchDesign.drawSmallText(guiGraphics, this.font, boxCats[i], leftX, currentY + 12, 0.45f, 0xFF7A818C);
+            WorkbenchDesign.drawSmallText(guiGraphics, this.font, attachments[i].name, leftX, currentY + 22, 0.65f, 0xFFD2D6DE);
             
             if (!attachments[i].stack.isEmpty()) {
                 guiGraphics.pose().pushPose();
@@ -2035,8 +2024,8 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
         }
 
         int tabY = currentY + 10;
-        drawSmallText(guiGraphics, "AMMUNITION", leftX, tabY + 6, 0.55f, this.showAmmunitionTab ? 0xFFFFFFFF : 0xFF7A818C);
-        drawSmallText(guiGraphics, "DEPLOYABLE", 116, tabY + 6, 0.55f, !this.showAmmunitionTab ? 0xFFFFFFFF : 0xFF7A818C);
+        WorkbenchDesign.drawSmallText(guiGraphics, this.font, "AMMUNITION", leftX, tabY + 6, 0.55f, this.showAmmunitionTab ? 0xFFFFFFFF : 0xFF7A818C);
+        WorkbenchDesign.drawSmallText(guiGraphics, this.font, "DEPLOYABLE", 116, tabY + 6, 0.55f, !this.showAmmunitionTab ? 0xFFFFFFFF : 0xFF7A818C);
         currentY = tabY + 20;
 
         if (this.showAmmunitionTab) {
@@ -2058,11 +2047,11 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
                     sAmmoInfo.name.equals("NONE") ? "9X19MM PARABELLUM" : sAmmoInfo.name
             };
             
-            drawSmallText(guiGraphics, "PRIMARY AMMUNITION", leftX, currentY + 6, 0.65f, 0xFF7A818C);
+            WorkbenchDesign.drawSmallText(guiGraphics, this.font, "PRIMARY AMMUNITION", leftX, currentY + 6, 0.65f, 0xFF7A818C);
             currentY += 16;
             for (int i = 0; i < primaryCats.length; i++) {
-                drawSmallText(guiGraphics, primaryCats[i], leftX, currentY + 8, 0.45f, 0xFF7A818C);
-                drawSmallText(guiGraphics, primaryNames[i], leftX, currentY + 18, 0.65f, 0xFFFFFFFF);
+                WorkbenchDesign.drawSmallText(guiGraphics, this.font, primaryCats[i], leftX, currentY + 8, 0.45f, 0xFF7A818C);
+                WorkbenchDesign.drawSmallText(guiGraphics, this.font, primaryNames[i], leftX, currentY + 18, 0.65f, 0xFFFFFFFF);
                 if (!pAmmoInfos[i].stack.isEmpty()) {
                     guiGraphics.pose().pushPose();
                     guiGraphics.pose().translate(185, currentY + 4, 350.0F); 
@@ -2074,11 +2063,11 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
             }
 
             currentY += 10; 
-            drawSmallText(guiGraphics, "SIDEARM AMMUNITION", leftX, currentY + 6, 0.65f, 0xFF7A818C);
+            WorkbenchDesign.drawSmallText(guiGraphics, this.font, "SIDEARM AMMUNITION", leftX, currentY + 6, 0.65f, 0xFF7A818C);
             currentY += 16;
             for (int i = 0; i < sidearmCats.length; i++) {
-                drawSmallText(guiGraphics, sidearmCats[i], leftX, currentY + 8, 0.45f, 0xFF7A818C);
-                drawSmallText(guiGraphics, sidearmNames[i], leftX, currentY + 18, 0.65f, 0xFFFFFFFF);
+                WorkbenchDesign.drawSmallText(guiGraphics, this.font, sidearmCats[i], leftX, currentY + 8, 0.45f, 0xFF7A818C);
+                WorkbenchDesign.drawSmallText(guiGraphics, this.font, sidearmNames[i], leftX, currentY + 18, 0.65f, 0xFFFFFFFF);
                 if (!sAmmoInfos[i].stack.isEmpty()) {
                     guiGraphics.pose().pushPose();
                     guiGraphics.pose().translate(185, currentY + 4, 350.0F); 
@@ -2094,20 +2083,20 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
             String[] tacticalCats = {"TACTICAL", "TACTICAL", "TACTICAL", "TACTICAL", "TACTICAL"};
             String[] tacticalNames = {"C2", "LOCKPICK GUN", "PEPPER SPRAY", "TASER", "WEDGE"};
             
-            drawSmallText(guiGraphics, "GRENADE", leftX, currentY + 6, 0.65f, 0xFF7A818C);
+            WorkbenchDesign.drawSmallText(guiGraphics, this.font, "GRENADE", leftX, currentY + 6, 0.65f, 0xFF7A818C);
             currentY += 16;
             for (int i = 0; i < grenadeCats.length; i++) {
-                drawSmallText(guiGraphics, grenadeCats[i], leftX, currentY + 8, 0.45f, 0xFF7A818C);
-                drawSmallText(guiGraphics, grenadeNames[i], leftX, currentY + 18, 0.65f, 0xFFFFFFFF);
+                WorkbenchDesign.drawSmallText(guiGraphics, this.font, grenadeCats[i], leftX, currentY + 8, 0.45f, 0xFF7A818C);
+                WorkbenchDesign.drawSmallText(guiGraphics, this.font, grenadeNames[i], leftX, currentY + 18, 0.65f, 0xFFFFFFFF);
                 currentY += 31;
             }
 
             currentY += 10; 
-            drawSmallText(guiGraphics, "TACTICAL", leftX, currentY + 6, 0.65f, 0xFF7A818C);
+            WorkbenchDesign.drawSmallText(guiGraphics, this.font, "TACTICAL", leftX, currentY + 6, 0.65f, 0xFF7A818C);
             currentY += 16;
             for (int i = 0; i < tacticalCats.length; i++) {
-                drawSmallText(guiGraphics, tacticalCats[i], leftX, currentY + 8, 0.45f, 0xFF7A818C);
-                drawSmallText(guiGraphics, tacticalNames[i], leftX, currentY + 18, 0.65f, 0xFFFFFFFF);
+                WorkbenchDesign.drawSmallText(guiGraphics, this.font, tacticalCats[i], leftX, currentY + 8, 0.45f, 0xFF7A818C);
+                WorkbenchDesign.drawSmallText(guiGraphics, this.font, tacticalNames[i], leftX, currentY + 18, 0.65f, 0xFFFFFFFF);
                 currentY += 31;
             }
         }
