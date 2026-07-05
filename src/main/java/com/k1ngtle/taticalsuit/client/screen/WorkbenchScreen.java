@@ -380,7 +380,7 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
                     return true;
                 }
             } else {
-                if (pMouseY >= currentY && pMouseY <= currentY + 30 && pMouseX >= 20 && pMouseX <= 220) {
+                if (pMouseY >= currentY && pMouseY <= currentY + 40 && pMouseX >= 20 && pMouseX <= 220) {
                     this.expandedArmorCategory = "VEST";
                     return true;
                 }
@@ -1170,7 +1170,7 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
         int visibleHeight = trueHeight - 100;
         
         int currentY = 0;
-        currentY += 45; // Vest area text gap
+        currentY += 45; // Vest area box height
         
         currentY += 20; // Coverage header
         currentY += 40; // Coverage boxes
@@ -1188,20 +1188,25 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
         this.maxScroll = Math.max(0f, (float)(listHeight - visibleHeight));
         this.scrollOffset = Math.max(0f, Math.min(this.scrollOffset, this.maxScroll));
 
-        guiGraphics.fill(20, 16, 220, 18, 0xFFD62929);
-
         guiGraphics.enableScissor(0, 90, 240, trueHeight);
         int drawY = 100 - (int)this.scrollOffset;
         
         // VEST
+        WorkbenchDesign.drawCleanBox(guiGraphics, 20, drawY, 200, 40);
         drawY += 45;
         
-        // COVERAGE
+        // COVERAGE Boxes
         drawY += 20;
+        for(int i = 0; i < 4; i++) {
+            WorkbenchDesign.drawCleanBox(guiGraphics, 20 + (i * 50), drawY, 45, 30);
+        }
         drawY += 40;
         
-        // MATERIAL
+        // MATERIAL Boxes
         drawY += 20;
+        for(int i = 0; i < 3; i++) {
+            WorkbenchDesign.drawCleanBox(guiGraphics, 20 + (i * 66), drawY, 60, 30);
+        }
         drawY += 40;
 
         // AMMUNITION & DEPLOYABLE BG (Mirrored from Gunsmith)
@@ -1260,25 +1265,44 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
         int visibleHeight = trueHeight - 100;
         
         int currentY = 0;
-        currentY += 45; // Helmet text gap
+        currentY += 45; // Helmet box height
         if (this.expandedHeadwearCategory.equals("HELMET")) currentY += 2 * 35;
         
-        currentY += 45; // Mount text gap
+        currentY += 45; // Mount box height
         if (this.expandedHeadwearCategory.equals("MOUNT")) currentY += 3 * 35;
         if (!this.selectedMount.equals("NONE")) {
-            currentY += 45; // Phosphor boxes text gap
+            currentY += 45; // Phosphor boxes height
         }
         
-        currentY += 45; // Facewear text gap
+        currentY += 45; // Facewear box height
         if (this.expandedHeadwearCategory.equals("FACEWEAR")) currentY += 3 * 35;
         
         int listHeight = currentY + 20;
         this.maxScroll = Math.max(0f, (float)(listHeight - visibleHeight));
         this.scrollOffset = Math.max(0f, Math.min(this.scrollOffset, this.maxScroll));
 
-        guiGraphics.fill(20, 16, 220, 18, 0xFFD62929);
-
         guiGraphics.enableScissor(0, 90, 240, trueHeight);
+        int drawY = 100 - (int)this.scrollOffset;
+        
+        // HELMET Box
+        WorkbenchDesign.drawCleanBox(guiGraphics, 20, drawY, 200, 40);
+        drawY += 45;
+        if (this.expandedHeadwearCategory.equals("HELMET")) drawY += 2 * 35;
+        
+        // MOUNT Box
+        WorkbenchDesign.drawCleanBox(guiGraphics, 20, drawY, 200, 40);
+        drawY += 45;
+        if (this.expandedHeadwearCategory.equals("MOUNT")) drawY += 3 * 35;
+        if (!this.selectedMount.equals("NONE")) {
+            WorkbenchDesign.drawCleanBox(guiGraphics, 20, drawY, 100, 40);
+            WorkbenchDesign.drawCleanBox(guiGraphics, 120, drawY, 100, 40);
+            drawY += 45;
+        }
+        
+        // FACEWEAR Box
+        WorkbenchDesign.drawCleanBox(guiGraphics, 20, drawY, 200, 40);
+        drawY += 45;
+        if (this.expandedHeadwearCategory.equals("FACEWEAR")) drawY += 3 * 35;
         
         if (this.maxScroll > 0) {
             guiGraphics.fill(225, 100, 227, trueHeight - 20, 0xFF2E3136);
@@ -1560,6 +1584,7 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
         WorkbenchDesign.drawSmallText(guiGraphics, this.font, "SELECT EQUIPMENT", 20, 75, 0.65f, 0xFFD62929); 
 
         int currentY = 100 - (int)this.scrollOffset;
+        int leftX = 26;
         
         // Define effective mouse to prevent underlying items lighting up when Vest Dropdown is open
         int effMouseX = mouseX;
@@ -1572,10 +1597,10 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
         guiGraphics.enableScissor(0, 90, 240, trueHeight);
         
         // --- VEST SECTION ---
-        WorkbenchDesign.drawSmallText(guiGraphics, this.font, "VEST", 20, currentY + 8, 0.65f, 0xFF7A818C);
-        WorkbenchDesign.drawSmallText(guiGraphics, this.font, this.selectedVest, 20, currentY + 18, 0.75f, 0xFFFFFFFF);
+        WorkbenchDesign.drawSmallText(guiGraphics, this.font, "VEST", leftX, currentY + 12, 0.45f, 0xFF7A818C);
+        WorkbenchDesign.drawSmallText(guiGraphics, this.font, this.selectedVest, leftX, currentY + 22, 0.75f, 0xFFFFFFFF);
         
-        int vestDropdownY = currentY + 45;
+        int vestDropdownY = currentY + 40;
         currentY += 45;
         
         // --- COVERAGE SECTION ---
@@ -1593,6 +1618,10 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
             int textX = boxX + (i == 2 ? 2 : 8); 
             
             WorkbenchDesign.drawSmallText(guiGraphics, this.font, covList[i], textX, currentY + 12, textScale, color);
+            
+            if (isSelected) {
+                guiGraphics.fill(boxX, currentY + 28, boxX + 45, currentY + 30, 0xFFD62929);
+            }
         }
         currentY += 40;
 
@@ -1610,6 +1639,10 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
             int textX = boxX + 12;
             
             WorkbenchDesign.drawSmallText(guiGraphics, this.font, matList[i], textX, currentY + 12, 0.55f, color);
+            
+            if (isSelected) {
+                guiGraphics.fill(boxX, currentY + 28, boxX + 60, currentY + 30, 0xFFD62929);
+            }
         }
         currentY += 40;
 
