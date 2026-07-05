@@ -1,19 +1,21 @@
 package com.k1ngtle.taticalsuit.client.screen;
 
-import com.k1ngtle.taticalsuit.menu.WorkbenchMenu;
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
-import net.minecraft.client.gui.screens.inventory.InventoryScreen;
-import net.minecraft.network.chat.Component;
-import net.minecraft.world.entity.player.Inventory;
-import net.minecraft.world.item.ItemStack;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+
+import com.k1ngtle.taticalsuit.menu.WorkbenchMenu;
+
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
+import net.minecraft.client.gui.screens.inventory.InventoryScreen;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.item.ItemStack;
 
 public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
     
@@ -148,17 +150,28 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
         processed.addAll(dynamicLauncher);
         processed.addAll(dynamicSidearm);
 
-        String[] ignoreKeywords = {"mag", "drum", "ammo", "bullet", "nato", "parabellum", "buckshot", "acp", 
+        String[] ignoreKeywords = {"_mag", "magazine", "drum", "ammo", "bullet", "nato", "parabellum", "buckshot", "acp", 
                                    "scope", "sight", "optic", "reflex", "holo", "acog", "dot", 
                                    "grip", "underbarrel", "barrel", "muzzle", "suppressor", "silencer", 
                                    "laser", "peq", "flashlight", "stock", "handguard", "compensator", "brake", "choke", 
-                                   "m870modshotgun"};
+                                   "m870modshotgun", "icon_", "ui_", "crafting_", "part", "receiver", "bolt", "spring", 
+                                   "pin", "casing", "tube", "gas_block", "dust_cover", "sling", "charm", "sticker", 
+                                   "camo", "paint", "spray", "box", "case", "crate", "bundle", "key", "tool", "kit", 
+                                   "manual", "guide", "shell", "projectile", "powder", "primer", "brass", 
+                                   "steel", "polymer", "plastic", "wood", "cloth", "leather", "rubber", "glass", "lens", 
+                                   "battery", "wire", "circuit", "chip", "board", "screen", "display", "sensor", "camera", 
+                                   "button", "switch", "lever", "screw", "nut", "washer", "nail", "rivet",
+                                   "helmet", "chestplate", "leggings", "boots", "vest", "armor", "plate", "nvg", "goggles", "mask",
+                                   "m203launcher", "gp25", "fn40", "ulg99cannon"};
 
         for (net.minecraft.world.item.Item item : net.minecraftforge.registries.ForgeRegistries.ITEMS) {
-            net.minecraft.resources.ResourceLocation loc = net.minecraftforge.registries.ForgeRegistries.ITEMS.getKey(item);
+            ResourceLocation loc = net.minecraftforge.registries.ForgeRegistries.ITEMS.getKey(item);
             if (loc != null && loc.getNamespace().equals("pointblank")) {
                 String id = loc.toString();
                 if (processed.contains(id)) continue;
+                
+                // CRUCIAL: Guns never stack. This instantly eliminates 90% of junk items (ammo, boxes, icons, crafting parts)
+                if (item.getDefaultInstance().getMaxStackSize() > 1) continue; 
                 
                 String path = loc.getPath().toLowerCase();
                 
@@ -171,21 +184,21 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
                 if (isAccessory) continue;
 
                 // Auto-Sort unknown datapack guns by keyword matching
-                if (path.contains("pistol") || path.contains("glock") || path.contains("m9") || path.contains("eagle") || path.contains("revolver") || path.contains("hg")) {
+                if (path.contains("pistol") || path.contains("glock") || path.contains("m9") || path.contains("eagle") || path.contains("revolver") || path.contains("hg") || path.contains("makarov") || path.contains("1911") || path.contains("usp")) {
                     dynamicSidearm.add(id);
-                } else if (path.contains("shotgun") || path.contains("spas") || path.contains("870") || path.contains("12g")) {
+                } else if (path.contains("shotgun") || path.contains("spas") || path.contains("870") || path.contains("12g") || path.contains("m1014") || path.contains("saiga") || path.contains("super90") || path.contains("mossberg")) {
                     dynamicShotgun.add(id);
-                } else if (path.contains("sniper") || path.contains("awp") || path.contains("svd") || path.contains("m82")) {
+                } else if (path.contains("sniper") || path.contains("awp") || path.contains("svd") || path.contains("m82") || path.contains("m24") || path.contains("barrett") || path.contains("intervention") || path.contains("l96") || path.contains("dragunov")) {
                     dynamicSniper.add(id);
-                } else if (path.contains("lmg") || path.contains("m249") || path.contains("minigun")) {
+                } else if (path.contains("lmg") || path.contains("m249") || path.contains("minigun") || path.contains("m60") || path.contains("pkp") || path.contains("pkm") || path.contains("mg42") || path.contains("rpd")) {
                     dynamicLMG.add(id);
-                } else if (path.contains("smg") || path.contains("mp5") || path.contains("vector") || path.contains("mac") || path.contains("ump")) {
+                } else if (path.contains("smg") || path.contains("mp5") || path.contains("vector") || path.contains("mac") || path.contains("ump") || path.contains("uzi") || path.contains("bizon") || path.contains("mp9")) {
                     dynamicSMG.add(id);
                 } else if (path.contains("pdw") || path.contains("p90") || path.contains("mp7")) {
                     dynamicPDW.add(id);
-                } else if (path.contains("br") || path.contains("fal") || path.contains("scarh")) {
+                } else if (path.contains("br") || path.contains("fal") || path.contains("scarh") || path.contains("m14") || path.contains("g3")) {
                     dynamicBR.add(id);
-                } else if (path.contains("launcher") || path.contains("rpg") || path.contains("m32")) {
+                } else if (path.contains("launcher") || path.contains("rpg") || path.contains("m32") || path.contains("smaw") || path.contains("thumper") || path.contains("m203") || path.contains("m320")) {
                     dynamicLauncher.add(id);
                 } else {
                     dynamicAR.add(id); // Default fallback
@@ -214,7 +227,8 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
                 continue;
             }
             
-            net.minecraft.resources.ResourceLocation loc = new net.minecraft.resources.ResourceLocation(ids[i]);
+            ResourceLocation loc = ResourceLocation.tryParse(ids[i]);
+            if(loc == null) continue;
             net.minecraft.world.item.Item item = net.minecraftforge.registries.ForgeRegistries.ITEMS.getValue(loc);
             
             if (item != null && item != net.minecraft.world.item.Items.AIR) {
@@ -226,7 +240,7 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
                 String targetId = ids[i].toLowerCase().replace("pointblank:", "");
                 
                 for (net.minecraft.world.item.Item regItem : net.minecraftforge.registries.ForgeRegistries.ITEMS) {
-                    net.minecraft.resources.ResourceLocation regLoc = net.minecraftforge.registries.ForgeRegistries.ITEMS.getKey(regItem);
+                    ResourceLocation regLoc = net.minecraftforge.registries.ForgeRegistries.ITEMS.getKey(regItem);
                     if (regLoc != null && "pointblank".equals(regLoc.getNamespace())) {
                         String path = regLoc.getPath().toLowerCase();
                         
@@ -572,8 +586,8 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
                             for (int k = 0; k < asList.size(); k++) {
                                 net.minecraft.nbt.CompoundTag entry = asList.getCompound(k);
                                 String eid = entry.getString("id");
-                                net.minecraft.world.item.Item eItem = net.minecraftforge.registries.ForgeRegistries.ITEMS
-                                        .getValue(new net.minecraft.resources.ResourceLocation(eid.isEmpty() ? "minecraft:air" : eid));
+                                ResourceLocation resLoc = ResourceLocation.tryParse(eid.isEmpty() ? "minecraft:air" : eid);
+                                net.minecraft.world.item.Item eItem = resLoc == null ? net.minecraft.world.item.Items.AIR : net.minecraftforge.registries.ForgeRegistries.ITEMS.getValue(resLoc);
                                 if (eItem != null && eItem != net.minecraft.world.item.Items.AIR
                                         && !com.k1ngtle.taticalsuit.network.EquipWeaponPacket.isItemInCategory(eItem, vpbCategory)) {
                                     newAs.add(entry);
@@ -586,8 +600,8 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
                             for (int k = 0; k < asList.size(); k++) {
                                 net.minecraft.nbt.CompoundTag entry = asList.getCompound(k);
                                 String eid = entry.getString("id");
-                                net.minecraft.world.item.Item eItem = net.minecraftforge.registries.ForgeRegistries.ITEMS
-                                        .getValue(new net.minecraft.resources.ResourceLocation(eid.isEmpty() ? "minecraft:air" : eid));
+                                ResourceLocation resLoc = ResourceLocation.tryParse(eid.isEmpty() ? "minecraft:air" : eid);
+                                net.minecraft.world.item.Item eItem = resLoc == null ? net.minecraft.world.item.Items.AIR : net.minecraftforge.registries.ForgeRegistries.ITEMS.getValue(resLoc);
                                 if (eItem != null && eItem != net.minecraft.world.item.Items.AIR
                                         && !com.k1ngtle.taticalsuit.network.EquipWeaponPacket.isItemInCategory(eItem, vpbCategory)) {
                                     newAs.add(entry);
@@ -648,7 +662,7 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
                     
                     ItemStack currentEquipped = (this.currentWeaponTab == 8) ? getDisplayedSidearm() : getDisplayedPrimary();
                     if (!currentEquipped.isEmpty()) {
-                        net.minecraft.resources.ResourceLocation currentLoc = net.minecraftforge.registries.ForgeRegistries.ITEMS.getKey(currentEquipped.getItem());
+                        ResourceLocation currentLoc = net.minecraftforge.registries.ForgeRegistries.ITEMS.getKey(currentEquipped.getItem());
                         if (currentLoc != null && currentLoc.toString().equals(idPool[i])) {
                             this.inWeaponSelection = false; 
                             this.scrollOffset = 0f;
@@ -663,7 +677,7 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
                         for (int j = 0; j < Minecraft.getInstance().player.getInventory().getContainerSize(); j++) {
                             ItemStack invStack = Minecraft.getInstance().player.getInventory().getItem(j);
                             if (!invStack.isEmpty()) {
-                                net.minecraft.resources.ResourceLocation invLoc = net.minecraftforge.registries.ForgeRegistries.ITEMS.getKey(invStack.getItem());
+                                ResourceLocation invLoc = net.minecraftforge.registries.ForgeRegistries.ITEMS.getKey(invStack.getItem());
                                 if (invLoc != null && invLoc.toString().equals(idPool[i])) {
                                     optimisticStack = invStack.copy();
                                     break;
@@ -673,9 +687,12 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
                     }
                     
                     if (optimisticStack.isEmpty()) {
-                        net.minecraft.world.item.Item newItem = net.minecraftforge.registries.ForgeRegistries.ITEMS.getValue(new net.minecraft.resources.ResourceLocation(idPool[i]));
-                        if (newItem != null && newItem != net.minecraft.world.item.Items.AIR) {
-                            optimisticStack = newItem.getDefaultInstance().copy();
+                        ResourceLocation resLoc = ResourceLocation.tryParse(idPool[i]);
+                        if(resLoc != null) {
+                            net.minecraft.world.item.Item newItem = net.minecraftforge.registries.ForgeRegistries.ITEMS.getValue(resLoc);
+                            if (newItem != null && newItem != net.minecraft.world.item.Items.AIR) {
+                                optimisticStack = newItem.getDefaultInstance().copy();
+                            }
                         }
                     }
                     
@@ -1186,7 +1203,6 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
         this.maxScroll = Math.max(0f, (float)(listHeight - visibleHeight));
         this.scrollOffset = Math.max(0f, Math.min(this.scrollOffset, this.maxScroll));
 
-        guiGraphics.fill(0, 0, 240, trueHeight, 0xFF000000);
         guiGraphics.fill(20, 16, 220, 18, 0xFFD62929);
 
         guiGraphics.enableScissor(0, 90, 240, trueHeight);
@@ -1195,18 +1211,12 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
         // VEST
         drawY += 45;
         
-        // COVERAGE Boxes
+        // COVERAGE
         drawY += 20;
-        for(int i = 0; i < 4; i++) {
-            WorkbenchDesign.drawCleanBox(guiGraphics, 20 + (i * 50), drawY, 45, 30);
-        }
         drawY += 40;
         
-        // MATERIAL Boxes
+        // MATERIAL
         drawY += 20;
-        for(int i = 0; i < 3; i++) {
-            WorkbenchDesign.drawCleanBox(guiGraphics, 20 + (i * 66), drawY, 60, 30);
-        }
         drawY += 40;
 
         // AMMUNITION & DEPLOYABLE BG (Mirrored from Gunsmith)
@@ -1265,47 +1275,35 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
         int visibleHeight = trueHeight - 100;
         
         int currentY = 0;
-        currentY += 45; // Helmet box (now just text)
+        currentY += 45; // Helmet box 
         if (this.expandedHeadwearCategory.equals("HELMET")) currentY += 2 * 35;
         
-        currentY += 45; // Mount box (now just text)
+        currentY += 45; // Mount box 
         if (this.expandedHeadwearCategory.equals("MOUNT")) currentY += 3 * 35;
         if (!this.selectedMount.equals("NONE")) {
-            currentY += 45; // Phosphor boxes text gap
+            currentY += 45; // Phosphor boxes 
         }
         
-        currentY += 45; // Facewear text gap
+        currentY += 45; // Facewear box 
         if (this.expandedHeadwearCategory.equals("FACEWEAR")) currentY += 3 * 35;
         
         int listHeight = currentY + 20;
         this.maxScroll = Math.max(0f, (float)(listHeight - visibleHeight));
         this.scrollOffset = Math.max(0f, Math.min(this.scrollOffset, this.maxScroll));
 
-        guiGraphics.fill(0, 0, 240, trueHeight, 0xFF000000);
         guiGraphics.fill(20, 16, 220, 18, 0xFFD62929);
 
         guiGraphics.enableScissor(0, 90, 240, trueHeight);
         int drawY = 100 - (int)this.scrollOffset;
         
         // HELMET Box
-        WorkbenchDesign.drawCleanBox(guiGraphics, 20, drawY, 200, 40);
         drawY += 45;
-        if (this.expandedHeadwearCategory.equals("HELMET")) drawY += 2 * 35;
         
         // MOUNT Box
-        WorkbenchDesign.drawCleanBox(guiGraphics, 20, drawY, 200, 40);
         drawY += 45;
-        if (this.expandedHeadwearCategory.equals("MOUNT")) drawY += 3 * 35;
-        if (!this.selectedMount.equals("NONE")) {
-            WorkbenchDesign.drawCleanBox(guiGraphics, 20, drawY, 100, 40);
-            WorkbenchDesign.drawCleanBox(guiGraphics, 120, drawY, 100, 40);
-            drawY += 45;
-        }
         
         // FACEWEAR Box
-        WorkbenchDesign.drawCleanBox(guiGraphics, 20, drawY, 200, 40);
         drawY += 45;
-        if (this.expandedHeadwearCategory.equals("FACEWEAR")) drawY += 3 * 35;
         
         if (this.maxScroll > 0) {
             guiGraphics.fill(225, 100, 227, trueHeight - 20, 0xFF2E3136);
@@ -1620,10 +1618,6 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
             int textX = boxX + (i == 2 ? 2 : 8); 
             
             WorkbenchDesign.drawSmallText(guiGraphics, this.font, covList[i], textX, currentY + 12, textScale, color);
-            
-            if (isSelected) {
-                guiGraphics.fill(boxX, currentY + 28, boxX + 45, currentY + 30, 0xFFD62929);
-            }
         }
         currentY += 40;
 
@@ -1641,10 +1635,6 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
             int textX = boxX + 12;
             
             WorkbenchDesign.drawSmallText(guiGraphics, this.font, matList[i], textX, currentY + 12, 0.55f, color);
-            
-            if (isSelected) {
-                guiGraphics.fill(boxX, currentY + 28, boxX + 60, currentY + 30, 0xFFD62929);
-            }
         }
         currentY += 40;
 
@@ -1777,9 +1767,6 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
             WorkbenchDesign.drawSmallText(guiGraphics, this.font, "WHITE", 126, currentY + 10, 0.65f, whiteColor);
             WorkbenchDesign.drawSmallText(guiGraphics, this.font, "PHOSPHOR", 126, currentY + 22, 0.65f, whiteColor);
             
-            if (this.selectedPhosphor.equals("GREEN PHOSPHOR")) guiGraphics.fill(20, currentY + 38, 120, currentY + 40, 0xFFD62929);
-            if (this.selectedPhosphor.equals("WHITE PHOSPHOR")) guiGraphics.fill(120, currentY + 38, 220, currentY + 40, 0xFFD62929);
-            
             currentY += 45;
         }
         
@@ -1870,16 +1857,34 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
         int currentY = 100 - (int)this.scrollOffset;
         int leftX = 26;
         
-        ItemStack previewStack = (this.currentWeaponTab == 8) ? getDisplayedSidearm() : getDisplayedPrimary(); 
+        ItemStack equippedStack = (this.currentWeaponTab == 8) ? getDisplayedSidearm() : getDisplayedPrimary(); 
+        ItemStack previewStack = equippedStack;
+        boolean hoveringAny = false;
 
         guiGraphics.enableScissor(0, 90, 240, trueHeight);
         for (int i = 0; i < numBoxes; i++) {
             int y = currentY + (i * 45);
             
             // Re-map the preview stack on hover to render off to the right
-            if (mouseY >= y && mouseY <= y + 40 && mouseX >= 20 && mouseX <= 220) {
+            if (mouseY >= Math.max(90, y) && mouseY <= Math.min(trueHeight, y + 40) && mouseX >= 20 && mouseX <= 220) {
                 if (weaponPool[i] != null && !weaponPool[i].isEmpty()) {
-                    previewStack = weaponPool[i]; 
+                    if (ItemStack.isSameItem(equippedStack, weaponPool[i])) {
+                        previewStack = equippedStack; // Has equipped tags
+                    } else {
+                        // Check inventory for a match to preview existing attachments!
+                        ItemStack invMatch = ItemStack.EMPTY;
+                        if (Minecraft.getInstance().player != null) {
+                            for (int j = 0; j < Minecraft.getInstance().player.getInventory().getContainerSize(); j++) {
+                                ItemStack invStack = Minecraft.getInstance().player.getInventory().getItem(j);
+                                if (!invStack.isEmpty() && ItemStack.isSameItem(invStack, weaponPool[i])) {
+                                    invMatch = invStack;
+                                    break;
+                                }
+                            }
+                        }
+                        previewStack = invMatch.isEmpty() ? weaponPool[i] : invMatch;
+                    }
+                    hoveringAny = true;
                 }
             }
             
@@ -1893,6 +1898,10 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
         }
         guiGraphics.disableScissor();
 
+        if (!hoveringAny) {
+            previewStack = equippedStack;
+        }
+
         if (!previewStack.isEmpty()) {
             int infoX = 260;
             int infoY = 100;
@@ -1900,67 +1909,96 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
             String gunName = previewStack.getHoverName().getString().toUpperCase();
             WorkbenchDesign.drawSmallText(guiGraphics, this.font, gunName, infoX, infoY, 1.2f, 0xFFFFFFFF);
             
-            infoY += 30;
+            infoY += 25;
             WorkbenchDesign.drawSmallText(guiGraphics, this.font, "BRIEF", infoX, infoY, 0.65f, 0xFF7A818C);
             infoY += 12;
             
             String brief1 = "A standardized tactical weapon designed for";
             String brief2 = "modern combat operations.";
+            String round = "5.56X45MM NATO";
+            String recoil = "MODERATE";
+            String fireRate = "750 RPM";
+            String capacity = "30 ROUNDS";
             String platform = "TACTICAL PLATFORM";
-            String attachments = "OPTIC, BARREL, MUZZLE, UNDERBARREL, LASER";
             
             switch (this.currentWeaponTab) {
-                case 0:
+                case 0: // AR
                     brief1 = "A versatile assault rifle providing high fire";
                     brief2 = "rate and reliable medium range accuracy.";
+                    round = "5.56X45MM NATO"; recoil = "MODERATE"; fireRate = "750 RPM"; capacity = "30 ROUNDS";
                     platform = "ASSAULT RIFLE PLATFORM";
                     break;
-                case 1:
+                case 1: // BR
                     brief1 = "Heavy hitting battle rifle firing high caliber";
                     brief2 = "rounds for maximum stopping power.";
+                    round = "7.62X51MM NATO"; recoil = "HIGH"; fireRate = "600 RPM"; capacity = "20 ROUNDS";
                     platform = "BATTLE RIFLE PLATFORM";
                     break;
-                case 2:
+                case 2: // LMG
                     brief1 = "Light machine gun designed to lay down";
                     brief2 = "sustained suppressive fire in combat.";
+                    round = "5.56X45MM NATO"; recoil = "MODERATE"; fireRate = "800 RPM"; capacity = "100 ROUNDS";
                     platform = "LMG PLATFORM";
                     break;
-                case 3:
+                case 3: // PDW
                     brief1 = "Personal defense weapon prioritizing mobility";
                     brief2 = "and high fire rate for close quarters.";
+                    round = "5.7X28MM"; recoil = "LOW"; fireRate = "900 RPM"; capacity = "50 ROUNDS";
                     platform = "PDW PLATFORM";
                     break;
-                case 4:
+                case 4: // SMG
                     brief1 = "Submachine gun offering excellent handling";
                     brief2 = "and extreme fire rate in tight spaces.";
+                    round = "9X19MM PARABELLUM"; recoil = "LOW"; fireRate = "850 RPM"; capacity = "30 ROUNDS";
                     platform = "SMG PLATFORM";
                     break;
-                case 5:
+                case 5: // SHOTGUN
                     brief1 = "Devastating close-range scattergun capable";
                     brief2 = "of breaching doors and clearing rooms.";
+                    round = "12 GAUGE"; recoil = "HIGH"; fireRate = "PUMP-ACTION"; capacity = "8 ROUNDS";
                     platform = "SHOTGUN PLATFORM";
                     break;
-                case 6:
+                case 6: // SNIPER
                     brief1 = "High-precision marksman rifle designed for";
                     brief2 = "extreme long-range engagements.";
+                    round = ".338 LAPUA MAGNUM"; recoil = "VERY HIGH"; fireRate = "BOLT-ACTION"; capacity = "5 ROUNDS";
                     platform = "SNIPER PLATFORM";
                     break;
-                case 7:
+                case 7: // LAUNCHER
                     brief1 = "Anti-armor munition launcher intended to";
                     brief2 = "destroy heavy vehicles and emplacements.";
+                    round = "84MM HE"; recoil = "EXTREME"; fireRate = "SINGLE SHOT"; capacity = "1 TUBE";
                     platform = "LAUNCHER PLATFORM";
                     break;
-                case 8:
+                case 8: // SIDEARM
                     brief1 = "Compact sidearm providing reliable backup";
                     brief2 = "firepower when the primary weapon is dry.";
+                    round = "9X19MM PARABELLUM"; recoil = "LOW"; fireRate = "SEMI-AUTO"; capacity = "15 ROUNDS";
                     platform = "SIDEARM PLATFORM";
-                    attachments = "OPTIC, MUZZLE, STOCK";
                     break;
             }
             
             WorkbenchDesign.drawSmallText(guiGraphics, this.font, brief1, infoX, infoY, 0.65f, 0xFFFFFFFF);
             infoY += 12;
             WorkbenchDesign.drawSmallText(guiGraphics, this.font, brief2, infoX, infoY, 0.65f, 0xFFFFFFFF);
+            
+            infoY += 25;
+            int col2X = infoX + 85;
+            
+            WorkbenchDesign.drawSmallText(guiGraphics, this.font, "ROUND", infoX, infoY, 0.65f, 0xFF7A818C);
+            WorkbenchDesign.drawSmallText(guiGraphics, this.font, round, col2X, infoY, 0.65f, 0xFFFFFFFF);
+            infoY += 12;
+            
+            WorkbenchDesign.drawSmallText(guiGraphics, this.font, "RECOIL", infoX, infoY, 0.65f, 0xFF7A818C);
+            WorkbenchDesign.drawSmallText(guiGraphics, this.font, recoil, col2X, infoY, 0.65f, 0xFFFFFFFF);
+            infoY += 12;
+            
+            WorkbenchDesign.drawSmallText(guiGraphics, this.font, "FIRE-RATE", infoX, infoY, 0.65f, 0xFF7A818C);
+            WorkbenchDesign.drawSmallText(guiGraphics, this.font, fireRate, col2X, infoY, 0.65f, 0xFFFFFFFF);
+            infoY += 12;
+            
+            WorkbenchDesign.drawSmallText(guiGraphics, this.font, "CAPACITY", infoX, infoY, 0.65f, 0xFF7A818C);
+            WorkbenchDesign.drawSmallText(guiGraphics, this.font, capacity, col2X, infoY, 0.65f, 0xFFFFFFFF);
             
             infoY += 25;
             WorkbenchDesign.drawSmallText(guiGraphics, this.font, "PLATFORM", infoX, infoY, 0.65f, 0xFF7A818C);
@@ -1970,7 +2008,21 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
             infoY += 25;
             WorkbenchDesign.drawSmallText(guiGraphics, this.font, "ATTACHMENTS", infoX, infoY, 0.65f, 0xFF7A818C);
             infoY += 12;
-            WorkbenchDesign.drawSmallText(guiGraphics, this.font, attachments, infoX, infoY, 0.65f, 0xFFFFFFFF);
+            
+            String[] cats = (this.currentWeaponTab == 8) ? new String[]{"OPTIC", "MUZZLE", "STOCK", "MAGAZINE"} : new String[]{"OPTIC", "BARREL", "MUZZLE", "UNDERBARREL", "LASER", "MAGAZINE"};
+            int attachY = infoY;
+            boolean hasAtt = false;
+            for (String cat : cats) {
+                AttachmentInfo att = getAttachmentInfo(previewStack, cat);
+                if (!att.name.equals("NONE")) {
+                    WorkbenchDesign.drawSmallText(guiGraphics, this.font, "- " + att.name, infoX, attachY, 0.65f, 0xFFD2D6DE);
+                    attachY += 12;
+                    hasAtt = true;
+                }
+            }
+            if (!hasAtt) {
+                WorkbenchDesign.drawSmallText(guiGraphics, this.font, "FACTORY STANDARD (NO ATTACHMENTS)", infoX, attachY, 0.65f, 0xFF555555);
+            }
         }
     }
 
@@ -2210,7 +2262,7 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
                 String rl = sa.getString(vpbCategory);
                 if (!rl.isEmpty()) {
                     net.minecraft.world.item.Item item = net.minecraftforge.registries.ForgeRegistries.ITEMS
-                            .getValue(new net.minecraft.resources.ResourceLocation(rl));
+                            .getValue(ResourceLocation.tryParse(rl));
                     if (item != null && item != net.minecraft.world.item.Items.AIR) {
                         String name = rl.contains(":") ? rl.substring(rl.indexOf(':') + 1).replace("_", " ").toUpperCase() : rl.toUpperCase();
                         return new AttachmentInfo(new ItemStack(item), name);
@@ -2226,7 +2278,7 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
                 String eid = entry.getString("id");
                 if (eid.isEmpty()) continue;
                 net.minecraft.world.item.Item eItem = net.minecraftforge.registries.ForgeRegistries.ITEMS
-                        .getValue(new net.minecraft.resources.ResourceLocation(eid));
+                        .getValue(ResourceLocation.tryParse(eid));
                 if (eItem != null && eItem != net.minecraft.world.item.Items.AIR
                         && com.k1ngtle.taticalsuit.network.EquipWeaponPacket.isItemInCategory(eItem, vpbCategory)) {
                     String name = eid.contains(":") ? eid.substring(eid.indexOf(':') + 1).replace("_", " ").toUpperCase() : eid.toUpperCase();
@@ -2240,7 +2292,7 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
 
     private boolean isPrimaryWeapon(ItemStack stack) {
         if (stack == null || stack.isEmpty()) return false;
-        net.minecraft.resources.ResourceLocation loc = net.minecraftforge.registries.ForgeRegistries.ITEMS.getKey(stack.getItem());
+        ResourceLocation loc = net.minecraftforge.registries.ForgeRegistries.ITEMS.getKey(stack.getItem());
         if (loc == null) return false;
         String id = loc.toString();
         
@@ -2253,7 +2305,7 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
 
     private boolean isSidearmWeapon(ItemStack stack) {
         if (stack == null || stack.isEmpty()) return false;
-        net.minecraft.resources.ResourceLocation loc = net.minecraftforge.registries.ForgeRegistries.ITEMS.getKey(stack.getItem());
+        ResourceLocation loc = net.minecraftforge.registries.ForgeRegistries.ITEMS.getKey(stack.getItem());
         if (loc == null) return false;
         String id = loc.toString();
         return dynamicSidearm.contains(id);
