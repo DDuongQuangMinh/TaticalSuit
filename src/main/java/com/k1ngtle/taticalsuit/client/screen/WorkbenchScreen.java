@@ -1,13 +1,6 @@
 package com.k1ngtle.taticalsuit.client.screen;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-
 import com.k1ngtle.taticalsuit.menu.WorkbenchMenu;
-
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
@@ -16,6 +9,12 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.ItemStack;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
     
@@ -150,20 +149,6 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
         processed.addAll(dynamicLauncher);
         processed.addAll(dynamicSidearm);
 
-        String[] ignoreKeywords = {"_mag", "magazine", "drum", "ammo", "bullet", "nato", "parabellum", "buckshot", "acp", 
-                                   "scope", "sight", "optic", "reflex", "holo", "acog", "dot", 
-                                   "grip", "underbarrel", "barrel", "muzzle", "suppressor", "silencer", 
-                                   "laser", "peq", "flashlight", "stock", "handguard", "compensator", "brake", "choke", 
-                                   "m870modshotgun", "icon_", "ui_", "crafting_", "part", "receiver", "bolt", "spring", 
-                                   "pin", "casing", "tube", "gas_block", "dust_cover", "sling", "charm", "sticker", 
-                                   "camo", "paint", "spray", "box", "case", "crate", "bundle", "key", "tool", "kit", 
-                                   "manual", "guide", "shell", "projectile", "powder", "primer", "brass", 
-                                   "steel", "polymer", "plastic", "wood", "cloth", "leather", "rubber", "glass", "lens", 
-                                   "battery", "wire", "circuit", "chip", "board", "screen", "display", "sensor", "camera", 
-                                   "button", "switch", "lever", "screw", "nut", "washer", "nail", "rivet",
-                                   "helmet", "chestplate", "leggings", "boots", "vest", "armor", "plate", "nvg", "goggles", "mask",
-                                   "m203launcher", "gp25", "fn40", "ulg99cannon"};
-
         for (net.minecraft.world.item.Item item : net.minecraftforge.registries.ForgeRegistries.ITEMS) {
             ResourceLocation loc = net.minecraftforge.registries.ForgeRegistries.ITEMS.getKey(item);
             if (loc != null && loc.getNamespace().equals("pointblank")) {
@@ -176,7 +161,7 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
                 String path = loc.getPath().toLowerCase();
                 
                 boolean isAccessory = false;
-                for (String kw : ignoreKeywords) {
+                for (String kw : WorkbenchData.IGNORE_KEYWORDS) {
                     if (path.contains(kw)) {
                         isAccessory = true; break;
                     }
@@ -1275,16 +1260,16 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
         int visibleHeight = trueHeight - 100;
         
         int currentY = 0;
-        currentY += 45; // Helmet box 
+        currentY += 45; // Helmet text gap
         if (this.expandedHeadwearCategory.equals("HELMET")) currentY += 2 * 35;
         
-        currentY += 45; // Mount box 
+        currentY += 45; // Mount text gap
         if (this.expandedHeadwearCategory.equals("MOUNT")) currentY += 3 * 35;
         if (!this.selectedMount.equals("NONE")) {
-            currentY += 45; // Phosphor boxes 
+            currentY += 45; // Phosphor boxes text gap
         }
         
-        currentY += 45; // Facewear box 
+        currentY += 45; // Facewear text gap
         if (this.expandedHeadwearCategory.equals("FACEWEAR")) currentY += 3 * 35;
         
         int listHeight = currentY + 20;
@@ -1294,16 +1279,6 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
         guiGraphics.fill(20, 16, 220, 18, 0xFFD62929);
 
         guiGraphics.enableScissor(0, 90, 240, trueHeight);
-        int drawY = 100 - (int)this.scrollOffset;
-        
-        // HELMET Box
-        drawY += 45;
-        
-        // MOUNT Box
-        drawY += 45;
-        
-        // FACEWEAR Box
-        drawY += 45;
         
         if (this.maxScroll > 0) {
             guiGraphics.fill(225, 100, 227, trueHeight - 20, 0xFF2E3136);
@@ -1767,6 +1742,9 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
             WorkbenchDesign.drawSmallText(guiGraphics, this.font, "WHITE", 126, currentY + 10, 0.65f, whiteColor);
             WorkbenchDesign.drawSmallText(guiGraphics, this.font, "PHOSPHOR", 126, currentY + 22, 0.65f, whiteColor);
             
+            if (this.selectedPhosphor.equals("GREEN PHOSPHOR")) guiGraphics.fill(20, currentY + 38, 120, currentY + 40, 0xFFD62929);
+            if (this.selectedPhosphor.equals("WHITE PHOSPHOR")) guiGraphics.fill(120, currentY + 38, 220, currentY + 40, 0xFFD62929);
+            
             currentY += 45;
         }
         
@@ -1986,27 +1964,31 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
             int col2X = infoX + 85;
             
             WorkbenchDesign.drawSmallText(guiGraphics, this.font, "ROUND", infoX, infoY, 0.65f, 0xFF7A818C);
-            WorkbenchDesign.drawSmallText(guiGraphics, this.font, round, col2X, infoY, 0.65f, 0xFFFFFFFF);
+            WorkbenchDesign.drawSmallText(guiGraphics, this.font, "PLATFORM", col2X, infoY, 0.65f, 0xFF7A818C);
             infoY += 12;
+            
+            WorkbenchDesign.drawSmallText(guiGraphics, this.font, round, infoX, infoY, 0.65f, 0xFFFFFFFF);
+            WorkbenchDesign.drawSmallText(guiGraphics, this.font, platform, col2X, infoY, 0.65f, 0xFFFFFFFF);
+            infoY += 15;
             
             WorkbenchDesign.drawSmallText(guiGraphics, this.font, "RECOIL", infoX, infoY, 0.65f, 0xFF7A818C);
-            WorkbenchDesign.drawSmallText(guiGraphics, this.font, recoil, col2X, infoY, 0.65f, 0xFFFFFFFF);
             infoY += 12;
+            WorkbenchDesign.drawSmallText(guiGraphics, this.font, recoil, infoX, infoY, 0.65f, 0xFFFFFFFF);
+            infoY += 15;
             
             WorkbenchDesign.drawSmallText(guiGraphics, this.font, "FIRE-RATE", infoX, infoY, 0.65f, 0xFF7A818C);
-            WorkbenchDesign.drawSmallText(guiGraphics, this.font, fireRate, col2X, infoY, 0.65f, 0xFFFFFFFF);
             infoY += 12;
+            WorkbenchDesign.drawSmallText(guiGraphics, this.font, fireRate, infoX, infoY, 0.65f, 0xFFFFFFFF);
+            infoY += 15;
             
             WorkbenchDesign.drawSmallText(guiGraphics, this.font, "CAPACITY", infoX, infoY, 0.65f, 0xFF7A818C);
-            WorkbenchDesign.drawSmallText(guiGraphics, this.font, capacity, col2X, infoY, 0.65f, 0xFFFFFFFF);
-            
-            infoY += 25;
-            WorkbenchDesign.drawSmallText(guiGraphics, this.font, "PLATFORM", infoX, infoY, 0.65f, 0xFF7A818C);
             infoY += 12;
-            WorkbenchDesign.drawSmallText(guiGraphics, this.font, platform, infoX, infoY, 0.65f, 0xFFFFFFFF);
+            WorkbenchDesign.drawSmallText(guiGraphics, this.font, capacity, infoX, infoY, 0.65f, 0xFFFFFFFF);
             
-            infoY += 25;
-            WorkbenchDesign.drawSmallText(guiGraphics, this.font, "ATTACHMENTS", infoX, infoY, 0.65f, 0xFF7A818C);
+            infoY = infoY - (15*3 + 12*3); // Reset to top of column 2 for attachments
+            infoY += 27; // Offset past Platform
+            
+            WorkbenchDesign.drawSmallText(guiGraphics, this.font, "ATTACHMENTS", col2X, infoY, 0.65f, 0xFF7A818C);
             infoY += 12;
             
             String[] cats = (this.currentWeaponTab == 8) ? new String[]{"OPTIC", "MUZZLE", "STOCK", "MAGAZINE"} : new String[]{"OPTIC", "BARREL", "MUZZLE", "UNDERBARREL", "LASER", "MAGAZINE"};
@@ -2015,13 +1997,14 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
             for (String cat : cats) {
                 AttachmentInfo att = getAttachmentInfo(previewStack, cat);
                 if (!att.name.equals("NONE")) {
-                    WorkbenchDesign.drawSmallText(guiGraphics, this.font, "- " + att.name, infoX, attachY, 0.65f, 0xFFD2D6DE);
+                    WorkbenchDesign.drawSmallText(guiGraphics, this.font, "- " + att.name, col2X, attachY, 0.65f, 0xFFD2D6DE);
                     attachY += 12;
                     hasAtt = true;
                 }
             }
             if (!hasAtt) {
-                WorkbenchDesign.drawSmallText(guiGraphics, this.font, "FACTORY STANDARD (NO ATTACHMENTS)", infoX, attachY, 0.65f, 0xFF555555);
+                WorkbenchDesign.drawSmallText(guiGraphics, this.font, "FACTORY STANDARD", col2X, attachY, 0.65f, 0xFF555555);
+                WorkbenchDesign.drawSmallText(guiGraphics, this.font, "(NO ATTACHMENTS)", col2X, attachY+12, 0.65f, 0xFF555555);
             }
         }
     }

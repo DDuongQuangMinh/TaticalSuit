@@ -6,6 +6,24 @@ public class WorkbenchData {
         "AR", "BR", "LMG", "PDW", "SMG", "SHOTGUN", "SNIPER", "LAUNCHER"
     };
 
+    public static final String[] IGNORE_KEYWORDS = {
+            "_mag", "magazine", "drum", "ammo", "bullet", "nato", "parabellum", "buckshot", "acp", "cartridge",
+            "scope", "sight", "optic", "reflex", "holo", "acog", "dot", "moa", "aimpoint", "srs", "rspec", 
+            "specter", "hamr", "eaglescope", "spear", "hawk_scope", "wolf_scope", "drake_scope", "precision_scope", "delta", "hi_red", "operatorreflex",
+            "grip", "underbarrel", "barrel", "muzzle", "suppressor", "silencer", "compensator", "brake", "choke", 
+            "laser", "peq", "flashlight", "stock", "handguard", "bipod", "rail", "mount", "adapter",
+            "m870modshotgun", "icon_", "ui_", "crafting_", "part", "receiver", "bolt", "spring", 
+            "pin", "casing", "tube", "gas_block", "dust_cover", "sling", "charm", "sticker", 
+            "camo", "paint", "spray", "skin", "blueprint", "pattern",
+            "box", "case", "crate", "bundle", "key", "tool", "kit", 
+            "manual", "guide", "shell", "projectile", "powder", "primer", "brass", 
+            "steel", "polymer", "plastic", "wood", "cloth", "leather", "rubber", "glass", "lens", 
+            "battery", "wire", "circuit", "chip", "board", "screen", "display", "sensor", "camera", 
+            "button", "switch", "lever", "screw", "nut", "washer", "nail", "rivet",
+            "helmet", "chestplate", "leggings", "boots", "vest", "armor", "plate", "nvg", "goggles", "mask",
+            "gp25", "fn40", "m203launcher", "ulg99cannon", "m4sopmodii_bartender", "m4a1_asiimov", "l96a1_hyperbeast", "scarl_iss"
+    };
+
     // --- WEAPON POOLS ---
     public static final String[] ASSAULT_RIFLE_IDS = new String[]{
             "pointblank:m4a1", "pointblank:m4a1mod1", "pointblank:m4sopmodii", 
