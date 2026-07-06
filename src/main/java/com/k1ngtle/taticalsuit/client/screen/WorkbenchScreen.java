@@ -1216,7 +1216,7 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
         int currentY = startY - (int)this.scrollOffset;
         
         for (int i = 0; i < 6; i++) {
-            WorkbenchDesign.drawCleanBox(guiGraphics, 20, currentY, 200, 40);
+            // Intentionally left blank: No border box rendered for tacticals
             currentY += 45;
         }
         
@@ -1577,32 +1577,6 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
         render3DOperator(guiGraphics, trueWidth, trueHeight);
     }
 
-    private void renderTacticalSelectionLabels(GuiGraphics guiGraphics, int mouseX, int mouseY, int trueWidth, int trueHeight) {
-        WorkbenchDesign.drawSmallText(guiGraphics, this.font, "< LOADOUT", 20, 25, 0.75f, 0xFFFFFF);
-        WorkbenchDesign.drawSmallText(guiGraphics, this.font, "LONG TACTICAL", 20, 55, 1.1f, 0xFFFFFF); 
-        WorkbenchDesign.drawSmallText(guiGraphics, this.font, "SELECT EQUIPMENT", 20, 75, 0.65f, 0xFFD62929); 
-
-        String[] tacticals = {"MIRRORGUN", "BREACHING SHOTGUN", "RIOT SHIELD", "TACTICAL DRONE", "BOLT CUTTERS", "BATTERING RAM"};
-
-        int currentY = 100 - (int)this.scrollOffset;
-        int leftX = 26;
-        
-        guiGraphics.enableScissor(0, 90, 240, trueHeight);
-        for (int i = 0; i < 6; i++) {
-            int y = currentY + (i * 45);
-            
-            boolean isSelected = this.selectedTactical.equals(tacticals[i]);
-            int textColor = isSelected ? 0xFFD62929 : 0xFFFFFFFF;
-            
-            WorkbenchDesign.drawSmallText(guiGraphics, this.font, tacticals[i], leftX + 10, y + 16, 0.7f, textColor);
-            
-            if (isSelected) {
-                WorkbenchDesign.drawSmallText(guiGraphics, this.font, "[EQUIPPED]", leftX + 140, y + 16, 0.6f, 0xFFD62929);
-            }
-        }
-        guiGraphics.disableScissor();
-    }
-
     private void renderLoadoutLabels(GuiGraphics guiGraphics) {
         guiGraphics.pose().pushPose();
         guiGraphics.pose().translate(0, 0, 300.0F); 
@@ -1715,10 +1689,6 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
             int textX = boxX + (i == 2 ? 2 : 8); 
             
             WorkbenchDesign.drawSmallText(guiGraphics, this.font, covList[i], textX, currentY + 12, textScale, color);
-            
-            if (isSelected) {
-                guiGraphics.fill(boxX, currentY + 28, boxX + 45, currentY + 30, 0xFFD62929);
-            }
         }
         currentY += 40;
 
@@ -1736,10 +1706,6 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
             int textX = boxX + 12;
             
             WorkbenchDesign.drawSmallText(guiGraphics, this.font, matList[i], textX, currentY + 12, 0.55f, color);
-            
-            if (isSelected) {
-                guiGraphics.fill(boxX, currentY + 28, boxX + 60, currentY + 30, 0xFFD62929);
-            }
         }
         currentY += 40;
 
@@ -1893,6 +1859,37 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
             }
         }
         
+        guiGraphics.disableScissor();
+    }
+
+    private void renderTacticalSelectionLabels(GuiGraphics guiGraphics, int mouseX, int mouseY, int trueWidth, int trueHeight) {
+        WorkbenchDesign.drawSmallText(guiGraphics, this.font, "< LOADOUT", 20, 25, 0.75f, 0xFFFFFF);
+        WorkbenchDesign.drawSmallText(guiGraphics, this.font, "LONG TACTICAL", 20, 55, 1.1f, 0xFFFFFF); 
+        WorkbenchDesign.drawSmallText(guiGraphics, this.font, "SELECT EQUIPMENT", 20, 75, 0.65f, 0xFFD62929); 
+
+        String[] tacticals = {"MIRRORGUN", "BREACHING SHOTGUN", "RIOT SHIELD", "TACTICAL DRONE", "BOLT CUTTERS", "BATTERING RAM"};
+
+        int currentY = 100 - (int)this.scrollOffset;
+        int leftX = 26;
+        
+        guiGraphics.enableScissor(0, 90, 240, trueHeight);
+        for (int i = 0; i < 6; i++) {
+            int y = currentY + (i * 45);
+            
+            boolean isSelected = this.selectedTactical.equals(tacticals[i]);
+            int textColor = isSelected ? 0xFFD62929 : 0xFFFFFFFF;
+            
+            // Text is moved from y + 16 to y + 28 to anchor it at the bottom-left of the 40px tall slot box
+            WorkbenchDesign.drawSmallText(guiGraphics, this.font, tacticals[i], leftX, y + 28, 0.7f, textColor);
+            
+            // Base grey underline
+            guiGraphics.fill(20, y + 40, 220, y + 41, 0xFF2E3136);
+            
+            // Red underline for equipped (covers the entire width now)
+            if (isSelected) {
+                guiGraphics.fill(20, y + 40, 220, y + 41, 0xFFD62929);
+            }
+        }
         guiGraphics.disableScissor();
     }
 
