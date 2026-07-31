@@ -24,7 +24,7 @@ public class ModCreativeTabs {
                     .displayItems((itemDisplayParameters, output) -> {
                         // Add the Workbench to the tab
                         output.accept(ModBlocks.WORKBENCH_ITEM.get());
-                        
+                        output.accept(ModItems.BASE_HELMET.get());
                         // NOTE: When you create more items/armor later, you will add them here like this:
                         // output.accept(ModItems.YOUR_NEW_ITEM.get());
                     })

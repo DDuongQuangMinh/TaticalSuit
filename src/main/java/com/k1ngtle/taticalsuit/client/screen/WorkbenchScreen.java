@@ -1868,6 +1868,14 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
         WorkbenchDesign.drawSmallText(guiGraphics, this.font, "SELECT EQUIPMENT", 20, 75, 0.65f, 0xFFD62929); 
 
         String[] tacticals = {"MIRRORGUN", "BREACHING SHOTGUN", "RIOT SHIELD", "TACTICAL DRONE", "BOLT CUTTERS", "BATTERING RAM"};
+        String[] descriptions = {
+            "PEEK UNDER DOORS AND CORNERS",
+            "DESTROY DOOR LOCKS AND HINGES",
+            "BLOCK INCOMING PROJECTILES",
+            "RECON SCOUTING DEVICE",
+            "CUT THROUGH CHAINLINK AND LOCKS",
+            "HEAVY DOOR BREACHING TOOL"
+        };
 
         int currentY = 100 - (int)this.scrollOffset;
         int leftX = 26;
@@ -1879,8 +1887,10 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
             boolean isSelected = this.selectedTactical.equals(tacticals[i]);
             int textColor = isSelected ? 0xFFD62929 : 0xFFFFFFFF;
             
-            // Text is moved from y + 16 to y + 28 to anchor it at the bottom-left of the 40px tall slot box
-            WorkbenchDesign.drawSmallText(guiGraphics, this.font, tacticals[i], leftX, y + 28, 0.7f, textColor);
+            // Draw the small description text above
+            WorkbenchDesign.drawSmallText(guiGraphics, this.font, descriptions[i], leftX, y + 14, 0.45f, 0xFF7A818C);
+            // Draw the Tactical Name
+            WorkbenchDesign.drawSmallText(guiGraphics, this.font, tacticals[i], leftX, y + 24, 0.7f, textColor);
             
             // Base grey underline
             guiGraphics.fill(20, y + 40, 220, y + 41, 0xFF2E3136);
