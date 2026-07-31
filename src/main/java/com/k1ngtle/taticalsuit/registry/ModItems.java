@@ -2,6 +2,8 @@ package com.k1ngtle.taticalsuit.registry;
 
 import com.k1ngtle.taticalsuit.TaticalSuit;
 import com.k1ngtle.taticalsuit.item.HelmetItem;
+import com.k1ngtle.taticalsuit.item.HelmetPVS31Item;
+
 import net.minecraft.world.item.ArmorItem;
 import net.minecraft.world.item.ArmorMaterials;
 import net.minecraft.world.item.Item;
@@ -19,6 +21,9 @@ public class ModItems {
     // Register your Base Helmet
     public static final RegistryObject<Item> BASE_HELMET = ITEMS.register("base_helmet",
             () -> new HelmetItem(ArmorMaterials.IRON, ArmorItem.Type.HELMET, new Item.Properties()));
+
+    public static final RegistryObject<Item> HELMET_PVS31 = ITEMS.register("helmet_pvs31",
+            () -> new HelmetPVS31Item(ArmorMaterials.IRON, ArmorItem.Type.HELMET, new Item.Properties()));
 
     // This method hooks the registry into your main mod event bus
     public static void register(IEventBus eventBus) {
