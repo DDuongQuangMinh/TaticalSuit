@@ -110,11 +110,6 @@ public class HelmetCameraManager {
 
         targetEntity = teammates.get(currentTargetIndex);
         mc.player.displayClientMessage(net.minecraft.network.chat.Component.literal("§aLINK ESTABLISHED - Viewing " + targetEntity.getDisplayName().getString().toUpperCase()), true);
-        
-        if (pipTarget == null) {
-            pipTarget = new TextureTarget(552, 392, true, Minecraft.ON_OSX);
-            pipTarget.setClearColor(0.0F, 0.0F, 0.0F, 1.0F);
-        }
     }
 
     private static void turnOffCamera(Minecraft mc) {
@@ -132,7 +127,7 @@ public class HelmetCameraManager {
 
     @SubscribeEvent
     public static void onRenderLevelStage(RenderLevelStageEvent event) {
-        if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_LEVEL || !isCameraActive || targetEntity == null || pipTarget == null || isRenderingPip) return;
+        if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_LEVEL || !isCameraActive || targetEntity == null || isRenderingPip) return;
 
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null || mc.level == null) return;
@@ -150,6 +145,12 @@ public class HelmetCameraManager {
         if (backupTarget == null || backupTarget.width != mainTarget.width || backupTarget.height != mainTarget.height) {
             if (backupTarget != null) backupTarget.destroyBuffers();
             backupTarget = new TextureTarget(mainTarget.width, mainTarget.height, true, Minecraft.ON_OSX);
+        }
+        
+        // Initialize PiP FBO to EXACT screen dimensions to prevent glBlitFramebuffer aspect ratio glitching!
+        if (pipTarget == null || pipTarget.width != mainTarget.width || pipTarget.height != mainTarget.height) {
+            if (pipTarget != null) pipTarget.destroyBuffers();
+            pipTarget = new TextureTarget(mainTarget.width, mainTarget.height, true, Minecraft.ON_OSX);
         }
 
         // 3. COPY MAIN SCREEN TO BACKUP
@@ -200,7 +201,8 @@ public class HelmetCameraManager {
             // 6. COPY THE RESULT TO OUR PIP TEXTURE
             GL30.glBindFramebuffer(GL30.GL_READ_FRAMEBUFFER, mainTarget.frameBufferId);
             GL30.glBindFramebuffer(GL30.GL_DRAW_FRAMEBUFFER, pipTarget.frameBufferId);
-            GL30.glBlitFramebuffer(0, 0, mainTarget.width, mainTarget.height, 0, 0, pipTarget.width, pipTarget.height, GL30.GL_COLOR_BUFFER_BIT, GL30.GL_LINEAR);
+            // GL_NEAREST is much safer for exact-sized framebuffers and prevents artifacting
+            GL30.glBlitFramebuffer(0, 0, mainTarget.width, mainTarget.height, 0, 0, pipTarget.width, pipTarget.height, GL30.GL_COLOR_BUFFER_BIT, GL30.GL_NEAREST);
 
         } finally {
             // 7. RESTORE THE MAIN SCREEN BACKUP
@@ -257,10 +259,25 @@ public class HelmetCameraManager {
         guiGraphics.fill(x + 5, y + 5, x + 11, y + 11, isBlinking ? 0xFFFF0000 : 0xFF550000);
         guiGraphics.drawString(mc.font, "CAM: " + targetEntity.getDisplayName().getString().toUpperCase(), x + 16, y + 4, 0xFFFFFF);
 
-        // --- RENDER TEXTURE ---
+        // --- RENDER TEXTURE WITH DYNAMIC UV CROPPING ---
         RenderSystem.setShaderTexture(0, pipTarget.getColorTextureId());
         RenderSystem.setShader(GameRenderer::getPositionTexShader);
-        RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
+        
+        // Dynamically verify if NVG is active to apply the Green tint to the PiP box!
+        boolean isNVG = false;
+        ItemStack helmet = mc.player.getItemBySlot(EquipmentSlot.HEAD);
+        if (helmet.getItem() instanceof HelmetPVS31Item || helmet.getItem() instanceof HelmetGPNVG18Item) {
+            if (helmet.hasTag() && helmet.getTag().getBoolean("nvg_active")) {
+                isNVG = true;
+            }
+        }
+
+        if (isNVG) {
+            RenderSystem.setShaderColor(0.2F, 1.0F, 0.3F, 1.0F); 
+        } else {
+            RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
+        }
+        
         RenderSystem.disableBlend();
         RenderSystem.disableDepthTest();
 
@@ -273,14 +290,34 @@ public class HelmetCameraManager {
         float drawW = boxWidth - 2;
         float drawH = 98;
 
-        bufferbuilder.vertex(matrix4f, drawX,         drawY + drawH, 0).uv(0.0F, 0.0F).endVertex();
-        bufferbuilder.vertex(matrix4f, drawX + drawW, drawY + drawH, 0).uv(1.0F, 0.0F).endVertex();
-        bufferbuilder.vertex(matrix4f, drawX + drawW, drawY,         0).uv(1.0F, 1.0F).endVertex();
-        bufferbuilder.vertex(matrix4f, drawX,         drawY,         0).uv(0.0F, 1.0F).endVertex();
+        // Mathematical Center-Cropping so the image never stretches or glitches
+        float targetAspect = drawW / drawH;
+        float screenAspect = (float)pipTarget.width / (float)pipTarget.height;
+        
+        float u0 = 0.0F, u1 = 1.0F, v0 = 0.0F, v1 = 1.0F;
+        
+        if (screenAspect > targetAspect) {
+            float scale = targetAspect / screenAspect;
+            float margin = (1.0F - scale) / 2.0F;
+            u0 = margin;
+            u1 = 1.0F - margin;
+        } else {
+            float scale = screenAspect / targetAspect;
+            float margin = (1.0F - scale) / 2.0F;
+            v0 = margin;
+            v1 = 1.0F - margin;
+        }
+
+        // OpenGL Framebuffers map V0 as bottom and V1 as top.
+        bufferbuilder.vertex(matrix4f, drawX,         drawY + drawH, 0).uv(u0, v0).endVertex();
+        bufferbuilder.vertex(matrix4f, drawX + drawW, drawY + drawH, 0).uv(u1, v0).endVertex();
+        bufferbuilder.vertex(matrix4f, drawX + drawW, drawY,         0).uv(u1, v1).endVertex();
+        bufferbuilder.vertex(matrix4f, drawX,         drawY,         0).uv(u0, v1).endVertex();
 
         Tesselator.getInstance().end();
         RenderSystem.enableBlend();
         RenderSystem.enableDepthTest();
+        RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
 
         // Footer Stats
         float healthPct = targetEntity.getHealth() / targetEntity.getMaxHealth();
