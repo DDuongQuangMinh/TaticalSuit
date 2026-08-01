@@ -35,7 +35,7 @@ public class NVGNetwork {
     private static final String PROTOCOL_VERSION = "1";
     
     public static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(
-            new ResourceLocation(TaticalSuit.MODID, "nvg_channel"),
+            new ResourceLocation(TaticalSuit.MODID + ":nvg_channel"),
             () -> PROTOCOL_VERSION, PROTOCOL_VERSION::equals, PROTOCOL_VERSION::equals);
 
     public static void register() {
@@ -58,7 +58,7 @@ public class NVGNetwork {
                 if (player != null) {
                     ItemStack helmet = player.getItemBySlot(EquipmentSlot.HEAD);
                     
-                    // --- UPDATED: Check for both PVS-31 and GPNVG-18 ---
+                    // Strictly enforce that they are wearing the PVS-31 or GPNVG-18 to process the toggle
                     if (helmet.getItem() instanceof HelmetPVS31Item || helmet.getItem() instanceof HelmetGPNVG18Item) {
                         CompoundTag tag = helmet.getOrCreateTag();
                         boolean isActive = !tag.getBoolean("nvg_active");
@@ -84,9 +84,16 @@ public class NVGNetwork {
             if (event.phase == TickEvent.Phase.END && !event.player.level().isClientSide()) {
                 ItemStack helmet = event.player.getItemBySlot(EquipmentSlot.HEAD);
                 
-                // --- UPDATED: Apply Night Vision Potion Effect for both helmets ---
-                if ((helmet.getItem() instanceof HelmetPVS31Item || helmet.getItem() instanceof HelmetGPNVG18Item) && helmet.getOrCreateTag().getBoolean("nvg_active")) {
+                boolean hasNVGHelmet = (helmet.getItem() instanceof HelmetPVS31Item || helmet.getItem() instanceof HelmetGPNVG18Item);
+                boolean isNVGActive = hasNVGHelmet && helmet.hasTag() && helmet.getTag().getBoolean("nvg_active");
+
+                if (isNVGActive) {
                     event.player.addEffect(new MobEffectInstance(MobEffects.NIGHT_VISION, 250, 0, false, false, false));
+                } else {
+                    // Instantly remove the night vision effect if they unequip the helmet!
+                    if (event.player.hasEffect(MobEffects.NIGHT_VISION)) {
+                        event.player.removeEffect(MobEffects.NIGHT_VISION);
+                    }
                 }
             }
         }
@@ -98,12 +105,24 @@ public class NVGNetwork {
                 "key.taticalsuit.toggle_nvg", KeyConflictContext.IN_GAME,
                 InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_N, "category.taticalsuit.keys");
 
-        private static final ResourceLocation TARGET_SHADER = new ResourceLocation(TaticalSuit.MODID, "shaders/post/nv_green.json");
+        // Fixed ResourceLocation deprecation warning
+        private static final ResourceLocation TARGET_SHADER = new ResourceLocation(TaticalSuit.MODID + ":shaders/post/nv_green.json");
 
         @SubscribeEvent
         public static void onKeyInput(InputEvent.Key event) {
             if (TOGGLE_KEY.consumeClick()) {
-                CHANNEL.sendToServer(new TogglePacket());
+                Minecraft mc = Minecraft.getInstance();
+                if (mc.player != null) {
+                    ItemStack helmet = mc.player.getItemBySlot(EquipmentSlot.HEAD);
+                    
+                    // Only send the packet if they are wearing the PVS31 or GPNVG18
+                    if (helmet.getItem() instanceof HelmetPVS31Item || helmet.getItem() instanceof HelmetGPNVG18Item) {
+                        CHANNEL.sendToServer(new TogglePacket());
+                    } else {
+                        // Optional: Show a message when trying to activate without the right helmet
+                        mc.player.displayClientMessage(net.minecraft.network.chat.Component.literal("§c[!] No Tactical NVG Equipped"), true);
+                    }
+                }
             }
         }
 
@@ -116,9 +135,9 @@ public class NVGNetwork {
 
             ItemStack helmet = mc.player.getItemBySlot(EquipmentSlot.HEAD);
             
-            // --- UPDATED: Load the Shader for both helmets ---
+            // Check if they are wearing the helmet AND it is turned on
             boolean isWearingActiveNVG = (helmet.getItem() instanceof HelmetPVS31Item || helmet.getItem() instanceof HelmetGPNVG18Item) 
-                                         && helmet.getOrCreateTag().getBoolean("nvg_active");
+                                         && helmet.hasTag() && helmet.getTag().getBoolean("nvg_active");
 
             if (isWearingActiveNVG) {
                 if (mc.gameRenderer.currentEffect() == null || !mc.gameRenderer.currentEffect().getName().equals(TARGET_SHADER.toString())) {
