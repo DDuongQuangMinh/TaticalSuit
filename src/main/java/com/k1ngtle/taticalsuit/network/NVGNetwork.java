@@ -1,6 +1,7 @@
 package com.k1ngtle.taticalsuit.network;
 
 import com.k1ngtle.taticalsuit.TaticalSuit;
+import com.k1ngtle.taticalsuit.item.HelmetGPNVG18Item;
 import com.k1ngtle.taticalsuit.item.HelmetPVS31Item;
 import com.mojang.blaze3d.platform.InputConstants;
 import net.minecraft.client.KeyMapping;
@@ -56,7 +57,9 @@ public class NVGNetwork {
                 ServerPlayer player = context.getSender();
                 if (player != null) {
                     ItemStack helmet = player.getItemBySlot(EquipmentSlot.HEAD);
-                    if (helmet.getItem() instanceof HelmetPVS31Item) {
+                    
+                    // --- UPDATED: Check for both PVS-31 and GPNVG-18 ---
+                    if (helmet.getItem() instanceof HelmetPVS31Item || helmet.getItem() instanceof HelmetGPNVG18Item) {
                         CompoundTag tag = helmet.getOrCreateTag();
                         boolean isActive = !tag.getBoolean("nvg_active");
                         tag.putBoolean("nvg_active", isActive);
@@ -80,7 +83,9 @@ public class NVGNetwork {
         public static void onPlayerTick(TickEvent.PlayerTickEvent event) {
             if (event.phase == TickEvent.Phase.END && !event.player.level().isClientSide()) {
                 ItemStack helmet = event.player.getItemBySlot(EquipmentSlot.HEAD);
-                if (helmet.getItem() instanceof HelmetPVS31Item && helmet.getOrCreateTag().getBoolean("nvg_active")) {
+                
+                // --- UPDATED: Apply Night Vision Potion Effect for both helmets ---
+                if ((helmet.getItem() instanceof HelmetPVS31Item || helmet.getItem() instanceof HelmetGPNVG18Item) && helmet.getOrCreateTag().getBoolean("nvg_active")) {
                     event.player.addEffect(new MobEffectInstance(MobEffects.NIGHT_VISION, 250, 0, false, false, false));
                 }
             }
@@ -93,7 +98,6 @@ public class NVGNetwork {
                 "key.taticalsuit.toggle_nvg", KeyConflictContext.IN_GAME,
                 InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_N, "category.taticalsuit.keys");
 
-        // CHANGE THIS LINE to point to our fresh new pipeline file!
         private static final ResourceLocation TARGET_SHADER = new ResourceLocation(TaticalSuit.MODID, "shaders/post/nv_green.json");
 
         @SubscribeEvent
@@ -111,7 +115,10 @@ public class NVGNetwork {
             if (mc.player == null) return;
 
             ItemStack helmet = mc.player.getItemBySlot(EquipmentSlot.HEAD);
-            boolean isWearingActiveNVG = helmet.getItem() instanceof HelmetPVS31Item && helmet.getOrCreateTag().getBoolean("nvg_active");
+            
+            // --- UPDATED: Load the Shader for both helmets ---
+            boolean isWearingActiveNVG = (helmet.getItem() instanceof HelmetPVS31Item || helmet.getItem() instanceof HelmetGPNVG18Item) 
+                                         && helmet.getOrCreateTag().getBoolean("nvg_active");
 
             if (isWearingActiveNVG) {
                 if (mc.gameRenderer.currentEffect() == null || !mc.gameRenderer.currentEffect().getName().equals(TARGET_SHADER.toString())) {

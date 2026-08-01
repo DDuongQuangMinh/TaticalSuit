@@ -2,5 +2,6 @@
   "creativetab.tatical_suit_tab": "Tactical Suit Equipment",
   "block.taticalsuit.workbench": "Tactical Workbench",
   "item.taticalsuit.base_helmet": "Helmet",
-  "item.tacticalsuit.helmet_pvs31": "PVS-31 Helmet"
+  "item.taticalsuit.helmet_pvs31": "PVS-31 Helmet",
+  "item.taticalsuit.helmet_gpnvg18": "GPNVG-18 Helmet"
 }
