@@ -69,6 +69,14 @@ public class WorkbenchData {
             "pointblank:rhino"
     };
 
+    // --- GEAR POOLS ---
+    public static final String[] HELMET_IDS = new String[]{
+            "NONE",
+            "taticalsuit:helmet",
+            "taticalsuit:helmet_pvs31",
+            "taticalsuit:helmet_gpnvg18"
+    };
+
     // --- ATTACHMENT POOLS ---
     public static final String[] OPTIC_IDS = {
             "NONE", 

@@ -84,6 +84,9 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
     private ItemStack[] launcherStacks;
     private ItemStack[] sidearmWeaponStacks;
 
+    // Added Helmet Stacks
+    private ItemStack[] helmetStacks;
+
     public WorkbenchScreen(WorkbenchMenu menu, Inventory inventory, Component title) {
         super(menu, inventory, title);
     }
@@ -128,6 +131,9 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
         this.sniperRifleStacks = resolveStacks(dynamicSniper.toArray(new String[0]), "WEAPON");
         this.launcherStacks = resolveStacks(dynamicLauncher.toArray(new String[0]), "WEAPON");
         this.sidearmWeaponStacks = resolveStacks(dynamicSidearm.toArray(new String[0]), "WEAPON");
+
+        // Resolve Helmet Stacks
+        this.helmetStacks = resolveStacks(WorkbenchData.HELMET_IDS, "GEAR");
     }
 
     private void buildDynamicPools() {
@@ -206,6 +212,7 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
             case "BARREL": keywords = new String[]{"barrel", "handguard", "choke"}; break;
             case "MUZZLE": keywords = new String[]{"muzzle", "silencer", "suppressor", "compensator", "flash", "osprey", "omega", "ti_rant", "rotor"}; break;
             case "LASER": keywords = new String[]{"laser", "tactical", "light", "peq", "flashlight", "tlr", "x300", "surefire", "m600"}; break;
+            case "GEAR": keywords = new String[]{""}; break; // Fallback for gears, handled directly by exact ID match
             default: keywords = new String[]{category.toLowerCase()}; break;
         }
 
@@ -233,7 +240,7 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
                         String path = regLoc.getPath().toLowerCase();
                         
                         boolean matchesCategory = false;
-                        if (category.equals("WEAPON")) {
+                        if (category.equals("WEAPON") || category.equals("GEAR")) {
                             matchesCategory = true;
                         } else {
                             for (String kw : keywords) {
@@ -265,6 +272,15 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
             }
         }
         return stacks;
+    }
+
+    // Helper to get formatted name for helmet IDs
+    private String getFormattedHelmetName(String id) {
+        if (id.equals("NONE")) return "NO HELMET";
+        if (id.equals("taticalsuit:helmet")) return "BASE HELMET";
+        if (id.equals("taticalsuit:helmet_pvs31")) return "HELMET (PVS-31)";
+        if (id.equals("taticalsuit:helmet_gpnvg18")) return "HELMET (GPNVG-18)";
+        return id.replace("taticalsuit:", "").replace("_", " ").toUpperCase();
     }
 
     private String[] getActiveWeaponPool() {
@@ -477,6 +493,13 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
                     if (pMouseY >= currentY && pMouseY <= currentY + 35 && pMouseX >= 20 && pMouseX <= 220) {
                         this.selectedHelmet = item;
                         this.expandedHeadwearCategory = "";
+                        
+                        // If taking off helmet, remove the mount too
+                        if (item.equals("NO HELMET")) {
+                            this.selectedMount = "NONE";
+                        }
+                        updateHelmetEquip();
+                        
                         return true;
                     }
                     currentY += 35;
@@ -496,6 +519,13 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
                     if (pMouseY >= currentY && pMouseY <= currentY + 35 && pMouseX >= 20 && pMouseX <= 220) {
                         this.selectedMount = item;
                         this.expandedHeadwearCategory = "";
+                        
+                        // If selecting a mount, force the helmet ON
+                        if (!item.equals("NONE")) {
+                            this.selectedHelmet = "HELMET ONLY";
+                        }
+                        updateHelmetEquip();
+                        
                         return true;
                     }
                     currentY += 35;
@@ -1407,7 +1437,7 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
             if (weaponPool[i] != null && !weaponPool[i].isEmpty()) {
                 guiGraphics.pose().pushPose();
                 guiGraphics.pose().translate(30, currentY + 8, 250); // High Z-depth
-                guiGraphics.pose().scale(1.8f, 1.8f, 1.0f);
+                guiGraphics.pose().scale(1.8f, 1.8f, 1.8f); // FIXED: Uniform Z scaling prevents the error block!
                 guiGraphics.renderItem(weaponPool[i], 0, 0);
                 guiGraphics.pose().popPose();
             }
@@ -1447,7 +1477,7 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
             if (attachmentPool[i] != null && !attachmentPool[i].isEmpty()) {
                 guiGraphics.pose().pushPose();
                 guiGraphics.pose().translate(30, currentY + 12, 250); 
-                guiGraphics.pose().scale(1.2f, 1.2f, 1.0f);
+                guiGraphics.pose().scale(1.2f, 1.2f, 1.2f); // FIXED: Uniform Z scaling
                 guiGraphics.renderItem(attachmentPool[i], 0, 0);
                 guiGraphics.pose().popPose();
             }
@@ -1598,7 +1628,7 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
         if (!primaryStack.isEmpty()) {
             guiGraphics.pose().pushPose();
             guiGraphics.pose().translate(110, 44, 350.0F); 
-            guiGraphics.pose().scale(2.5f, 2.5f, 1.0f); 
+            guiGraphics.pose().scale(2.5f, 2.5f, 2.5f); // FIXED: Uniform Z scaling
             guiGraphics.renderItem(primaryStack, 0, 0);
             guiGraphics.pose().popPose();
         }
@@ -1608,7 +1638,7 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
         if (!secondaryStack.isEmpty()) {
             guiGraphics.pose().pushPose();
             guiGraphics.pose().translate(110, 89, 350.0F); 
-            guiGraphics.pose().scale(2.5f, 2.5f, 1.0f); 
+            guiGraphics.pose().scale(2.5f, 2.5f, 2.5f); // FIXED: Uniform Z scaling
             guiGraphics.renderItem(secondaryStack, 0, 0);
             guiGraphics.pose().popPose();
         }
@@ -1633,11 +1663,30 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
         WorkbenchDesign.drawSmallText(guiGraphics, this.font, "AP", 153, 310, 0.55f, 0xFFFFFFFF);
         WorkbenchDesign.drawSmallText(guiGraphics, this.font, "5", 201, 310, 0.55f, 0xFFFFFFFF);
 
+        // --- 3D HELMET PREVIEW ---
+        if (Minecraft.getInstance().player != null) {
+            ItemStack headStack = Minecraft.getInstance().player.getItemBySlot(net.minecraft.world.entity.EquipmentSlot.HEAD);
+            if (!headStack.isEmpty() && (
+                headStack.getItem() instanceof com.k1ngtle.taticalsuit.item.HelmetItem ||
+                headStack.getItem() instanceof com.k1ngtle.taticalsuit.item.HelmetPVS31Item ||
+                headStack.getItem() instanceof com.k1ngtle.taticalsuit.item.HelmetGPNVG18Item)) {
+                
+                guiGraphics.pose().pushPose();
+                guiGraphics.pose().translate(39, 357, 150.0F); // Moved left by another 6 units (51 -> 45)
+                guiGraphics.pose().scale(2.5f, 2.5f, 2.5f); // Scaled down to fit properly
+                guiGraphics.renderItem(headStack, 0, 0);
+                guiGraphics.pose().popPose();
+            }
+        }
+
         // --- HEADWEAR DYNAMIC LABELS ---
         WorkbenchDesign.drawSmallText(guiGraphics, this.font, "HEADWEAR", 20, 330, 0.65f, 0xFFAAAAAA);
         
+        guiGraphics.pose().pushPose();
+        guiGraphics.pose().translate(0, 0, 400.0F); // Force text into EXTREME FOREGROUND above the 3D model
         WorkbenchDesign.drawSmallText(guiGraphics, this.font, "HELMET", 26, 383, 0.55f, 0xFF7A818C);
         WorkbenchDesign.drawSmallText(guiGraphics, this.font, this.selectedHelmet, 26, 389, 0.75f, 0xFFD2D6DE);
+        guiGraphics.pose().popPose();
         
         WorkbenchDesign.drawSmallText(guiGraphics, this.font, "MOUNT | ", 106, 358, 0.55f, 0xFF7A818C);
         if (!this.selectedMount.equals("NONE")) {
@@ -2021,8 +2070,17 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
 
         if (!previewStack.isEmpty()) {
             int infoX = 260;
-            int infoY = 100;
+            int infoY = 35; // Moved up to make room for the 3D model!
             
+            // DRAW LARGE 3D PREVIEW MODEL ABOVE TEXT
+            guiGraphics.pose().pushPose();
+            guiGraphics.pose().translate(infoX + 15, infoY, 350.0F); 
+            guiGraphics.pose().scale(4.0f, 4.0f, 4.0f); // UNIFORM Z scaling to render perfectly
+            guiGraphics.renderItem(previewStack, 0, 0);
+            guiGraphics.pose().popPose();
+
+            infoY += 80; // Push text down to start directly below the weapon
+
             String gunName = previewStack.getHoverName().getString().toUpperCase();
             WorkbenchDesign.drawSmallText(guiGraphics, this.font, gunName, infoX, infoY, 1.2f, 0xFFFFFFFF);
             
@@ -2456,5 +2514,45 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
         ItemStack hotbarStack = Minecraft.getInstance().player.getInventory().getItem(1);
         if (isSidearmWeapon(hotbarStack)) return hotbarStack;
         return ItemStack.EMPTY;
+    }
+
+    private void updateHelmetEquip() {
+        String targetId = "NONE";
+        
+        if (this.selectedHelmet.equals("HELMET ONLY")) {
+            if (this.selectedMount.equals("NONE")) {
+                targetId = "taticalsuit:helmet";
+            } else if (this.selectedMount.equals("NVGS")) {
+                targetId = "taticalsuit:helmet_pvs31";
+            } else if (this.selectedMount.equals("GPNVGS")) {
+                targetId = "taticalsuit:helmet_gpnvg18";
+            }
+        }
+        
+        // INSTANT CLIENT-SIDE GUI PREDICTION
+        if (Minecraft.getInstance().player != null) {
+            if (targetId.equals("NONE")) {
+                // Instantly clear from client inventory for responsive real-time GUI
+                for (int i = 0; i < Minecraft.getInstance().player.getInventory().getContainerSize(); i++) {
+                    ItemStack stack = Minecraft.getInstance().player.getInventory().getItem(i);
+                    if (stack.getItem() instanceof com.k1ngtle.taticalsuit.item.HelmetItem ||
+                        stack.getItem() instanceof com.k1ngtle.taticalsuit.item.HelmetPVS31Item ||
+                        stack.getItem() instanceof com.k1ngtle.taticalsuit.item.HelmetGPNVG18Item) {
+                        Minecraft.getInstance().player.getInventory().setItem(i, ItemStack.EMPTY);
+                    }
+                }
+            } else {
+                ResourceLocation loc = new ResourceLocation(targetId);
+                net.minecraft.world.item.Item targetItem = net.minecraftforge.registries.ForgeRegistries.ITEMS.getValue(loc);
+                if (targetItem != null && targetItem != net.minecraft.world.item.Items.AIR) {
+                    Minecraft.getInstance().player.setItemSlot(net.minecraft.world.entity.EquipmentSlot.HEAD, new ItemStack(targetItem));
+                }
+            }
+        }
+        
+        // Send packet to server to scan and equip the helmet
+        com.k1ngtle.taticalsuit.network.HeadwearNetwork.CHANNEL.sendToServer(
+                new com.k1ngtle.taticalsuit.network.HeadwearNetwork.EquipHelmetPacket(targetId)
+        );
     }
 }
