@@ -119,6 +119,30 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
         this.currentWeaponTab = 0;
         this.scrollOffset = 0f;
 
+        // --- READ CURRENTLY EQUIPPED HEADWEAR ---
+        if (Minecraft.getInstance().player != null) {
+            ItemStack helmetStack = Minecraft.getInstance().player.getItemBySlot(net.minecraft.world.entity.EquipmentSlot.HEAD);
+            if (!helmetStack.isEmpty()) {
+                if (helmetStack.getItem() instanceof com.k1ngtle.taticalsuit.item.HelmetItem) {
+                    this.selectedHelmet = "HELMET ONLY";
+                    this.selectedMount = "NONE";
+                } else if (helmetStack.getItem() instanceof com.k1ngtle.taticalsuit.item.HelmetPVS31Item) {
+                    this.selectedHelmet = "HELMET ONLY";
+                    this.selectedMount = "NVGS";
+                } else if (helmetStack.getItem() instanceof com.k1ngtle.taticalsuit.item.HelmetGPNVG18Item) {
+                    this.selectedHelmet = "HELMET ONLY";
+                    this.selectedMount = "GPNVGS";
+                }
+                
+                if (helmetStack.hasTag() && helmetStack.getTag().contains("phosphor")) {
+                    this.selectedPhosphor = helmetStack.getTag().getString("phosphor");
+                }
+            } else {
+                this.selectedHelmet = "NO HELMET";
+                this.selectedMount = "NONE";
+            }
+        }
+
         // Auto-sort new datapack guns and mix with hardcoded defaults
         buildDynamicPools();
 
@@ -536,9 +560,11 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
                 if (pMouseY >= currentY && pMouseY <= currentY + 40) {
                     if (pMouseX >= 20 && pMouseX <= 120) {
                         this.selectedPhosphor = "GREEN PHOSPHOR";
+                        updateHelmetEquip();
                         return true;
                     } else if (pMouseX > 120 && pMouseX <= 220) {
                         this.selectedPhosphor = "WHITE PHOSPHOR";
+                        updateHelmetEquip();
                         return true;
                     }
                 }
@@ -2545,14 +2571,16 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
                 ResourceLocation loc = new ResourceLocation(targetId);
                 net.minecraft.world.item.Item targetItem = net.minecraftforge.registries.ForgeRegistries.ITEMS.getValue(loc);
                 if (targetItem != null && targetItem != net.minecraft.world.item.Items.AIR) {
-                    Minecraft.getInstance().player.setItemSlot(net.minecraft.world.entity.EquipmentSlot.HEAD, new ItemStack(targetItem));
+                    ItemStack localEquip = new ItemStack(targetItem);
+                    localEquip.getOrCreateTag().putString("phosphor", this.selectedPhosphor);
+                    Minecraft.getInstance().player.setItemSlot(net.minecraft.world.entity.EquipmentSlot.HEAD, localEquip);
                 }
             }
         }
         
-        // Send packet to server to scan and equip the helmet
+        // Send packet to server to scan and equip the helmet WITH phosphor selection
         com.k1ngtle.taticalsuit.network.HeadwearNetwork.CHANNEL.sendToServer(
-                new com.k1ngtle.taticalsuit.network.HeadwearNetwork.EquipHelmetPacket(targetId)
+                new com.k1ngtle.taticalsuit.network.HeadwearNetwork.EquipHelmetPacket(targetId, this.selectedPhosphor)
         );
     }
 }

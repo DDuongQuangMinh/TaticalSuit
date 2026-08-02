@@ -38,17 +38,21 @@ public class HeadwearNetwork {
 
     public static class EquipHelmetPacket {
         public final String targetId;
+        public final String phosphor;
 
-        public EquipHelmetPacket(String targetId) {
+        public EquipHelmetPacket(String targetId, String phosphor) {
             this.targetId = targetId;
+            this.phosphor = phosphor;
         }
 
         public EquipHelmetPacket(FriendlyByteBuf buf) {
             this.targetId = buf.readUtf();
+            this.phosphor = buf.readUtf();
         }
 
         public void toBytes(FriendlyByteBuf buf) {
             buf.writeUtf(this.targetId);
+            buf.writeUtf(this.phosphor);
         }
 
         public boolean handle(Supplier<NetworkEvent.Context> supplier) {
@@ -74,11 +78,14 @@ public class HeadwearNetwork {
 
                 // 2. EQUIP SCENARIO
                 ResourceLocation loc = new ResourceLocation(targetId);
-                Item targetItem = ForgeRegistries.ITEMS.getValue(loc);
-                if (targetItem == null || targetItem == Items.AIR) return;
+                net.minecraft.world.item.Item targetItem = net.minecraftforge.registries.ForgeRegistries.ITEMS.getValue(loc);
+                if (targetItem == null || targetItem == net.minecraft.world.item.Items.AIR) return;
 
-                // If they are already wearing this exact item, do nothing
-                if (currentHead.getItem() == targetItem) return;
+                // If they are already wearing this exact item, just update the phosphor NBT and exit
+                if (currentHead.getItem() == targetItem) {
+                    currentHead.getOrCreateTag().putString("phosphor", phosphor);
+                    return;
+                }
 
                 // Strip off whatever is currently on their head safely
                 if (!currentHead.isEmpty()) {
@@ -103,6 +110,9 @@ public class HeadwearNetwork {
                 if (foundStack.isEmpty()) {
                     foundStack = new ItemStack(targetItem);
                 }
+
+                // Append the requested phosphor color directly to the helmet
+                foundStack.getOrCreateTag().putString("phosphor", phosphor);
 
                 // Equip the new helmet
                 player.setItemSlot(EquipmentSlot.HEAD, foundStack);

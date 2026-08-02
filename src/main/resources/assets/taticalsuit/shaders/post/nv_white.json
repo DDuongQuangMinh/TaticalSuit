@@ -1,0 +1,15 @@
+{
+  "targets": ["swap"],
+  "passes": [
+    {
+      "name": "taticalsuit:nv_white",
+      "intarget": "minecraft:main",
+      "outtarget": "swap"
+    },
+    {
+      "name": "blit",
+      "intarget": "swap",
+      "outtarget": "minecraft:main"
+    }
+  ]
+}

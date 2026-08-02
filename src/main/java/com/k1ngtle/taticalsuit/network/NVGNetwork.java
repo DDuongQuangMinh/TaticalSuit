@@ -105,8 +105,8 @@ public class NVGNetwork {
                 "key.taticalsuit.toggle_nvg", KeyConflictContext.IN_GAME,
                 InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_N, "category.taticalsuit.keys");
 
-        // Fixed ResourceLocation deprecation warning
-        private static final ResourceLocation TARGET_SHADER = new ResourceLocation(TaticalSuit.MODID + ":shaders/post/nv_green.json");
+        private static final ResourceLocation GREEN_SHADER = new ResourceLocation(TaticalSuit.MODID, "shaders/post/nv_green.json");
+        private static final ResourceLocation WHITE_SHADER = new ResourceLocation(TaticalSuit.MODID, "shaders/post/nv_white.json");
 
         @SubscribeEvent
         public static void onKeyInput(InputEvent.Key event) {
@@ -139,12 +139,20 @@ public class NVGNetwork {
             boolean isWearingActiveNVG = (helmet.getItem() instanceof HelmetPVS31Item || helmet.getItem() instanceof HelmetGPNVG18Item) 
                                          && helmet.hasTag() && helmet.getTag().getBoolean("nvg_active");
 
+            ResourceLocation targetShader = GREEN_SHADER;
+            if (isWearingActiveNVG && helmet.hasTag() && "WHITE PHOSPHOR".equals(helmet.getTag().getString("phosphor"))) {
+                targetShader = WHITE_SHADER;
+            }
+
             if (isWearingActiveNVG) {
-                if (mc.gameRenderer.currentEffect() == null || !mc.gameRenderer.currentEffect().getName().equals(TARGET_SHADER.toString())) {
-                    mc.gameRenderer.loadEffect(TARGET_SHADER);
+                if (mc.gameRenderer.currentEffect() == null || !mc.gameRenderer.currentEffect().getName().equals(targetShader.toString())) {
+                    if (mc.gameRenderer.currentEffect() != null) mc.gameRenderer.shutdownEffect();
+                    mc.gameRenderer.loadEffect(targetShader);
                 }
             } else {
-                if (mc.gameRenderer.currentEffect() != null && mc.gameRenderer.currentEffect().getName().equals(TARGET_SHADER.toString())) {
+                if (mc.gameRenderer.currentEffect() != null && 
+                   (mc.gameRenderer.currentEffect().getName().equals(GREEN_SHADER.toString()) || 
+                    mc.gameRenderer.currentEffect().getName().equals(WHITE_SHADER.toString()))) {
                     mc.gameRenderer.shutdownEffect();
                 }
             }

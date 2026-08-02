@@ -286,22 +286,33 @@ public class HelmetCameraManager {
         
         // 5. PROCESS SECONDARY SHADER ON PIP BOX
         boolean isNVG = false;
+        boolean isWhitePhosphor = false;
         ItemStack helmet = mc.player.getItemBySlot(EquipmentSlot.HEAD);
+        
         if (helmet.getItem() instanceof HelmetPVS31Item || helmet.getItem() instanceof HelmetGPNVG18Item) {
             if (helmet.hasTag() && helmet.getTag().getBoolean("nvg_active")) {
                 isNVG = true;
+                if ("WHITE PHOSPHOR".equals(helmet.getTag().getString("phosphor"))) {
+                    isWhitePhosphor = true;
+                }
             }
         }
 
         if (isNVG) {
-            if (pipShader == null) {
+            ResourceLocation targetShader = isWhitePhosphor ? 
+                new ResourceLocation(TaticalSuit.MODID, "shaders/post/nv_white.json") : 
+                new ResourceLocation(TaticalSuit.MODID, "shaders/post/nv_green.json");
+
+            if (pipShader == null || !pipShader.getName().equals(targetShader.toString())) {
                 try {
-                    pipShader = new PostChain(mc.getTextureManager(), mc.getResourceManager(), pipTarget, new ResourceLocation(TaticalSuit.MODID, "shaders/post/nv_green.json"));
+                    if (pipShader != null) pipShader.close();
+                    pipShader = new PostChain(mc.getTextureManager(), mc.getResourceManager(), pipTarget, targetShader);
                     pipShader.resize(pipTarget.width, pipTarget.height);
                 } catch (Exception e) {
                     System.out.println("Failed to load PIP NVG shader: " + e.getMessage());
                 }
             }
+            
             if (pipShader != null) {
                 RenderSystem.disableBlend();
                 RenderSystem.disableDepthTest();
