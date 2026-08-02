@@ -14,12 +14,10 @@ import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.Tesselator;
 import com.mojang.blaze3d.vertex.VertexFormat;
-import net.minecraft.client.CameraType;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.renderer.GameRenderer;
-import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemStack;
@@ -64,7 +62,6 @@ public class HelmetCameraManager {
     private static RenderTarget backupTarget;
     private static boolean isRenderingPip = false;
 
-    // Checks BOTH the Head slot and the Main Hand slot
     private static boolean hasTacticalHelmet(LivingEntity entity) {
         ItemStack head = entity.getItemBySlot(EquipmentSlot.HEAD);
         ItemStack hand = entity.getMainHandItem(); 
@@ -87,7 +84,6 @@ public class HelmetCameraManager {
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null || mc.level == null) return;
 
-        // Squad Menu Logic
         if (SQUAD_MENU_KEY.consumeClick()) {
             if (hasTacticalHelmet(mc.player)) {
                 mc.setScreen(new SquadSelectionScreen());
@@ -116,7 +112,6 @@ public class HelmetCameraManager {
         ItemStack headItem = mc.player.getItemBySlot(EquipmentSlot.HEAD);
         ItemStack handItem = mc.player.getMainHandItem();
         
-        // Find whichever one has the tag
         ItemStack myHelmet = ItemStack.EMPTY;
         if (headItem.hasTag() && headItem.getTag().contains("squad_name")) {
             myHelmet = headItem;
@@ -131,7 +126,6 @@ public class HelmetCameraManager {
         
         String mySquad = myHelmet.getTag().getString("squad_name");
 
-        // Advanced filter: Distance < 50, Alive, Not Self, Has Helmet, Has SAME SQUAD, Max 5 cams!
         List<LivingEntity> teammates = mc.level.getEntitiesOfClass(LivingEntity.class, mc.player.getBoundingBox().inflate(50.0)).stream()
                 .filter(e -> e != mc.player && e.isAlive() && mc.player.distanceTo(e) <= 50.0f && hasTacticalHelmet(e))
                 .filter(e -> {
@@ -141,7 +135,7 @@ public class HelmetCameraManager {
                     return (theirHead.hasTag() && theirHead.getTag().getString("squad_name").equals(mySquad)) ||
                            (theirHand.hasTag() && theirHand.getTag().getString("squad_name").equals(mySquad));
                 })
-                .limit(5) // Max 5 cameras!
+                .limit(5) 
                 .collect(Collectors.toList());
 
         if (teammates.isEmpty()) {
@@ -186,9 +180,6 @@ public class HelmetCameraManager {
         isRenderingPip = true;
 
         RenderTarget mainTarget = mc.getMainRenderTarget();
-        Entity originalCamera = mc.getCameraEntity();
-        CameraType originalCameraType = mc.options.getCameraType();
-
         mc.renderBuffers().bufferSource().endBatch();
 
         if (backupTarget == null || backupTarget.width != mainTarget.width || backupTarget.height != mainTarget.height) {
@@ -210,9 +201,7 @@ public class HelmetCameraManager {
             RenderSystem.clearColor(0.0F, 0.0F, 0.0F, 1.0F);
             RenderSystem.clear(GL11.GL_COLOR_BUFFER_BIT | GL11.GL_DEPTH_BUFFER_BIT, false);
 
-            mc.setCameraEntity(targetEntity);
-            mc.options.setCameraType(CameraType.FIRST_PERSON); 
-
+            // FIX: Removed mc.setCameraEntity() to prevent Minecraft from deleting the post-processing shader!
             net.minecraft.client.Camera pipCamera = new net.minecraft.client.Camera();
             pipCamera.setup(mc.level, targetEntity, false, false, event.getPartialTick());
             
@@ -252,9 +241,8 @@ public class HelmetCameraManager {
             GL30.glBlitFramebuffer(0, 0, backupTarget.width, backupTarget.height, 0, 0, mainTarget.width, mainTarget.height, GL30.GL_COLOR_BUFFER_BIT, GL30.GL_NEAREST);
 
             mainTarget.bindWrite(true);
-            mc.setCameraEntity(originalCamera);
-            mc.options.setCameraType(originalCameraType);
             
+            // Rebuild normal frustum
             mc.levelRenderer.prepareCullFrustum(event.getPoseStack(), mc.gameRenderer.getMainCamera().getPosition(), event.getProjectionMatrix());
             isRenderingPip = false;
         }
@@ -293,7 +281,7 @@ public class HelmetCameraManager {
         boolean isBlinking = (System.currentTimeMillis() % 1000) > 500;
         guiGraphics.fill(x + 5, y + 5, x + 11, y + 11, isBlinking ? 0xFFFF0000 : 0xFF550000);
         
-        // Find squad tag from head or hand
+        // Find squad tag
         ItemStack headItem = mc.player.getItemBySlot(EquipmentSlot.HEAD);
         ItemStack handItem = mc.player.getMainHandItem();
         String mySquad = "NONE";
@@ -303,11 +291,38 @@ public class HelmetCameraManager {
             mySquad = handItem.getTag().getString("squad_name");
         }
         
-        guiGraphics.drawString(mc.font, "CAM: " + targetEntity.getDisplayName().getString().toUpperCase() + " [" + mySquad + "]", x + 16, y + 4, 0xFFFFFF);
+        // --- DYNAMIC TEXT AUTO-SCALING FOR BOX HEADER ---
+        String headerText = "CAM: " + targetEntity.getDisplayName().getString().toUpperCase() + " [" + mySquad + "]";
+        int textWidth = mc.font.width(headerText);
+        int maxTextWidth = boxWidth - 20; // 20px buffer for the red dot and margin
 
+        guiGraphics.pose().pushPose();
+        
+        if (textWidth > maxTextWidth) {
+            float textScale = (float) maxTextWidth / (float) textWidth;
+            // Translate downward slightly so the shrunk text stays centered with the dot
+            guiGraphics.pose().translate(x + 16, y + 4 + ((8.0f - (8.0f * textScale)) / 2.0f), 0);
+            guiGraphics.pose().scale(textScale, textScale, 1.0f);
+        } else {
+            guiGraphics.pose().translate(x + 16, y + 4, 0);
+        }
+        
+        guiGraphics.drawString(mc.font, headerText, 0, 0, 0xFFFFFF, false);
+        guiGraphics.pose().popPose();
+
+        // --- RENDER CAMERA FEED ---
         RenderSystem.setShaderTexture(0, pipTarget.getColorTextureId());
         RenderSystem.setShader(GameRenderer::getPositionTexShader);
-        RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
+        
+        boolean isNVG = false;
+        if (headItem.getItem() instanceof HelmetPVS31Item || headItem.getItem() instanceof HelmetGPNVG18Item) {
+            if (headItem.hasTag() && headItem.getTag().getBoolean("nvg_active")) isNVG = true;
+        }
+        if (isNVG) {
+            RenderSystem.setShaderColor(0.2F, 1.0F, 0.3F, 1.0F); 
+        } else {
+            RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
+        }
         
         RenderSystem.disableBlend();
         RenderSystem.disableDepthTest();
@@ -347,6 +362,7 @@ public class HelmetCameraManager {
         RenderSystem.enableDepthTest();
         RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
 
+        // Footer Stats
         float healthPct = targetEntity.getHealth() / targetEntity.getMaxHealth();
         guiGraphics.drawString(mc.font, "HP: " + (int)targetEntity.getHealth(), x + 10, y + 118, 0xFFFFFF, false);
         guiGraphics.fill(x + 10, y + 128, x + boxWidth - 10, y + 132, 0xFF550000); 
