@@ -72,7 +72,7 @@ public class WorkbenchData {
     // --- GEAR POOLS ---
     public static final String[] HELMET_IDS = new String[]{
             "NONE",
-            "taticalsuit:helmet",
+            "taticalsuit:base_helmet",
             "taticalsuit:helmet_pvs31",
             "taticalsuit:helmet_gpnvg18"
     };

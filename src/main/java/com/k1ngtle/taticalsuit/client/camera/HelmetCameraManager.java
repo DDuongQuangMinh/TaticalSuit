@@ -45,22 +45,18 @@ import java.util.stream.Collectors;
 @Mod.EventBusSubscriber(modid = TaticalSuit.MODID, value = Dist.CLIENT)
 public class HelmetCameraManager {
     
-    // Squad Selection Keybind ([)
     public static final KeyMapping SQUAD_MENU_KEY = new KeyMapping(
             "key.taticalsuit.squad_menu", KeyConflictContext.IN_GAME,
             InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_LEFT_BRACKET, "category.taticalsuit.keys");
 
-    // Camera Cycle Keybind (T)
     public static final KeyMapping CAMERA_CYCLE_KEY = new KeyMapping(
             "key.taticalsuit.helmet_cam_cycle", KeyConflictContext.IN_GAME,
             InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_T, "category.taticalsuit.keys");
 
-    // Camera Off Keybind (P)
     public static final KeyMapping CAMERA_OFF_KEY = new KeyMapping(
             "key.taticalsuit.helmet_cam_off", KeyConflictContext.IN_GAME,
             InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_P, "category.taticalsuit.keys");
             
-    // Edit HUD Keybind (O)
     public static final KeyMapping EDIT_CAM_KEY = new KeyMapping(
             "key.taticalsuit.edit_cam", KeyConflictContext.IN_GAME,
             InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_O, "category.taticalsuit.keys");
@@ -69,12 +65,13 @@ public class HelmetCameraManager {
     private static LivingEntity targetEntity = null;
     private static int currentTargetIndex = 0;
 
+    // We keep these instances completely persistent to prevent GL Program deletion!
     private static RenderTarget pipTarget;
     private static RenderTarget backupTarget;
-    private static PostChain pipShader; // Isolated Shader for the PiP Box
+    private static PostChain pipShaderGreen; 
+    private static PostChain pipShaderWhite; 
     private static boolean isRenderingPip = false;
     
-    // Draggable & Resizable HUD Variables
     public static int pipX = -1;
     public static int pipY = 10;
     public static int pipWidth = 140;
@@ -102,7 +99,6 @@ public class HelmetCameraManager {
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null || mc.level == null) return;
 
-        // Squad Menu Logic
         if (SQUAD_MENU_KEY.consumeClick()) {
             if (hasTacticalHelmet(mc.player)) {
                 mc.setScreen(new SquadSelectionScreen());
@@ -111,7 +107,6 @@ public class HelmetCameraManager {
             }
         }
         
-        // HUD Edit Screen Logic
         if (EDIT_CAM_KEY.consumeClick()) {
             mc.setScreen(new PipEditScreen());
         }
@@ -183,18 +178,8 @@ public class HelmetCameraManager {
     private static void turnOffCamera(Minecraft mc) {
         isCameraActive = false;
         targetEntity = null;
-        if (pipTarget != null) {
-            pipTarget.destroyBuffers();
-            pipTarget = null;
-        }
-        if (backupTarget != null) {
-            backupTarget.destroyBuffers();
-            backupTarget = null;
-        }
-        if (pipShader != null) {
-            pipShader.close();
-            pipShader = null;
-        }
+        // CRITICAL FIX: Do NOT destroy buffers or call .close() on shaders here! 
+        // Doing so will delete the OpenGL Program cache entirely and break the main screen shader!
     }
 
     @SubscribeEvent
@@ -205,58 +190,71 @@ public class HelmetCameraManager {
         if (mc.player == null || mc.level == null) return;
 
         isRenderingPip = true;
-
         RenderTarget mainTarget = mc.getMainRenderTarget();
         
         // 1. Flush any pending main-pass rendering
         mc.renderBuffers().bufferSource().endBatch();
 
         if (backupTarget == null || backupTarget.width != mainTarget.width || backupTarget.height != mainTarget.height) {
-            if (backupTarget != null) backupTarget.destroyBuffers();
+            if (backupTarget != null) {
+                backupTarget.destroyBuffers();
+            }
             backupTarget = new TextureTarget(mainTarget.width, mainTarget.height, true, Minecraft.ON_OSX);
         }
         
         if (pipTarget == null || pipTarget.width != mainTarget.width || pipTarget.height != mainTarget.height) {
-            if (pipTarget != null) pipTarget.destroyBuffers();
+            if (pipTarget != null) {
+                pipTarget.destroyBuffers();
+            }
             pipTarget = new TextureTarget(mainTarget.width, mainTarget.height, true, Minecraft.ON_OSX);
-            if (pipShader != null) {
-                pipShader.close();
-                pipShader = null;
+            if (pipShaderGreen != null) {
+                pipShaderGreen.close();
+                pipShaderGreen = null;
+            }
+            if (pipShaderWhite != null) {
+                pipShaderWhite.close();
+                pipShaderWhite = null;
             }
         }
 
-        // 2. BACKUP MAIN SCREEN
+        // 2. BACKUP MAIN SCREEN (Color AND Depth to save weather/clouds/gui from breaking)
         GL30.glBindFramebuffer(GL30.GL_READ_FRAMEBUFFER, mainTarget.frameBufferId);
         GL30.glBindFramebuffer(GL30.GL_DRAW_FRAMEBUFFER, backupTarget.frameBufferId);
-        GL30.glBlitFramebuffer(0, 0, mainTarget.width, mainTarget.height, 0, 0, backupTarget.width, backupTarget.height, GL30.GL_COLOR_BUFFER_BIT, GL30.GL_NEAREST);
+        GL30.glBlitFramebuffer(0, 0, mainTarget.width, mainTarget.height, 0, 0, backupTarget.width, backupTarget.height, GL30.GL_COLOR_BUFFER_BIT | GL30.GL_DEPTH_BUFFER_BIT, GL30.GL_NEAREST);
 
         try {
             mainTarget.bindWrite(true);
             RenderSystem.clearColor(0.0F, 0.0F, 0.0F, 1.0F);
             RenderSystem.clear(GL11.GL_COLOR_BUFFER_BIT | GL11.GL_DEPTH_BUFFER_BIT, false);
 
-            // CRITICAL FIX: We DO NOT call mc.setCameraEntity() here!
-            // Calling setCameraEntity automatically triggers GameRenderer.checkEntityPostEffect() which brutally destroys the main screen's Night Vision shader.
-            // By bypassing it and manually passing the pipCamera, we perfectly preserve the main screen shader!
-
             net.minecraft.client.Camera pipCamera = new net.minecraft.client.Camera();
+            
+            // FIXED BUG 1: Temporarily hijack the entity's body rotation with its actual head rotation
+            // This prevents the camera from pointing out the back of the armor stand's head!
+            float prevXRot = targetEntity.getXRot();
+            float prevYRot = targetEntity.getYRot();
+            targetEntity.setXRot(targetEntity.xRotO + (targetEntity.getXRot() - targetEntity.xRotO) * event.getPartialTick());
+            targetEntity.setYRot(targetEntity.yHeadRotO + (targetEntity.yHeadRot - targetEntity.yHeadRotO) * event.getPartialTick());
+            
             pipCamera.setup(mc.level, targetEntity, false, false, event.getPartialTick());
             
+            targetEntity.setXRot(prevXRot);
+            targetEntity.setYRot(prevYRot);
+            
+            // Build the PoseStack exactly like vanilla does to prevent matrix corruption
             PoseStack pipPoseStack = new PoseStack();
             pipPoseStack.mulPose(com.mojang.math.Axis.XP.rotationDegrees(pipCamera.getXRot()));
             pipPoseStack.mulPose(com.mojang.math.Axis.YP.rotationDegrees(pipCamera.getYRot() + 180.0F));
             
+            // Shift the camera visually UP by 1.2 blocks to sit on top of the helmet and prevent ground clipping
+            pipPoseStack.translate(0.0D, -1.2D, 0.0D);
+
             Matrix4f pipProjection = mc.gameRenderer.getProjectionMatrix((double)mc.options.fov().get());
-
-            RenderSystem.getModelViewStack().pushPose();
-            RenderSystem.getModelViewStack().setIdentity();
-            RenderSystem.getModelViewStack().mulPoseMatrix(pipPoseStack.last().pose());
-            RenderSystem.applyModelViewMatrix();
-
             Matrix4f oldProj = RenderSystem.getProjectionMatrix();
             RenderSystem.setProjectionMatrix(pipProjection, com.mojang.blaze3d.vertex.VertexSorting.DISTANCE_TO_ORIGIN);
 
-            mc.levelRenderer.prepareCullFrustum(pipPoseStack, pipCamera.getPosition(), pipProjection);
+            net.minecraft.world.phys.Vec3 trueCamPos = pipCamera.getPosition().add(0.0D, 1.2D, 0.0D);
+            mc.levelRenderer.prepareCullFrustum(pipPoseStack, trueCamPos, pipProjection);
 
             mc.gameRenderer.lightTexture().turnOnLightLayer();
             mc.levelRenderer.renderLevel(pipPoseStack, event.getPartialTick(), event.getRenderTick(), false, pipCamera, mc.gameRenderer, mc.gameRenderer.lightTexture(), pipProjection);
@@ -265,8 +263,6 @@ public class HelmetCameraManager {
             mc.renderBuffers().bufferSource().endBatch();
 
             RenderSystem.setProjectionMatrix(oldProj, com.mojang.blaze3d.vertex.VertexSorting.DISTANCE_TO_ORIGIN);
-            RenderSystem.getModelViewStack().popPose();
-            RenderSystem.applyModelViewMatrix();
 
             // 3. COPY FRAME TO PIP TEXTURE
             GL30.glBindFramebuffer(GL30.GL_READ_FRAMEBUFFER, mainTarget.frameBufferId);
@@ -274,10 +270,10 @@ public class HelmetCameraManager {
             GL30.glBlitFramebuffer(0, 0, mainTarget.width, mainTarget.height, 0, 0, pipTarget.width, pipTarget.height, GL30.GL_COLOR_BUFFER_BIT, GL30.GL_NEAREST);
 
         } finally {
-            // 4. RESTORE MAIN SCREEN
+            // 4. RESTORE MAIN SCREEN (Color AND Depth)
             GL30.glBindFramebuffer(GL30.GL_READ_FRAMEBUFFER, backupTarget.frameBufferId);
             GL30.glBindFramebuffer(GL30.GL_DRAW_FRAMEBUFFER, mainTarget.frameBufferId);
-            GL30.glBlitFramebuffer(0, 0, backupTarget.width, backupTarget.height, 0, 0, mainTarget.width, mainTarget.height, GL30.GL_COLOR_BUFFER_BIT, GL30.GL_NEAREST);
+            GL30.glBlitFramebuffer(0, 0, backupTarget.width, backupTarget.height, 0, 0, mainTarget.width, mainTarget.height, GL30.GL_COLOR_BUFFER_BIT | GL30.GL_DEPTH_BUFFER_BIT, GL30.GL_NEAREST);
 
             mainTarget.bindWrite(true);
             mc.levelRenderer.prepareCullFrustum(event.getPoseStack(), mc.gameRenderer.getMainCamera().getPosition(), event.getProjectionMatrix());
@@ -285,52 +281,65 @@ public class HelmetCameraManager {
         }
         
         // 5. PROCESS SECONDARY SHADER ON PIP BOX
-        boolean isNVG = false;
-        boolean isWhitePhosphor = false;
-        ItemStack helmet = mc.player.getItemBySlot(EquipmentSlot.HEAD);
-        
-        if (helmet.getItem() instanceof HelmetPVS31Item || helmet.getItem() instanceof HelmetGPNVG18Item) {
-            if (helmet.hasTag() && helmet.getTag().getBoolean("nvg_active")) {
-                isNVG = true;
-                if ("WHITE PHOSPHOR".equals(helmet.getTag().getString("phosphor"))) {
-                    isWhitePhosphor = true;
+        PostChain currentMainEffect = mc.gameRenderer.currentEffect();
+        if (currentMainEffect != null) {
+            String currentEffectName = currentMainEffect.getName();
+            ResourceLocation targetShader = null;
+            boolean useWhite = false;
+
+            ResourceLocation greenShader = new ResourceLocation(TaticalSuit.MODID, "shaders/post/nv_green.json");
+            ResourceLocation whiteShader = new ResourceLocation(TaticalSuit.MODID, "shaders/post/nv_white.json");
+
+            if (currentEffectName.equals(greenShader.toString())) {
+                targetShader = greenShader;
+            } else if (currentEffectName.equals(whiteShader.toString())) {
+                targetShader = whiteShader;
+                useWhite = true;
+            }
+
+            if (targetShader != null) {
+                PostChain activeShader = null;
+                if (useWhite) {
+                    if (pipShaderWhite == null) {
+                        try {
+                            pipShaderWhite = new PostChain(mc.getTextureManager(), mc.getResourceManager(), pipTarget, whiteShader);
+                            pipShaderWhite.resize(pipTarget.width, pipTarget.height);
+                        } catch (Exception e) { }
+                    }
+                    activeShader = pipShaderWhite;
+                } else {
+                    if (pipShaderGreen == null) {
+                        try {
+                            pipShaderGreen = new PostChain(mc.getTextureManager(), mc.getResourceManager(), pipTarget, greenShader);
+                            pipShaderGreen.resize(pipTarget.width, pipTarget.height);
+                        } catch (Exception e) { }
+                    }
+                    activeShader = pipShaderGreen;
+                }
+
+                if (activeShader != null) {
+                    RenderSystem.disableBlend();
+                    RenderSystem.disableDepthTest();
+                    RenderSystem.resetTextureMatrix();
+                    
+                    Matrix4f shaderProjBackup = RenderSystem.getProjectionMatrix();
+                    
+                    activeShader.process(event.getPartialTick()); 
+                    
+                    RenderSystem.setProjectionMatrix(shaderProjBackup, com.mojang.blaze3d.vertex.VertexSorting.DISTANCE_TO_ORIGIN);
                 }
             }
         }
-
-        if (isNVG) {
-            ResourceLocation targetShader = isWhitePhosphor ? 
-                new ResourceLocation(TaticalSuit.MODID, "shaders/post/nv_white.json") : 
-                new ResourceLocation(TaticalSuit.MODID, "shaders/post/nv_green.json");
-
-            if (pipShader == null || !pipShader.getName().equals(targetShader.toString())) {
-                try {
-                    if (pipShader != null) pipShader.close();
-                    pipShader = new PostChain(mc.getTextureManager(), mc.getResourceManager(), pipTarget, targetShader);
-                    pipShader.resize(pipTarget.width, pipTarget.height);
-                } catch (Exception e) {
-                    System.out.println("Failed to load PIP NVG shader: " + e.getMessage());
-                }
-            }
-            
-            if (pipShader != null) {
-                RenderSystem.disableBlend();
-                RenderSystem.disableDepthTest();
-                RenderSystem.resetTextureMatrix();
-                
-                // Runs the shader directly onto the pipTarget FBO!
-                pipShader.process(event.getPartialTick()); 
-            }
-        }
         
-        // Safety Rebind
+        // Critical Safety Rebind
         mainTarget.bindWrite(true);
     }
 
     @SubscribeEvent
     public static void onRenderLivingPre(RenderLivingEvent.Pre<?, ?> event) {
         if (isRenderingPip) {
-            if (event.getEntity() == targetEntity || event.getEntity() == Minecraft.getInstance().player) {
+            Minecraft mc = Minecraft.getInstance();
+            if (event.getEntity() == targetEntity && event.getEntity() != mc.player) {
                 event.setCanceled(true);
             }
         }
@@ -382,7 +391,6 @@ public class HelmetCameraManager {
         guiGraphics.pose().pushPose();
         if (textWidth > maxTextWidth) {
             float textScale = (float) maxTextWidth / (float) textWidth;
-            // Center the compressed text correctly on the Y axis
             guiGraphics.pose().translate(x + 16, y + 4 + ((8.0f - (8.0f * textScale)) / 2.0f), 0);
             guiGraphics.pose().scale(textScale, textScale, 1.0f);
         } else {
@@ -473,9 +481,7 @@ public class HelmetCameraManager {
                 guiGraphics.drawCenteredString(this.font, "[ NO SIGNAL ]", pipX + pipWidth / 2, pipY + pipHeight / 2, 0xFF5555);
             }
 
-            // Draggable Yellow Handle
             guiGraphics.fill(pipX + pipWidth - 10, pipY + pipHeight - 10, pipX + pipWidth, pipY + pipHeight, 0xFFFFFF00);
-
             super.render(guiGraphics, mouseX, mouseY, partialTick);
         }
 
@@ -483,13 +489,10 @@ public class HelmetCameraManager {
         public boolean mouseClicked(double mouseX, double mouseY, int button) {
             if (button == 0) {
                 int handleSize = 10;
-                // Check Resize Handle Click
                 if (mouseX >= pipX + pipWidth - handleSize && mouseX <= pipX + pipWidth && mouseY >= pipY + pipHeight - handleSize && mouseY <= pipY + pipHeight) {
                     isResizing = true;
                     return true;
-                } 
-                // Check Drag Click
-                else if (mouseX >= pipX && mouseX <= pipX + pipWidth && mouseY >= pipY && mouseY <= pipY + pipHeight) {
+                } else if (mouseX >= pipX && mouseX <= pipX + pipWidth && mouseY >= pipY && mouseY <= pipY + pipHeight) {
                     isDragging = true;
                     dragOffsetX = mouseX - pipX;
                     dragOffsetY = mouseY - pipY;
@@ -521,9 +524,7 @@ public class HelmetCameraManager {
         }
         
         @Override
-        public boolean isPauseScreen() {
-            return false; // Don't pause singleplayer
-        }
+        public boolean isPauseScreen() { return false; }
     }
 
     @Mod.EventBusSubscriber(modid = TaticalSuit.MODID, value = Dist.CLIENT, bus = Mod.EventBusSubscriber.Bus.MOD)

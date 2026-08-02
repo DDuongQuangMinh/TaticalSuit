@@ -119,7 +119,6 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
         this.currentWeaponTab = 0;
         this.scrollOffset = 0f;
 
-        // --- READ CURRENTLY EQUIPPED HEADWEAR ---
         if (Minecraft.getInstance().player != null) {
             ItemStack helmetStack = Minecraft.getInstance().player.getItemBySlot(net.minecraft.world.entity.EquipmentSlot.HEAD);
             if (!helmetStack.isEmpty()) {
@@ -298,10 +297,9 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
         return stacks;
     }
 
-    // Helper to get formatted name for helmet IDs
     private String getFormattedHelmetName(String id) {
         if (id.equals("NONE")) return "NO HELMET";
-        if (id.equals("taticalsuit:helmet")) return "BASE HELMET";
+        if (id.equals("taticalsuit:base_helmet")) return "BASE HELMET";
         if (id.equals("taticalsuit:helmet_pvs31")) return "HELMET (PVS-31)";
         if (id.equals("taticalsuit:helmet_gpnvg18")) return "HELMET (GPNVG-18)";
         return id.replace("taticalsuit:", "").replace("_", " ").toUpperCase();
@@ -544,10 +542,8 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
                         this.selectedMount = item;
                         this.expandedHeadwearCategory = "";
                         
-                        // If selecting a mount, force the helmet ON
-                        if (!item.equals("NONE")) {
-                            this.selectedHelmet = "HELMET ONLY";
-                        }
+                        // ALWAYS force the helmet ON when interacting with the Mount dropdown. (NONE = Base Helmet)
+                        this.selectedHelmet = "HELMET ONLY";
                         updateHelmetEquip();
                         
                         return true;
@@ -973,6 +969,32 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
             return true;
         }
         return super.mouseDragged(pMouseX, pMouseY, pButton, pDragX, pDragY);
+    }
+
+    @Override
+    public boolean mouseScrolled(double pMouseX, double pMouseY, double pDelta) {
+        float scrollSpeed = 25.0f; // Multiplier for mouse wheel scrolling speed
+        
+        int rightPanelX = this.width;
+        if (this.inCustomizationTab && this.inCustomizationSelection) {
+            boolean isLargeGrid = this.customizationCategory.equals("SHIRT") || this.customizationCategory.equals("PANTS") || this.customizationCategory.equals("ARMOR");
+            rightPanelX = this.width - (isLargeGrid ? 170 : 120);
+        }
+
+        // Scroll Customization Right-Panel Grid
+        if (this.inCustomizationSelection && pMouseX >= rightPanelX) {
+            this.scrollOffset -= (float) (pDelta * scrollSpeed);
+            this.scrollOffset = Math.max(0f, Math.min(this.scrollOffset, this.maxScroll));
+            return true;
+        } 
+        // Scroll Loadout Left-Panel Menus
+        else if ((this.inGunsmith || this.inWeaponSelection || this.inAttachmentSelection || this.inMunitionSelection || this.inHeadwearSelection || this.inArmorSelection || this.inTacticalSelection) && pMouseX < 240) {
+            this.scrollOffset -= (float) (pDelta * scrollSpeed);
+            this.scrollOffset = Math.max(0f, Math.min(this.scrollOffset, this.maxScroll));
+            return true;
+        }
+
+        return super.mouseScrolled(pMouseX, pMouseY, pDelta);
     }
 
     @Override
@@ -1698,7 +1720,7 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
                 headStack.getItem() instanceof com.k1ngtle.taticalsuit.item.HelmetGPNVG18Item)) {
                 
                 guiGraphics.pose().pushPose();
-                guiGraphics.pose().translate(39, 357, 150.0F); // Moved left by another 6 units (51 -> 45)
+                guiGraphics.pose().translate(39, 357, 150.0F); // Positioned inside the box
                 guiGraphics.pose().scale(2.5f, 2.5f, 2.5f); // Scaled down to fit properly
                 guiGraphics.renderItem(headStack, 0, 0);
                 guiGraphics.pose().popPose();
@@ -2547,11 +2569,30 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
         
         if (this.selectedHelmet.equals("HELMET ONLY")) {
             if (this.selectedMount.equals("NONE")) {
-                targetId = "taticalsuit:helmet";
+                targetId = "taticalsuit:base_helmet";
             } else if (this.selectedMount.equals("NVGS")) {
                 targetId = "taticalsuit:helmet_pvs31";
             } else if (this.selectedMount.equals("GPNVGS")) {
                 targetId = "taticalsuit:helmet_gpnvg18";
+            }
+        }
+        
+        net.minecraft.world.item.Item targetItem = null;
+        
+        if (!targetId.equals("NONE")) {
+            targetItem = net.minecraftforge.registries.ForgeRegistries.ITEMS.getValue(new ResourceLocation(targetId));
+            
+            // BULLETPROOF FALLBACK: Ensure the base helmet equips even if ID lookup fails
+            if (targetItem == null || targetItem == net.minecraft.world.item.Items.AIR) {
+                for (net.minecraft.world.item.Item regItem : net.minecraftforge.registries.ForgeRegistries.ITEMS) {
+                    if (regItem instanceof com.k1ngtle.taticalsuit.item.HelmetItem && 
+                       !(regItem instanceof com.k1ngtle.taticalsuit.item.HelmetPVS31Item) && 
+                       !(regItem instanceof com.k1ngtle.taticalsuit.item.HelmetGPNVG18Item)) {
+                        targetItem = regItem;
+                        targetId = net.minecraftforge.registries.ForgeRegistries.ITEMS.getKey(regItem).toString();
+                        break;
+                    }
+                }
             }
         }
         
@@ -2567,18 +2608,26 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
                         Minecraft.getInstance().player.getInventory().setItem(i, ItemStack.EMPTY);
                     }
                 }
-            } else {
-                ResourceLocation loc = new ResourceLocation(targetId);
-                net.minecraft.world.item.Item targetItem = net.minecraftforge.registries.ForgeRegistries.ITEMS.getValue(loc);
-                if (targetItem != null && targetItem != net.minecraft.world.item.Items.AIR) {
-                    ItemStack localEquip = new ItemStack(targetItem);
-                    localEquip.getOrCreateTag().putString("phosphor", this.selectedPhosphor);
-                    Minecraft.getInstance().player.setItemSlot(net.minecraft.world.entity.EquipmentSlot.HEAD, localEquip);
+                Minecraft.getInstance().player.setItemSlot(net.minecraft.world.entity.EquipmentSlot.HEAD, ItemStack.EMPTY);
+            } else if (targetItem != null && targetItem != net.minecraft.world.item.Items.AIR) {
+                // Clear out other helmets so they don't visually dupe in the hotbar
+                for (int i = 0; i < Minecraft.getInstance().player.getInventory().getContainerSize(); i++) {
+                    ItemStack stack = Minecraft.getInstance().player.getInventory().getItem(i);
+                    if (stack.getItem() instanceof com.k1ngtle.taticalsuit.item.HelmetItem ||
+                        stack.getItem() instanceof com.k1ngtle.taticalsuit.item.HelmetPVS31Item ||
+                        stack.getItem() instanceof com.k1ngtle.taticalsuit.item.HelmetGPNVG18Item) {
+                        Minecraft.getInstance().player.getInventory().setItem(i, ItemStack.EMPTY);
+                    }
                 }
+                
+                // Force equip the new item instantly to update the 3D model
+                ItemStack localEquip = new ItemStack(targetItem);
+                localEquip.getOrCreateTag().putString("phosphor", this.selectedPhosphor);
+                Minecraft.getInstance().player.setItemSlot(net.minecraft.world.entity.EquipmentSlot.HEAD, localEquip);
             }
         }
         
-        // Send packet to server to scan and equip the helmet WITH phosphor selection
+        // Send packet to server to scan and equip the helmet
         com.k1ngtle.taticalsuit.network.HeadwearNetwork.CHANNEL.sendToServer(
                 new com.k1ngtle.taticalsuit.network.HeadwearNetwork.EquipHelmetPacket(targetId, this.selectedPhosphor)
         );
