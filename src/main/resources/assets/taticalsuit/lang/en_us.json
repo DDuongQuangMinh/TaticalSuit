@@ -1,5 +1,8 @@
 {
   "creativetab.tatical_suit_tab": "Tactical Suit Equipment",
+  "key.taticalsuit.helmet_cam_cycle": "Cycle Helmet Camera Mode",
+  "key.taticalsuit.helmet_cam_off": "Turn Off Helmet Camera",
+  "key.taticalsuit.toggle_nvg": "Toggle Night Vision Goggles",
   "block.taticalsuit.workbench": "Tactical Workbench",
   "item.taticalsuit.base_helmet": "Helmet",
   "item.taticalsuit.helmet_pvs31": "PVS-31 Helmet",

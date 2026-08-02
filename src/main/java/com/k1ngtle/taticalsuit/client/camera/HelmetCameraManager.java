@@ -1,6 +1,7 @@
 package com.k1ngtle.taticalsuit.client.camera;
 
 import com.k1ngtle.taticalsuit.TaticalSuit;
+import com.k1ngtle.taticalsuit.client.screen.SquadSelectionScreen;
 import com.k1ngtle.taticalsuit.item.HelmetItem;
 import com.k1ngtle.taticalsuit.item.HelmetPVS31Item;
 import com.k1ngtle.taticalsuit.item.HelmetGPNVG18Item;
@@ -42,6 +43,11 @@ import java.util.stream.Collectors;
 @Mod.EventBusSubscriber(modid = TaticalSuit.MODID, value = Dist.CLIENT)
 public class HelmetCameraManager {
     
+    // Squad Selection Keybind ([)
+    public static final KeyMapping SQUAD_MENU_KEY = new KeyMapping(
+            "key.taticalsuit.squad_menu", KeyConflictContext.IN_GAME,
+            InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_LEFT_BRACKET, "category.taticalsuit.keys");
+
     public static final KeyMapping CAMERA_CYCLE_KEY = new KeyMapping(
             "key.taticalsuit.helmet_cam_cycle", KeyConflictContext.IN_GAME,
             InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_T, "category.taticalsuit.keys");
@@ -55,14 +61,23 @@ public class HelmetCameraManager {
     private static int currentTargetIndex = 0;
 
     private static RenderTarget pipTarget;
-    private static RenderTarget backupTarget; // The FBO Backup to protect shaders!
+    private static RenderTarget backupTarget;
     private static boolean isRenderingPip = false;
 
+    // Checks BOTH the Head slot and the Main Hand slot
     private static boolean hasTacticalHelmet(LivingEntity entity) {
         ItemStack head = entity.getItemBySlot(EquipmentSlot.HEAD);
-        return head.getItem() instanceof HelmetItem || 
-               head.getItem() instanceof HelmetPVS31Item || 
-               head.getItem() instanceof HelmetGPNVG18Item;
+        ItemStack hand = entity.getMainHandItem(); 
+        
+        boolean wearingHelmet = head.getItem() instanceof HelmetItem || 
+                                head.getItem() instanceof HelmetPVS31Item || 
+                                head.getItem() instanceof HelmetGPNVG18Item;
+                                
+        boolean holdingHelmet = hand.getItem() instanceof HelmetItem || 
+                                hand.getItem() instanceof HelmetPVS31Item || 
+                                hand.getItem() instanceof HelmetGPNVG18Item;
+
+        return wearingHelmet || holdingHelmet;
     }
 
     @SubscribeEvent
@@ -71,6 +86,15 @@ public class HelmetCameraManager {
 
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null || mc.level == null) return;
+
+        // Squad Menu Logic
+        if (SQUAD_MENU_KEY.consumeClick()) {
+            if (hasTacticalHelmet(mc.player)) {
+                mc.setScreen(new SquadSelectionScreen());
+            } else {
+                mc.player.displayClientMessage(net.minecraft.network.chat.Component.literal("§cEQUIP OR HOLD A TACTICAL HELMET TO ACCESS SQUAD LINK"), true);
+            }
+        }
 
         if (CAMERA_CYCLE_KEY.consumeClick()) cycleCamera(mc);
 
@@ -89,13 +113,40 @@ public class HelmetCameraManager {
     }
 
     private static void cycleCamera(Minecraft mc) {
+        ItemStack headItem = mc.player.getItemBySlot(EquipmentSlot.HEAD);
+        ItemStack handItem = mc.player.getMainHandItem();
+        
+        // Find whichever one has the tag
+        ItemStack myHelmet = ItemStack.EMPTY;
+        if (headItem.hasTag() && headItem.getTag().contains("squad_name")) {
+            myHelmet = headItem;
+        } else if (handItem.hasTag() && handItem.getTag().contains("squad_name")) {
+            myHelmet = handItem;
+        }
+
+        if (myHelmet.isEmpty()) {
+            mc.player.displayClientMessage(net.minecraft.network.chat.Component.literal("§cNO SQUAD LINKED - Press '[' while holding/wearing to select a frequency"), true);
+            return;
+        }
+        
+        String mySquad = myHelmet.getTag().getString("squad_name");
+
+        // Advanced filter: Distance < 50, Alive, Not Self, Has Helmet, Has SAME SQUAD, Max 5 cams!
         List<LivingEntity> teammates = mc.level.getEntitiesOfClass(LivingEntity.class, mc.player.getBoundingBox().inflate(50.0)).stream()
                 .filter(e -> e != mc.player && e.isAlive() && mc.player.distanceTo(e) <= 50.0f && hasTacticalHelmet(e))
+                .filter(e -> {
+                    ItemStack theirHead = e.getItemBySlot(EquipmentSlot.HEAD);
+                    ItemStack theirHand = e.getMainHandItem();
+                    
+                    return (theirHead.hasTag() && theirHead.getTag().getString("squad_name").equals(mySquad)) ||
+                           (theirHand.hasTag() && theirHand.getTag().getString("squad_name").equals(mySquad));
+                })
+                .limit(5) // Max 5 cameras!
                 .collect(Collectors.toList());
 
         if (teammates.isEmpty()) {
             turnOffCamera(mc);
-            mc.player.displayClientMessage(net.minecraft.network.chat.Component.literal("§cNO SIGNAL - No helmet feeds found in range."), true);
+            mc.player.displayClientMessage(net.minecraft.network.chat.Component.literal("§cNO SIGNAL - No " + mySquad + " squad members found in range."), true);
             return;
         }
 
@@ -109,7 +160,7 @@ public class HelmetCameraManager {
         if (currentTargetIndex >= teammates.size()) currentTargetIndex = 0;
 
         targetEntity = teammates.get(currentTargetIndex);
-        mc.player.displayClientMessage(net.minecraft.network.chat.Component.literal("§aLINK ESTABLISHED - Viewing " + targetEntity.getDisplayName().getString().toUpperCase()), true);
+        mc.player.displayClientMessage(net.minecraft.network.chat.Component.literal("§a" + mySquad + " LINK ESTABLISHED - Viewing " + targetEntity.getDisplayName().getString().toUpperCase()), true);
     }
 
     private static void turnOffCamera(Minecraft mc) {
@@ -138,28 +189,23 @@ public class HelmetCameraManager {
         Entity originalCamera = mc.getCameraEntity();
         CameraType originalCameraType = mc.options.getCameraType();
 
-        // 1. Flush any pending main-pass rendering
         mc.renderBuffers().bufferSource().endBatch();
 
-        // 2. Initialize Backup FBO to safely hold the main screen + shaders
         if (backupTarget == null || backupTarget.width != mainTarget.width || backupTarget.height != mainTarget.height) {
             if (backupTarget != null) backupTarget.destroyBuffers();
             backupTarget = new TextureTarget(mainTarget.width, mainTarget.height, true, Minecraft.ON_OSX);
         }
         
-        // Initialize PiP FBO to EXACT screen dimensions to prevent glBlitFramebuffer aspect ratio glitching!
         if (pipTarget == null || pipTarget.width != mainTarget.width || pipTarget.height != mainTarget.height) {
             if (pipTarget != null) pipTarget.destroyBuffers();
             pipTarget = new TextureTarget(mainTarget.width, mainTarget.height, true, Minecraft.ON_OSX);
         }
 
-        // 3. COPY MAIN SCREEN TO BACKUP
         GL30.glBindFramebuffer(GL30.GL_READ_FRAMEBUFFER, mainTarget.frameBufferId);
         GL30.glBindFramebuffer(GL30.GL_DRAW_FRAMEBUFFER, backupTarget.frameBufferId);
-        GL30.glBlitFramebuffer(0, 0, mainTarget.width, mainTarget.height, 0, 0, backupTarget.width, backupTarget.height, GL30.GL_COLOR_BUFFER_BIT | GL30.GL_DEPTH_BUFFER_BIT, GL30.GL_NEAREST);
+        GL30.glBlitFramebuffer(0, 0, mainTarget.width, mainTarget.height, 0, 0, backupTarget.width, backupTarget.height, GL30.GL_COLOR_BUFFER_BIT, GL30.GL_NEAREST);
 
         try {
-            // 4. PREPARE TO DRAW PIP ONTO MAIN TARGET (Temporarily)
             mainTarget.bindWrite(true);
             RenderSystem.clearColor(0.0F, 0.0F, 0.0F, 1.0F);
             RenderSystem.clear(GL11.GL_COLOR_BUFFER_BIT | GL11.GL_DEPTH_BUFFER_BIT, false);
@@ -186,39 +232,30 @@ public class HelmetCameraManager {
 
             mc.levelRenderer.prepareCullFrustum(pipPoseStack, pipCamera.getPosition(), pipProjection);
 
-            // 5. RENDER THE LEVEL
             mc.gameRenderer.lightTexture().turnOnLightLayer();
             mc.levelRenderer.renderLevel(pipPoseStack, event.getPartialTick(), event.getRenderTick(), false, pipCamera, mc.gameRenderer, mc.gameRenderer.lightTexture(), pipProjection);
             mc.gameRenderer.lightTexture().turnOffLightLayer();
 
-            // Flush the entities drawn during the PiP phase
             mc.renderBuffers().bufferSource().endBatch();
 
             RenderSystem.setProjectionMatrix(oldProj, com.mojang.blaze3d.vertex.VertexSorting.DISTANCE_TO_ORIGIN);
             RenderSystem.getModelViewStack().popPose();
             RenderSystem.applyModelViewMatrix();
 
-            // 6. COPY THE RESULT TO OUR PIP TEXTURE
             GL30.glBindFramebuffer(GL30.GL_READ_FRAMEBUFFER, mainTarget.frameBufferId);
             GL30.glBindFramebuffer(GL30.GL_DRAW_FRAMEBUFFER, pipTarget.frameBufferId);
-            // GL_NEAREST is much safer for exact-sized framebuffers and prevents artifacting
             GL30.glBlitFramebuffer(0, 0, mainTarget.width, mainTarget.height, 0, 0, pipTarget.width, pipTarget.height, GL30.GL_COLOR_BUFFER_BIT, GL30.GL_NEAREST);
 
         } finally {
-            // 7. RESTORE THE MAIN SCREEN BACKUP
             GL30.glBindFramebuffer(GL30.GL_READ_FRAMEBUFFER, backupTarget.frameBufferId);
             GL30.glBindFramebuffer(GL30.GL_DRAW_FRAMEBUFFER, mainTarget.frameBufferId);
-            GL30.glBlitFramebuffer(0, 0, backupTarget.width, backupTarget.height, 0, 0, mainTarget.width, mainTarget.height, GL30.GL_COLOR_BUFFER_BIT | GL30.GL_DEPTH_BUFFER_BIT, GL30.GL_NEAREST);
+            GL30.glBlitFramebuffer(0, 0, backupTarget.width, backupTarget.height, 0, 0, mainTarget.width, mainTarget.height, GL30.GL_COLOR_BUFFER_BIT, GL30.GL_NEAREST);
 
-            // Rebind the main target properly for the rest of the engine
             mainTarget.bindWrite(true);
-
             mc.setCameraEntity(originalCamera);
             mc.options.setCameraType(originalCameraType);
             
-            // Fix main frustum so the normal screen doesn't glitch
             mc.levelRenderer.prepareCullFrustum(event.getPoseStack(), mc.gameRenderer.getMainCamera().getPosition(), event.getProjectionMatrix());
-
             isRenderingPip = false;
         }
     }
@@ -245,7 +282,6 @@ public class HelmetCameraManager {
         int x = screenWidth - boxWidth - 10;
         int y = 10;
 
-        // Background & Borders
         guiGraphics.fill(x, y, x + boxWidth, y + boxHeight, 0xFF000000);
         guiGraphics.fill(x, y, x + boxWidth, y + 16, 0xFF000000);
         guiGraphics.fill(x, y + 115, x + boxWidth, y + boxHeight, 0xFF000000);
@@ -254,29 +290,24 @@ public class HelmetCameraManager {
         guiGraphics.fill(x, y, x + 1, y + boxHeight, 0xFF555555);
         guiGraphics.fill(x + boxWidth - 1, y, x + boxWidth, y + boxHeight, 0xFF555555);
 
-        // Header Indicator
         boolean isBlinking = (System.currentTimeMillis() % 1000) > 500;
         guiGraphics.fill(x + 5, y + 5, x + 11, y + 11, isBlinking ? 0xFFFF0000 : 0xFF550000);
-        guiGraphics.drawString(mc.font, "CAM: " + targetEntity.getDisplayName().getString().toUpperCase(), x + 16, y + 4, 0xFFFFFF);
+        
+        // Find squad tag from head or hand
+        ItemStack headItem = mc.player.getItemBySlot(EquipmentSlot.HEAD);
+        ItemStack handItem = mc.player.getMainHandItem();
+        String mySquad = "NONE";
+        if (headItem.hasTag() && headItem.getTag().contains("squad_name")) {
+            mySquad = headItem.getTag().getString("squad_name");
+        } else if (handItem.hasTag() && handItem.getTag().contains("squad_name")) {
+            mySquad = handItem.getTag().getString("squad_name");
+        }
+        
+        guiGraphics.drawString(mc.font, "CAM: " + targetEntity.getDisplayName().getString().toUpperCase() + " [" + mySquad + "]", x + 16, y + 4, 0xFFFFFF);
 
-        // --- RENDER TEXTURE WITH DYNAMIC UV CROPPING ---
         RenderSystem.setShaderTexture(0, pipTarget.getColorTextureId());
         RenderSystem.setShader(GameRenderer::getPositionTexShader);
-        
-        // Dynamically verify if NVG is active to apply the Green tint to the PiP box!
-        boolean isNVG = false;
-        ItemStack helmet = mc.player.getItemBySlot(EquipmentSlot.HEAD);
-        if (helmet.getItem() instanceof HelmetPVS31Item || helmet.getItem() instanceof HelmetGPNVG18Item) {
-            if (helmet.hasTag() && helmet.getTag().getBoolean("nvg_active")) {
-                isNVG = true;
-            }
-        }
-
-        if (isNVG) {
-            RenderSystem.setShaderColor(0.2F, 1.0F, 0.3F, 1.0F); 
-        } else {
-            RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
-        }
+        RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
         
         RenderSystem.disableBlend();
         RenderSystem.disableDepthTest();
@@ -290,10 +321,8 @@ public class HelmetCameraManager {
         float drawW = boxWidth - 2;
         float drawH = 98;
 
-        // Mathematical Center-Cropping so the image never stretches or glitches
         float targetAspect = drawW / drawH;
         float screenAspect = (float)pipTarget.width / (float)pipTarget.height;
-        
         float u0 = 0.0F, u1 = 1.0F, v0 = 0.0F, v1 = 1.0F;
         
         if (screenAspect > targetAspect) {
@@ -308,7 +337,6 @@ public class HelmetCameraManager {
             v1 = 1.0F - margin;
         }
 
-        // OpenGL Framebuffers map V0 as bottom and V1 as top.
         bufferbuilder.vertex(matrix4f, drawX,         drawY + drawH, 0).uv(u0, v0).endVertex();
         bufferbuilder.vertex(matrix4f, drawX + drawW, drawY + drawH, 0).uv(u1, v0).endVertex();
         bufferbuilder.vertex(matrix4f, drawX + drawW, drawY,         0).uv(u1, v1).endVertex();
@@ -319,7 +347,6 @@ public class HelmetCameraManager {
         RenderSystem.enableDepthTest();
         RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
 
-        // Footer Stats
         float healthPct = targetEntity.getHealth() / targetEntity.getMaxHealth();
         guiGraphics.drawString(mc.font, "HP: " + (int)targetEntity.getHealth(), x + 10, y + 118, 0xFFFFFF, false);
         guiGraphics.fill(x + 10, y + 128, x + boxWidth - 10, y + 132, 0xFF550000); 
@@ -341,6 +368,7 @@ public class HelmetCameraManager {
     public static class ClientModEvents {
         @SubscribeEvent
         public static void onKeyRegister(RegisterKeyMappingsEvent event) {
+            event.register(SQUAD_MENU_KEY);
             event.register(CAMERA_CYCLE_KEY);
             event.register(CAMERA_OFF_KEY);
         }

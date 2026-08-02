@@ -3,6 +3,7 @@ package com.k1ngtle.taticalsuit;
 import com.k1ngtle.taticalsuit.client.renderer.WorkbenchRenderer;
 import com.k1ngtle.taticalsuit.network.ModNetworking;
 import com.k1ngtle.taticalsuit.network.NVGNetwork;
+import com.k1ngtle.taticalsuit.network.SquadNetwork;
 import com.k1ngtle.taticalsuit.registry.ModBlockEntities;
 import com.k1ngtle.taticalsuit.registry.ModBlocks;
 import com.k1ngtle.taticalsuit.registry.ModCreativeTabs;
@@ -42,6 +43,7 @@ public class TaticalSuit {
         
         // Register NVG toggle networking (RESTORED so it initializes at startup)
         NVGNetwork.register();
+        SquadNetwork.register();
 
         MinecraftForge.EVENT_BUS.register(this);
     }
