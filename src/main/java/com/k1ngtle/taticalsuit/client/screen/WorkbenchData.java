@@ -74,7 +74,9 @@ public class WorkbenchData {
             "NONE",
             "taticalsuit:base_helmet",
             "taticalsuit:helmet_pvs31",
-            "taticalsuit:helmet_gpnvg18"
+            "taticalsuit:helmet_gpnvg18",
+            "taticalsuit:helmet_ghillie",
+            "taticalsuit:helmet_sand"
     };
 
     // --- ATTACHMENT POOLS ---

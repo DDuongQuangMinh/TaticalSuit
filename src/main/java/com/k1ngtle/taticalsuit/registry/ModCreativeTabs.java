@@ -26,6 +26,7 @@ public class ModCreativeTabs {
                         output.accept(ModBlocks.WORKBENCH_ITEM.get());
                         output.accept(ModItems.BASE_HELMET.get());
                         output.accept(ModItems.HELMET_GHILLIE.get());
+                        output.accept(ModItems.HELMET_SAND.get());
                         output.accept(ModItems.HELMET_PVS31.get());
                         output.accept(ModItems.HELMET_GPNVG18.get());
                         // NOTE: When you create more items/armor later, you will add them here like this:

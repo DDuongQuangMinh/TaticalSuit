@@ -5,6 +5,7 @@ import com.k1ngtle.taticalsuit.item.HelmetItem;
 import com.k1ngtle.taticalsuit.item.HelmetGPNVG18Item;
 import com.k1ngtle.taticalsuit.item.HelmetPVS31Item;
 import com.k1ngtle.taticalsuit.item.HelmetGhillieItem;
+import com.k1ngtle.taticalsuit.item.HelmetSandItem;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
@@ -61,7 +62,8 @@ public class SquadNetwork {
                     if (helmet.getItem() instanceof HelmetItem || 
                         helmet.getItem() instanceof HelmetPVS31Item || 
                         helmet.getItem() instanceof HelmetGPNVG18Item ||
-                        helmet.getItem() instanceof HelmetGhillieItem) {
+                        helmet.getItem() instanceof HelmetGhillieItem ||
+                        helmet.getItem() instanceof HelmetSandItem) {
                         
                         CompoundTag tag = helmet.getOrCreateTag();
                         tag.putString("squad_name", squadName);

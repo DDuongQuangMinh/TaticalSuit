@@ -5,6 +5,7 @@ import com.k1ngtle.taticalsuit.item.HelmetGPNVG18Item;
 import com.k1ngtle.taticalsuit.item.HelmetGhillieItem;
 import com.k1ngtle.taticalsuit.item.HelmetItem;
 import com.k1ngtle.taticalsuit.item.HelmetPVS31Item;
+import com.k1ngtle.taticalsuit.item.HelmetSandItem;
 
 import net.minecraft.world.item.ArmorItem;
 import net.minecraft.world.item.ArmorMaterials;
@@ -32,6 +33,9 @@ public class ModItems {
 
     public static final RegistryObject<Item> HELMET_GHILLIE = ITEMS.register("helmet_ghillie",
             () -> new HelmetGhillieItem(ArmorMaterials.IRON, ArmorItem.Type.HELMET, new Item.Properties()));
+
+    public static final RegistryObject<Item> HELMET_SAND = ITEMS.register("helmet_sand",
+            () -> new HelmetSandItem(ArmorMaterials.IRON, ArmorItem.Type.HELMET, new Item.Properties()));
 
     // This method hooks the registry into your main mod event bus
     public static void register(IEventBus eventBus) {

@@ -6,6 +6,7 @@ import com.k1ngtle.taticalsuit.item.HelmetItem;
 import com.k1ngtle.taticalsuit.item.HelmetPVS31Item;
 import com.k1ngtle.taticalsuit.item.HelmetGPNVG18Item;
 import com.k1ngtle.taticalsuit.item.HelmetGhillieItem;
+import com.k1ngtle.taticalsuit.item.HelmetSandItem;
 import com.mojang.blaze3d.pipeline.RenderTarget;
 import com.mojang.blaze3d.pipeline.TextureTarget;
 import com.mojang.blaze3d.platform.InputConstants;
@@ -85,12 +86,14 @@ public class HelmetCameraManager {
         boolean wearingHelmet = head.getItem() instanceof HelmetItem || 
                                 head.getItem() instanceof HelmetPVS31Item || 
                                 head.getItem() instanceof HelmetGPNVG18Item ||
-                                head.getItem() instanceof HelmetGhillieItem;
+                                head.getItem() instanceof HelmetGhillieItem ||
+                                head.getItem() instanceof HelmetSandItem;
                                 
         boolean holdingHelmet = hand.getItem() instanceof HelmetItem || 
                                 hand.getItem() instanceof HelmetPVS31Item || 
                                 hand.getItem() instanceof HelmetGPNVG18Item ||
-                                hand.getItem() instanceof HelmetGhillieItem;
+                                hand.getItem() instanceof HelmetGhillieItem ||
+                                hand.getItem() instanceof HelmetSandItem;
 
         return wearingHelmet || holdingHelmet;
     }

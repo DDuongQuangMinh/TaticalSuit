@@ -29,9 +29,108 @@ public class WorkbenchDesign {
         guiGraphics.drawString(font, text, 0, 0, color, false);
         guiGraphics.pose().popPose();
     }
+    
+    // --- ATTACHMENT INFO CLASS ---
+    public static class AttachmentInfo {
+        public final ItemStack stack;
+        public final String name;
+        public AttachmentInfo(ItemStack stack, String name) {
+            this.stack = stack;
+            this.name = name;
+        }
+    }
+
+    public AttachmentInfo getAttachmentInfo(ItemStack weaponStack, String category) {
+        if (weaponStack == null || weaponStack.isEmpty() || !weaponStack.hasTag()) {
+            return new AttachmentInfo(ItemStack.EMPTY, "NONE");
+        }
+
+        net.minecraft.nbt.CompoundTag tag = weaponStack.getTag();
+        String vpbCategory = switch (category.toUpperCase()) {
+            case "OPTIC"       -> "scope";
+            case "BARREL"      -> "barrel";
+            case "MUZZLE"      -> "muzzle";
+            case "UNDERBARREL" -> "underbarrel";
+            case "LASER"       -> "rail";
+            case "STOCK"       -> "stock";
+            case "MAGAZINE"    -> "magazine";
+            default -> category.toLowerCase();
+        };
+
+        if (tag.contains("sa", net.minecraft.nbt.Tag.TAG_COMPOUND)) {
+            net.minecraft.nbt.CompoundTag sa = tag.getCompound("sa");
+            if (sa.contains(vpbCategory, net.minecraft.nbt.Tag.TAG_STRING)) {
+                String rl = sa.getString(vpbCategory);
+                if (!rl.isEmpty()) {
+                    net.minecraft.world.item.Item item = net.minecraftforge.registries.ForgeRegistries.ITEMS
+                            .getValue(ResourceLocation.tryParse(rl));
+                    if (item != null && item != net.minecraft.world.item.Items.AIR) {
+                        String name = rl.contains(":") ? rl.substring(rl.indexOf(':') + 1).replace("_", " ").toUpperCase() : rl.toUpperCase();
+                        return new AttachmentInfo(new ItemStack(item), name);
+                    }
+                }
+            }
+        }
+
+        if (tag.contains("as", net.minecraft.nbt.Tag.TAG_LIST)) {
+            net.minecraft.nbt.ListTag asList = tag.getList("as", net.minecraft.nbt.Tag.TAG_COMPOUND);
+            for (int k = 0; k < asList.size(); k++) {
+                net.minecraft.nbt.CompoundTag entry = asList.getCompound(k);
+                String eid = entry.getString("id");
+                if (eid.isEmpty()) continue;
+                net.minecraft.world.item.Item eItem = net.minecraftforge.registries.ForgeRegistries.ITEMS
+                        .getValue(ResourceLocation.tryParse(eid));
+                if (eItem != null && eItem != net.minecraft.world.item.Items.AIR
+                        && com.k1ngtle.taticalsuit.network.EquipWeaponPacket.isItemInCategory(eItem, vpbCategory)) {
+                    String name = eid.contains(":") ? eid.substring(eid.indexOf(':') + 1).replace("_", " ").toUpperCase() : eid.toUpperCase();
+                    return new AttachmentInfo(new ItemStack(eItem), name);
+                }
+            }
+        }
+
+        return new AttachmentInfo(ItemStack.EMPTY, "NONE");
+    }
+    
+    // --- INPUT HANDLING ---
 
     public boolean handleMouseClicked(double pMouseX, double pMouseY, int pButton) {
         if (pButton != 0) return false;
+
+        if (screen.inCustomizationTab && screen.inStyleSelection) {
+            int openSpaceWidth = screen.width - 120; 
+            int centerX = 240 + (openSpaceWidth - 240) / 2;
+            int boxSize = 70;
+            int gap = 15;
+            
+            int totalWidth = (boxSize * 3) + (gap * 2);
+            int startX = centerX - (totalWidth / 2);
+            int startY = screen.height - 100; 
+            
+            boolean clickedInsideBoxes = false;
+
+            for (int i = 0; i < 3; i++) {
+                int boxX = startX + (i * (boxSize + gap));
+                if (pMouseX >= boxX && pMouseX <= boxX + boxSize && pMouseY >= startY && pMouseY <= startY + boxSize) {
+                    clickedInsideBoxes = true;
+                    if (System.currentTimeMillis() - screen.lastClickTime < 500) return true;
+                    screen.lastClickTime = System.currentTimeMillis();
+                    
+                    if (i == 0) screen.selectedHelmet = "HELMET ONLY";
+                    else if (i == 1) screen.selectedHelmet = "GHILLIE HELMET";
+                    else if (i == 2) screen.selectedHelmet = "SAND GHILLIE HELMET";
+                    
+                    screen.updateHelmetEquip();
+                    
+                    screen.inStyleSelection = false;
+                    return true;
+                }
+            }
+            
+            if (!clickedInsideBoxes && pMouseX > 240 && pMouseX < (screen.width - 120)) {
+                 screen.inStyleSelection = false;
+                 return true;
+            }
+        }
 
         if (screen.inCustomizationTab && screen.inCustomizationSelection) {
             boolean isLargeGrid = screen.customizationCategory.equals("SHIRT") || screen.customizationCategory.equals("PANTS") || screen.customizationCategory.equals("ARMOR");
@@ -42,8 +141,10 @@ public class WorkbenchDesign {
             int panelX = screen.width - panelWidth;
 
             if (pMouseX < panelX) {
-                screen.inCustomizationSelection = false;
-                screen.scrollOffset = 0f;
+                if (!screen.inStyleSelection) {
+                    screen.inCustomizationSelection = false;
+                    screen.scrollOffset = 0f;
+                }
                 return true;
             }
 
@@ -59,8 +160,19 @@ public class WorkbenchDesign {
                 if (pMouseX >= boxX && pMouseX <= boxX + 40 && pMouseY >= boxY && pMouseY <= boxY + 40) {
                     if (System.currentTimeMillis() - screen.lastClickTime < 500) return true;
                     screen.lastClickTime = System.currentTimeMillis();
-                    screen.inCustomizationSelection = false;
-                    screen.scrollOffset = 0f;
+                    
+                    if (screen.customizationCategory.equals("HELMET")) {
+                        if (i == 0) {
+                            if (screen.selectedHelmet.equals("NO HELMET")) {
+                                screen.selectedHelmet = "HELMET ONLY";
+                                screen.updateHelmetEquip();
+                            }
+                            screen.inStyleSelection = true;
+                        }
+                    } else {
+                        screen.inCustomizationSelection = false;
+                        screen.scrollOffset = 0f;
+                    }
                     return true;
                 }
             }
@@ -174,7 +286,7 @@ public class WorkbenchDesign {
             currentY += 45;
             
             if (screen.expandedHeadwearCategory.equals("HELMET")) {
-                String[] list = {"NO HELMET", "HELMET ONLY", "GHILLIE HELMET"};
+                String[] list = {"NO HELMET", "HELMET ONLY"};
                 for (String item : list) {
                     if (pMouseY >= currentY && pMouseY <= currentY + 35 && pMouseX >= 20 && pMouseX <= 220) {
                         screen.selectedHelmet = item;
@@ -201,7 +313,8 @@ public class WorkbenchDesign {
                     if (pMouseY >= currentY && pMouseY <= currentY + 35 && pMouseX >= 20 && pMouseX <= 220) {
                         screen.selectedMount = item;
                         screen.expandedHeadwearCategory = "";
-                        if (!screen.selectedHelmet.equals("GHILLIE HELMET")) {
+                        
+                        if (!screen.selectedHelmet.equals("GHILLIE HELMET") && !screen.selectedHelmet.equals("SAND GHILLIE HELMET")) {
                             screen.selectedHelmet = "HELMET ONLY";
                         }
                         screen.updateHelmetEquip();
@@ -491,10 +604,12 @@ public class WorkbenchDesign {
                 if (pMouseX >= 20 && pMouseX <= 20 + loadoutWidth) {
                     screen.inCustomizationTab = false;
                     screen.inCustomizationSelection = false;
+                    screen.inStyleSelection = false;
                     return true;
                 } else if (pMouseX >= customX && pMouseX <= customX + font.width("CUSTOMIZATION")) {
                     screen.inCustomizationTab = true;
                     screen.inCustomizationSelection = false;
+                    screen.inStyleSelection = false;
                     return true;
                 }
             }
@@ -504,33 +619,33 @@ public class WorkbenchDesign {
                 int currentY = startY + 15;
                 
                 if (pMouseY >= currentY && pMouseY <= currentY + 40) {
-                    if (pMouseX >= 20 && pMouseX <= 115) { screen.inCustomizationSelection = true; screen.customizationCategory = "SHIRT"; screen.scrollOffset = 0f; return true; }
-                    if (pMouseX >= 125 && pMouseX <= 220) { screen.inCustomizationSelection = true; screen.customizationCategory = "PANTS"; screen.scrollOffset = 0f; return true; }
+                    if (pMouseX >= 20 && pMouseX <= 115) { screen.inCustomizationSelection = true; screen.customizationCategory = "SHIRT"; screen.scrollOffset = 0f; screen.inStyleSelection = false; return true; }
+                    if (pMouseX >= 125 && pMouseX <= 220) { screen.inCustomizationSelection = true; screen.customizationCategory = "PANTS"; screen.scrollOffset = 0f; screen.inStyleSelection = false; return true; }
                 }
                 currentY += 45;
                 if (pMouseY >= currentY && pMouseY <= currentY + 40) {
-                    if (pMouseX >= 20 && pMouseX <= 80) { screen.inCustomizationSelection = true; screen.customizationCategory = "GLOVES"; screen.scrollOffset = 0f; return true; }
-                    if (pMouseX >= 90 && pMouseX <= 150) { screen.inCustomizationSelection = true; screen.customizationCategory = "BOOTS"; screen.scrollOffset = 0f; return true; }
-                    if (pMouseX >= 160 && pMouseX <= 220) { screen.inCustomizationSelection = true; screen.customizationCategory = "BELT"; screen.scrollOffset = 0f; return true; }
+                    if (pMouseX >= 20 && pMouseX <= 80) { screen.inCustomizationSelection = true; screen.customizationCategory = "GLOVES"; screen.scrollOffset = 0f; screen.inStyleSelection = false; return true; }
+                    if (pMouseX >= 90 && pMouseX <= 150) { screen.inCustomizationSelection = true; screen.customizationCategory = "BOOTS"; screen.scrollOffset = 0f; screen.inStyleSelection = false; return true; }
+                    if (pMouseX >= 160 && pMouseX <= 220) { screen.inCustomizationSelection = true; screen.customizationCategory = "BELT"; screen.scrollOffset = 0f; screen.inStyleSelection = false; return true; }
                 }
                 
                 currentY += 60; 
                 if (pMouseY >= currentY && pMouseY <= currentY + 40) {
-                    if (pMouseX >= 20 && pMouseX <= 115) { screen.inCustomizationSelection = true; screen.customizationCategory = "ARMOR"; screen.scrollOffset = 0f; return true; }
-                    if (pMouseX >= 125 && pMouseX <= 220) { screen.inCustomizationSelection = true; screen.customizationCategory = "HELMET"; screen.scrollOffset = 0f; return true; }
+                    if (pMouseX >= 20 && pMouseX <= 115) { screen.inCustomizationSelection = true; screen.customizationCategory = "ARMOR"; screen.scrollOffset = 0f; screen.inStyleSelection = false; return true; }
+                    if (pMouseX >= 125 && pMouseX <= 220) { screen.inCustomizationSelection = true; screen.customizationCategory = "HELMET"; screen.scrollOffset = 0f; screen.inStyleSelection = false; return true; }
                 }
                 currentY += 45;
                 if (pMouseY >= currentY && pMouseY <= currentY + 40) {
-                    if (pMouseX >= 20 && pMouseX <= 80) { screen.inCustomizationSelection = true; screen.customizationCategory = "FACEWEAR"; screen.scrollOffset = 0f; return true; }
-                    if (pMouseX >= 90 && pMouseX <= 150) { screen.inCustomizationSelection = true; screen.customizationCategory = "NVG"; screen.scrollOffset = 0f; return true; }
-                    if (pMouseX >= 160 && pMouseX <= 220) { screen.inCustomizationSelection = true; screen.customizationCategory = "BALLISTIC MASK"; screen.scrollOffset = 0f; return true; }
+                    if (pMouseX >= 20 && pMouseX <= 80) { screen.inCustomizationSelection = true; screen.customizationCategory = "FACEWEAR"; screen.scrollOffset = 0f; screen.inStyleSelection = false; return true; }
+                    if (pMouseX >= 90 && pMouseX <= 150) { screen.inCustomizationSelection = true; screen.customizationCategory = "NVG"; screen.scrollOffset = 0f; screen.inStyleSelection = false; return true; }
+                    if (pMouseX >= 160 && pMouseX <= 220) { screen.inCustomizationSelection = true; screen.customizationCategory = "BALLISTIC MASK"; screen.scrollOffset = 0f; screen.inStyleSelection = false; return true; }
                 }
                 
                 currentY += 60;
                 if (pMouseY >= currentY && pMouseY <= currentY + 40) {
-                    if (pMouseX >= 20 && pMouseX <= 80) { screen.inCustomizationSelection = true; screen.customizationCategory = "TATTOO"; screen.scrollOffset = 0f; return true; }
-                    if (pMouseX >= 90 && pMouseX <= 150) { screen.inCustomizationSelection = true; screen.customizationCategory = "EYEWEAR"; screen.scrollOffset = 0f; return true; }
-                    if (pMouseX >= 160 && pMouseX <= 220) { screen.inCustomizationSelection = true; screen.customizationCategory = "WATCH"; screen.scrollOffset = 0f; return true; }
+                    if (pMouseX >= 20 && pMouseX <= 80) { screen.inCustomizationSelection = true; screen.customizationCategory = "TATTOO"; screen.scrollOffset = 0f; screen.inStyleSelection = false; return true; }
+                    if (pMouseX >= 90 && pMouseX <= 150) { screen.inCustomizationSelection = true; screen.customizationCategory = "EYEWEAR"; screen.scrollOffset = 0f; screen.inStyleSelection = false; return true; }
+                    if (pMouseX >= 160 && pMouseX <= 220) { screen.inCustomizationSelection = true; screen.customizationCategory = "WATCH"; screen.scrollOffset = 0f; screen.inStyleSelection = false; return true; }
                 }
                 
             } else {
@@ -682,10 +797,65 @@ public class WorkbenchDesign {
             renderCustomizationLabels(guiGraphics, mouseX, mouseY);
             if (screen.inCustomizationSelection) {
                 renderCustomizationGridLabels(guiGraphics, mouseX, mouseY, screen.width, screen.height);
+                
+                if (screen.inStyleSelection) {
+                    renderStyleSelectionBar(guiGraphics, mouseX, mouseY, screen.width, screen.height);
+                }
             }
         } else {
             renderLoadoutLabels(guiGraphics);
         }
+    }
+
+    private void renderStyleSelectionBar(GuiGraphics guiGraphics, int mouseX, int mouseY, int trueWidth, int trueHeight) {
+        int openSpaceWidth = trueWidth - 120; 
+        int centerX = 240 + (openSpaceWidth - 240) / 2;
+        int boxSize = 70;
+        int gap = 15;
+        int totalWidth = (boxSize * 3) + (gap * 2);
+        int startX = centerX - (totalWidth / 2);
+        int startY = trueHeight - 100; 
+
+        guiGraphics.pose().pushPose();
+        guiGraphics.pose().translate(0, 0, 800.0F);
+
+        guiGraphics.drawCenteredString(font, "STYLES", centerX, startY - 15, 0xFFAAAAAA);
+        guiGraphics.fill(centerX - 30, startY - 4, centerX + 30, startY - 3, 0xFFD62929);
+
+        String[] styleItems = {"taticalsuit:base_helmet", "taticalsuit:helmet_ghillie", "taticalsuit:helmet_sand"};
+        
+        for (int i = 0; i < 3; i++) {
+            int boxX = startX + (i * (boxSize + gap));
+            
+            guiGraphics.fill(boxX, startY, boxX + boxSize, startY + boxSize, 0xAA000000);
+            
+            if (mouseX >= boxX && mouseX <= boxX + boxSize && mouseY >= startY && mouseY <= startY + boxSize) {
+                guiGraphics.fill(boxX, startY, boxX + boxSize, startY + boxSize, 0x44FFFFFF);
+            }
+            
+            ResourceLocation loc = ResourceLocation.tryParse(styleItems[i]);
+            if (loc != null) {
+                net.minecraft.world.item.Item item = net.minecraftforge.registries.ForgeRegistries.ITEMS.getValue(loc);
+                if (item != null && item != net.minecraft.world.item.Items.AIR) {
+                    float scale = 4.0f;
+                    guiGraphics.pose().pushPose();
+                    guiGraphics.pose().translate(boxX + (boxSize / 2f) - (8 * scale), startY + (boxSize / 2f) - (8 * scale), 150.0F); 
+                    guiGraphics.pose().scale(scale, scale, scale);
+                    guiGraphics.renderItem(new ItemStack(item), 0, 0);
+                    guiGraphics.pose().popPose();
+                }
+            }
+            
+            boolean isEquipped = false;
+            if (i == 0 && screen.selectedHelmet.equals("HELMET ONLY")) isEquipped = true;
+            if (i == 1 && screen.selectedHelmet.equals("GHILLIE HELMET")) isEquipped = true;
+            if (i == 2 && screen.selectedHelmet.equals("SAND GHILLIE HELMET")) isEquipped = true;
+            
+            if (isEquipped) {
+                guiGraphics.fill(boxX, startY + boxSize, boxX + boxSize, startY + boxSize + 2, 0xFF00FF00);
+            }
+        }
+        guiGraphics.pose().popPose();
     }
 
     private void render3DOperator(GuiGraphics guiGraphics, int trueWidth, int trueHeight) {
@@ -747,6 +917,8 @@ public class WorkbenchDesign {
         int cols = isLargeGrid ? 3 : 2;
         int rows = isLargeGrid ? 7 : 6;
         
+        int itemsToRender = screen.customizationCategory.equals("HELMET") ? 1 : (rows * cols);
+        
         int panelWidth = isLargeGrid ? 170 : 120;
         int panelX = trueWidth - panelWidth;
         int gridStartX = panelX + 15;
@@ -762,7 +934,7 @@ public class WorkbenchDesign {
 
         guiGraphics.enableScissor(panelX, 40, trueWidth, trueHeight);
         
-        for (int i = 0; i < (rows * cols); i++) {
+        for (int i = 0; i < itemsToRender; i++) {
             int col = i % cols;
             int row = i / cols;
             int boxX = gridStartX + (col * 45);
@@ -806,12 +978,33 @@ public class WorkbenchDesign {
         drawSmallText(guiGraphics, font, "TATTOO", 24, currentY + 4, 0.45f, 0xFF7A818C);
         drawSmallText(guiGraphics, font, "EYEWEAR", 94, currentY + 4, 0.45f, 0xFF7A818C);
         drawSmallText(guiGraphics, font, "WATCH", 164, currentY + 4, 0.45f, 0xFF7A818C);
+
+        if (!screen.selectedHelmet.equals("NO HELMET")) {
+            String targetId = "taticalsuit:base_helmet";
+            if (screen.selectedHelmet.equals("GHILLIE HELMET")) targetId = "taticalsuit:helmet_ghillie";
+            if (screen.selectedHelmet.equals("SAND GHILLIE HELMET")) targetId = "taticalsuit:helmet_sand";
+            
+            ResourceLocation loc = ResourceLocation.tryParse(targetId);
+            if (loc != null) {
+                net.minecraft.world.item.Item item = net.minecraftforge.registries.ForgeRegistries.ITEMS.getValue(loc);
+                if (item != null && item != net.minecraft.world.item.Items.AIR) {
+                    float hScale = 2.0f;
+                    guiGraphics.pose().pushPose();
+                    guiGraphics.pose().translate(125 + (95 / 2f) - (8 * hScale), 150 + (40 / 2f) - (8 * hScale), 250.0F);
+                    guiGraphics.pose().scale(hScale, hScale, hScale);
+                    guiGraphics.renderItem(new ItemStack(item), 0, 0);
+                    guiGraphics.pose().popPose();
+                }
+            }
+        }
     }
 
     private void renderCustomizationGridLabels(GuiGraphics guiGraphics, int mouseX, int mouseY, int trueWidth, int trueHeight) {
         boolean isLargeGrid = screen.customizationCategory.equals("SHIRT") || screen.customizationCategory.equals("PANTS") || screen.customizationCategory.equals("ARMOR");
         int cols = isLargeGrid ? 3 : 2;
         int rows = isLargeGrid ? 7 : 6;
+        
+        int itemsToRender = screen.customizationCategory.equals("HELMET") ? 1 : (rows * cols);
         
         int panelWidth = isLargeGrid ? 170 : 120;
         int panelX = trueWidth - panelWidth;
@@ -821,7 +1014,7 @@ public class WorkbenchDesign {
         drawSmallText(guiGraphics, font, "SELECT " + screen.customizationCategory, panelX + 15, 25, 0.75f, 0xFFFFFFFF);
         
         guiGraphics.enableScissor(panelX, 40, trueWidth, trueHeight);
-        for (int i = 0; i < (rows * cols); i++) {
+        for (int i = 0; i < itemsToRender; i++) {
             int col = i % cols;
             int row = i / cols;
             int boxX = gridStartX + (col * 45);
@@ -829,6 +1022,29 @@ public class WorkbenchDesign {
             
             if (mouseX >= boxX && mouseX <= boxX + 40 && mouseY >= boxY && mouseY <= boxY + 40) {
                 guiGraphics.fill(boxX + 1, boxY + 1, boxX + 39, boxY + 39, 0xFF3E4249);
+            }
+
+            if (screen.customizationCategory.equals("HELMET")) {
+                String targetId = "taticalsuit:base_helmet";
+                if (screen.selectedHelmet.equals("GHILLIE HELMET")) targetId = "taticalsuit:helmet_ghillie";
+                if (screen.selectedHelmet.equals("SAND GHILLIE HELMET")) targetId = "taticalsuit:helmet_sand";
+                
+                ResourceLocation loc = ResourceLocation.tryParse(targetId);
+                if (loc != null) {
+                    net.minecraft.world.item.Item item = net.minecraftforge.registries.ForgeRegistries.ITEMS.getValue(loc);
+                    if (item != null && item != net.minecraft.world.item.Items.AIR) {
+                        float scale = 2.0f;
+                        guiGraphics.pose().pushPose();
+                        guiGraphics.pose().translate(boxX + 4, boxY + 4, 350.0F);
+                        guiGraphics.pose().scale(scale, scale, scale);
+                        guiGraphics.renderItem(new ItemStack(item), 0, 0);
+                        guiGraphics.pose().popPose();
+                    }
+                }
+                
+                if (!screen.selectedHelmet.equals("NO HELMET")) {
+                     guiGraphics.fill(boxX, boxY + 40, boxX + 40, boxY + 42, 0xFF00FF00); 
+                }
             }
         }
         guiGraphics.disableScissor();
@@ -982,7 +1198,7 @@ public class WorkbenchDesign {
         
         int currentY = 0;
         currentY += 45; 
-        if (screen.expandedHeadwearCategory.equals("HELMET")) currentY += 3 * 35;
+        if (screen.expandedHeadwearCategory.equals("HELMET")) currentY += 2 * 35;
         
         currentY += 45; 
         if (screen.expandedHeadwearCategory.equals("MOUNT")) currentY += 3 * 35;
@@ -1004,7 +1220,7 @@ public class WorkbenchDesign {
         
         drawCleanBox(guiGraphics, 20, drawY, 200, 40);
         drawY += 45;
-        if (screen.expandedHeadwearCategory.equals("HELMET")) drawY += 3 * 35;
+        if (screen.expandedHeadwearCategory.equals("HELMET")) drawY += 2 * 35;
         
         drawCleanBox(guiGraphics, 20, drawY, 200, 40);
         drawY += 45;
@@ -1278,7 +1494,8 @@ public class WorkbenchDesign {
                 headStack.getItem() instanceof com.k1ngtle.taticalsuit.item.HelmetItem ||
                 headStack.getItem() instanceof com.k1ngtle.taticalsuit.item.HelmetPVS31Item ||
                 headStack.getItem() instanceof com.k1ngtle.taticalsuit.item.HelmetGPNVG18Item ||
-                headStack.getItem() instanceof com.k1ngtle.taticalsuit.item.HelmetGhillieItem)) {
+                headStack.getItem() instanceof com.k1ngtle.taticalsuit.item.HelmetGhillieItem ||
+                headStack.getItem() instanceof com.k1ngtle.taticalsuit.item.HelmetSandItem)) {
                 
                 guiGraphics.pose().pushPose();
                 guiGraphics.pose().translate(39, 357, 150.0F); 
@@ -1454,7 +1671,7 @@ public class WorkbenchDesign {
         currentY += 45;
         
         if (screen.expandedHeadwearCategory.equals("HELMET")) {
-            String[] list = {"NO HELMET", "HELMET ONLY", "GHILLIE HELMET"};
+            String[] list = {"NO HELMET", "HELMET ONLY"};
             for (String item : list) {
                 renderTextListItem(guiGraphics, item, 20, currentY, mouseX, mouseY);
                 currentY += 35;
@@ -1996,65 +2213,5 @@ public class WorkbenchDesign {
         }
 
         guiGraphics.disableScissor();
-    }
-
-    public static class AttachmentInfo {
-        public final ItemStack stack;
-        public final String name;
-        public AttachmentInfo(ItemStack stack, String name) {
-            this.stack = stack;
-            this.name = name;
-        }
-    }
-
-    public AttachmentInfo getAttachmentInfo(ItemStack weaponStack, String category) {
-        if (weaponStack == null || weaponStack.isEmpty() || !weaponStack.hasTag()) {
-            return new AttachmentInfo(ItemStack.EMPTY, "NONE");
-        }
-
-        net.minecraft.nbt.CompoundTag tag = weaponStack.getTag();
-        String vpbCategory = switch (category.toUpperCase()) {
-            case "OPTIC"       -> "scope";
-            case "BARREL"      -> "barrel";
-            case "MUZZLE"      -> "muzzle";
-            case "UNDERBARREL" -> "underbarrel";
-            case "LASER"       -> "rail";
-            case "STOCK"       -> "stock";
-            case "MAGAZINE"    -> "magazine";
-            default -> category.toLowerCase();
-        };
-
-        if (tag.contains("sa", net.minecraft.nbt.Tag.TAG_COMPOUND)) {
-            net.minecraft.nbt.CompoundTag sa = tag.getCompound("sa");
-            if (sa.contains(vpbCategory, net.minecraft.nbt.Tag.TAG_STRING)) {
-                String rl = sa.getString(vpbCategory);
-                if (!rl.isEmpty()) {
-                    net.minecraft.world.item.Item item = net.minecraftforge.registries.ForgeRegistries.ITEMS
-                            .getValue(ResourceLocation.tryParse(rl));
-                    if (item != null && item != net.minecraft.world.item.Items.AIR) {
-                        String name = rl.contains(":") ? rl.substring(rl.indexOf(':') + 1).replace("_", " ").toUpperCase() : rl.toUpperCase();
-                        return new AttachmentInfo(new ItemStack(item), name);
-                    }
-                }
-            }
-        }
-
-        if (tag.contains("as", net.minecraft.nbt.Tag.TAG_LIST)) {
-            net.minecraft.nbt.ListTag asList = tag.getList("as", net.minecraft.nbt.Tag.TAG_COMPOUND);
-            for (int k = 0; k < asList.size(); k++) {
-                net.minecraft.nbt.CompoundTag entry = asList.getCompound(k);
-                String eid = entry.getString("id");
-                if (eid.isEmpty()) continue;
-                net.minecraft.world.item.Item eItem = net.minecraftforge.registries.ForgeRegistries.ITEMS
-                        .getValue(ResourceLocation.tryParse(eid));
-                if (eItem != null && eItem != net.minecraft.world.item.Items.AIR
-                        && com.k1ngtle.taticalsuit.network.EquipWeaponPacket.isItemInCategory(eItem, vpbCategory)) {
-                    String name = eid.contains(":") ? eid.substring(eid.indexOf(':') + 1).replace("_", " ").toUpperCase() : eid.toUpperCase();
-                    return new AttachmentInfo(new ItemStack(eItem), name);
-                }
-            }
-        }
-
-        return new AttachmentInfo(ItemStack.EMPTY, "NONE");
     }
 }

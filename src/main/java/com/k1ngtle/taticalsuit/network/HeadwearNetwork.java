@@ -5,6 +5,7 @@ import com.k1ngtle.taticalsuit.item.HelmetGPNVG18Item;
 import com.k1ngtle.taticalsuit.item.HelmetItem;
 import com.k1ngtle.taticalsuit.item.HelmetPVS31Item;
 import com.k1ngtle.taticalsuit.item.HelmetGhillieItem;
+import com.k1ngtle.taticalsuit.item.HelmetSandItem;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
@@ -88,12 +89,9 @@ public class HeadwearNetwork {
                     return;
                 }
 
-                // Strip off whatever is currently on their head safely
+                // Strip off whatever is currently on their head without returning it to the inventory
                 if (!currentHead.isEmpty()) {
                     player.setItemSlot(EquipmentSlot.HEAD, ItemStack.EMPTY);
-                    if (!player.getInventory().add(currentHead)) {
-                        player.drop(currentHead, false);
-                    }
                 }
 
                 // Scan inventory for the target helmet
@@ -126,7 +124,8 @@ public class HeadwearNetwork {
             return stack.getItem() instanceof HelmetItem || 
                    stack.getItem() instanceof HelmetPVS31Item || 
                    stack.getItem() instanceof HelmetGPNVG18Item ||
-                   stack.getItem() instanceof HelmetGhillieItem;
+                   stack.getItem() instanceof HelmetGhillieItem ||
+                   stack.getItem() instanceof HelmetSandItem;
         }
     }
 }
