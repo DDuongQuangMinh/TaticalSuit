@@ -5,6 +5,7 @@ import com.k1ngtle.taticalsuit.client.screen.SquadSelectionScreen;
 import com.k1ngtle.taticalsuit.item.HelmetItem;
 import com.k1ngtle.taticalsuit.item.HelmetPVS31Item;
 import com.k1ngtle.taticalsuit.item.HelmetGPNVG18Item;
+import com.k1ngtle.taticalsuit.item.HelmetGhillieItem;
 import com.mojang.blaze3d.pipeline.RenderTarget;
 import com.mojang.blaze3d.pipeline.TextureTarget;
 import com.mojang.blaze3d.platform.InputConstants;
@@ -83,11 +84,13 @@ public class HelmetCameraManager {
         
         boolean wearingHelmet = head.getItem() instanceof HelmetItem || 
                                 head.getItem() instanceof HelmetPVS31Item || 
-                                head.getItem() instanceof HelmetGPNVG18Item;
+                                head.getItem() instanceof HelmetGPNVG18Item ||
+                                head.getItem() instanceof HelmetGhillieItem;
                                 
         boolean holdingHelmet = hand.getItem() instanceof HelmetItem || 
                                 hand.getItem() instanceof HelmetPVS31Item || 
-                                hand.getItem() instanceof HelmetGPNVG18Item;
+                                hand.getItem() instanceof HelmetGPNVG18Item ||
+                                hand.getItem() instanceof HelmetGhillieItem;
 
         return wearingHelmet || holdingHelmet;
     }
@@ -178,8 +181,6 @@ public class HelmetCameraManager {
     private static void turnOffCamera(Minecraft mc) {
         isCameraActive = false;
         targetEntity = null;
-        // CRITICAL FIX: Do NOT destroy buffers or call .close() on shaders here! 
-        // Doing so will delete the OpenGL Program cache entirely and break the main screen shader!
     }
 
     @SubscribeEvent
@@ -192,7 +193,6 @@ public class HelmetCameraManager {
         isRenderingPip = true;
         RenderTarget mainTarget = mc.getMainRenderTarget();
         
-        // 1. Flush any pending main-pass rendering
         mc.renderBuffers().bufferSource().endBatch();
 
         if (backupTarget == null || backupTarget.width != mainTarget.width || backupTarget.height != mainTarget.height) {
@@ -217,7 +217,7 @@ public class HelmetCameraManager {
             }
         }
 
-        // 2. BACKUP MAIN SCREEN (Color AND Depth to save weather/clouds/gui from breaking)
+        // BACKUP MAIN SCREEN (Color AND Depth to save weather/clouds/gui from breaking)
         GL30.glBindFramebuffer(GL30.GL_READ_FRAMEBUFFER, mainTarget.frameBufferId);
         GL30.glBindFramebuffer(GL30.GL_DRAW_FRAMEBUFFER, backupTarget.frameBufferId);
         GL30.glBlitFramebuffer(0, 0, mainTarget.width, mainTarget.height, 0, 0, backupTarget.width, backupTarget.height, GL30.GL_COLOR_BUFFER_BIT | GL30.GL_DEPTH_BUFFER_BIT, GL30.GL_NEAREST);
@@ -229,8 +229,6 @@ public class HelmetCameraManager {
 
             net.minecraft.client.Camera pipCamera = new net.minecraft.client.Camera();
             
-            // FIXED BUG 1: Temporarily hijack the entity's body rotation with its actual head rotation
-            // This prevents the camera from pointing out the back of the armor stand's head!
             float prevXRot = targetEntity.getXRot();
             float prevYRot = targetEntity.getYRot();
             targetEntity.setXRot(targetEntity.xRotO + (targetEntity.getXRot() - targetEntity.xRotO) * event.getPartialTick());
@@ -241,12 +239,10 @@ public class HelmetCameraManager {
             targetEntity.setXRot(prevXRot);
             targetEntity.setYRot(prevYRot);
             
-            // Build the PoseStack exactly like vanilla does to prevent matrix corruption
             PoseStack pipPoseStack = new PoseStack();
             pipPoseStack.mulPose(com.mojang.math.Axis.XP.rotationDegrees(pipCamera.getXRot()));
             pipPoseStack.mulPose(com.mojang.math.Axis.YP.rotationDegrees(pipCamera.getYRot() + 180.0F));
             
-            // Shift the camera visually UP by 1.2 blocks to sit on top of the helmet and prevent ground clipping
             pipPoseStack.translate(0.0D, -1.2D, 0.0D);
 
             Matrix4f pipProjection = mc.gameRenderer.getProjectionMatrix((double)mc.options.fov().get());
@@ -264,13 +260,13 @@ public class HelmetCameraManager {
 
             RenderSystem.setProjectionMatrix(oldProj, com.mojang.blaze3d.vertex.VertexSorting.DISTANCE_TO_ORIGIN);
 
-            // 3. COPY FRAME TO PIP TEXTURE
+            // COPY FRAME TO PIP TEXTURE
             GL30.glBindFramebuffer(GL30.GL_READ_FRAMEBUFFER, mainTarget.frameBufferId);
             GL30.glBindFramebuffer(GL30.GL_DRAW_FRAMEBUFFER, pipTarget.frameBufferId);
             GL30.glBlitFramebuffer(0, 0, mainTarget.width, mainTarget.height, 0, 0, pipTarget.width, pipTarget.height, GL30.GL_COLOR_BUFFER_BIT, GL30.GL_NEAREST);
 
         } finally {
-            // 4. RESTORE MAIN SCREEN (Color AND Depth)
+            // RESTORE MAIN SCREEN
             GL30.glBindFramebuffer(GL30.GL_READ_FRAMEBUFFER, backupTarget.frameBufferId);
             GL30.glBindFramebuffer(GL30.GL_DRAW_FRAMEBUFFER, mainTarget.frameBufferId);
             GL30.glBlitFramebuffer(0, 0, backupTarget.width, backupTarget.height, 0, 0, mainTarget.width, mainTarget.height, GL30.GL_COLOR_BUFFER_BIT | GL30.GL_DEPTH_BUFFER_BIT, GL30.GL_NEAREST);
@@ -280,7 +276,6 @@ public class HelmetCameraManager {
             isRenderingPip = false;
         }
         
-        // 5. PROCESS SECONDARY SHADER ON PIP BOX
         PostChain currentMainEffect = mc.gameRenderer.currentEffect();
         if (currentMainEffect != null) {
             String currentEffectName = currentMainEffect.getName();
@@ -330,8 +325,6 @@ public class HelmetCameraManager {
                 }
             }
         }
-        
-        // Critical Safety Rebind
         mainTarget.bindWrite(true);
     }
 
@@ -352,7 +345,6 @@ public class HelmetCameraManager {
         Minecraft mc = Minecraft.getInstance();
         GuiGraphics guiGraphics = event.getGuiGraphics();
         
-        // Dynamic Positioning
         if (pipX == -1) pipX = guiGraphics.guiWidth() - pipWidth - 10;
         
         int x = pipX;
@@ -361,7 +353,6 @@ public class HelmetCameraManager {
         int boxHeight = pipHeight;
         int footerY = y + boxHeight - 45;
 
-        // Background & Borders
         guiGraphics.fill(x, y, x + boxWidth, y + boxHeight, 0xFF000000);
         guiGraphics.fill(x, y, x + boxWidth, y + 16, 0xFF000000);
         guiGraphics.fill(x, footerY, x + boxWidth, y + boxHeight, 0xFF000000);
@@ -370,7 +361,6 @@ public class HelmetCameraManager {
         guiGraphics.fill(x, y, x + 1, y + boxHeight, 0xFF555555);
         guiGraphics.fill(x + boxWidth - 1, y, x + boxWidth, y + boxHeight, 0xFF555555);
 
-        // Header Indicator
         boolean isBlinking = (System.currentTimeMillis() % 1000) > 500;
         guiGraphics.fill(x + 5, y + 5, x + 11, y + 11, isBlinking ? 0xFFFF0000 : 0xFF550000);
         
@@ -383,7 +373,6 @@ public class HelmetCameraManager {
             mySquad = handItem.getTag().getString("squad_name");
         }
         
-        // --- TEXT AUTO-SCALER ---
         String headerText = "CAM: " + targetEntity.getDisplayName().getString().toUpperCase() + " [" + mySquad + "]";
         int textWidth = mc.font.width(headerText);
         int maxTextWidth = boxWidth - 20; 
@@ -399,7 +388,6 @@ public class HelmetCameraManager {
         guiGraphics.drawString(mc.font, headerText, 0, 0, 0xFFFFFF, false);
         guiGraphics.pose().popPose();
 
-        // --- RENDER TEXTURE ---
         RenderSystem.setShaderTexture(0, pipTarget.getColorTextureId());
         RenderSystem.setShader(GameRenderer::getPositionTexShader);
         RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
@@ -441,7 +429,6 @@ public class HelmetCameraManager {
         RenderSystem.enableBlend();
         RenderSystem.enableDepthTest();
 
-        // Footer Stats
         float healthPct = targetEntity.getHealth() / targetEntity.getMaxHealth();
         guiGraphics.drawString(mc.font, "HP: " + (int)targetEntity.getHealth(), x + 10, footerY + 3, 0xFFFFFF, false);
         guiGraphics.fill(x + 10, footerY + 13, x + boxWidth - 10, footerY + 17, 0xFF550000); 

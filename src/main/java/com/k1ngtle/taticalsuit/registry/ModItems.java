@@ -2,6 +2,7 @@ package com.k1ngtle.taticalsuit.registry;
 
 import com.k1ngtle.taticalsuit.TaticalSuit;
 import com.k1ngtle.taticalsuit.item.HelmetGPNVG18Item;
+import com.k1ngtle.taticalsuit.item.HelmetGhillieItem;
 import com.k1ngtle.taticalsuit.item.HelmetItem;
 import com.k1ngtle.taticalsuit.item.HelmetPVS31Item;
 
@@ -28,6 +29,9 @@ public class ModItems {
 
     public static final RegistryObject<Item> HELMET_GPNVG18 = ITEMS.register("helmet_gpnvg18",
             () -> new HelmetGPNVG18Item(ArmorMaterials.IRON, ArmorItem.Type.HELMET, new Item.Properties()));
+
+    public static final RegistryObject<Item> HELMET_GHILLIE = ITEMS.register("helmet_ghillie",
+            () -> new HelmetGhillieItem(ArmorMaterials.IRON, ArmorItem.Type.HELMET, new Item.Properties()));
 
     // This method hooks the registry into your main mod event bus
     public static void register(IEventBus eventBus) {

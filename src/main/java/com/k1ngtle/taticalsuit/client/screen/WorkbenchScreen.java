@@ -131,6 +131,9 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
                 } else if (helmetStack.getItem() instanceof com.k1ngtle.taticalsuit.item.HelmetGPNVG18Item) {
                     this.selectedHelmet = "HELMET ONLY";
                     this.selectedMount = "GPNVGS";
+                } else if (helmetStack.getItem() instanceof com.k1ngtle.taticalsuit.item.HelmetGhillieItem) {
+                    this.selectedHelmet = "GHILLIE HELMET";
+                    this.selectedMount = "NONE";
                 }
                 
                 if (helmetStack.hasTag() && helmetStack.getTag().contains("phosphor")) {
@@ -302,6 +305,7 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
         if (id.equals("taticalsuit:base_helmet")) return "BASE HELMET";
         if (id.equals("taticalsuit:helmet_pvs31")) return "HELMET (PVS-31)";
         if (id.equals("taticalsuit:helmet_gpnvg18")) return "HELMET (GPNVG-18)";
+        if (id.equals("taticalsuit:helmet_ghillie")) return "GHILLIE HELMET";
         return id.replace("taticalsuit:", "").replace("_", " ").toUpperCase();
     }
 
@@ -510,7 +514,7 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
             currentY += 45;
             
             if (this.expandedHeadwearCategory.equals("HELMET")) {
-                String[] list = {"NO HELMET", "HELMET ONLY"};
+                String[] list = {"NO HELMET", "HELMET ONLY", "GHILLIE HELMET"};
                 for (String item : list) {
                     if (pMouseY >= currentY && pMouseY <= currentY + 35 && pMouseX >= 20 && pMouseX <= 220) {
                         this.selectedHelmet = item;
@@ -543,7 +547,9 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
                         this.expandedHeadwearCategory = "";
                         
                         // ALWAYS force the helmet ON when interacting with the Mount dropdown. (NONE = Base Helmet)
-                        this.selectedHelmet = "HELMET ONLY";
+                        if (!this.selectedHelmet.equals("GHILLIE HELMET")) {
+                            this.selectedHelmet = "HELMET ONLY";
+                        }
                         updateHelmetEquip();
                         
                         return true;
@@ -1414,7 +1420,7 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
         
         int currentY = 0;
         currentY += 45; // Helmet box height
-        if (this.expandedHeadwearCategory.equals("HELMET")) currentY += 2 * 35;
+        if (this.expandedHeadwearCategory.equals("HELMET")) currentY += 3 * 35;
         
         currentY += 45; // Mount box height
         if (this.expandedHeadwearCategory.equals("MOUNT")) currentY += 3 * 35;
@@ -1437,7 +1443,7 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
         // HELMET Box
         WorkbenchDesign.drawCleanBox(guiGraphics, 20, drawY, 200, 40);
         drawY += 45;
-        if (this.expandedHeadwearCategory.equals("HELMET")) drawY += 2 * 35;
+        if (this.expandedHeadwearCategory.equals("HELMET")) drawY += 3 * 35;
         
         // MOUNT Box
         WorkbenchDesign.drawCleanBox(guiGraphics, 20, drawY, 200, 40);
@@ -1484,8 +1490,8 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
             
             if (weaponPool[i] != null && !weaponPool[i].isEmpty()) {
                 guiGraphics.pose().pushPose();
-                guiGraphics.pose().translate(30, currentY + 8, 250); // High Z-depth
-                guiGraphics.pose().scale(1.8f, 1.8f, 1.8f); // FIXED: Uniform Z scaling prevents the error block!
+                guiGraphics.pose().translate(30, currentY + 8, 250); 
+                guiGraphics.pose().scale(1.8f, 1.8f, 1.8f); 
                 guiGraphics.renderItem(weaponPool[i], 0, 0);
                 guiGraphics.pose().popPose();
             }
@@ -1525,7 +1531,7 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
             if (attachmentPool[i] != null && !attachmentPool[i].isEmpty()) {
                 guiGraphics.pose().pushPose();
                 guiGraphics.pose().translate(30, currentY + 12, 250); 
-                guiGraphics.pose().scale(1.2f, 1.2f, 1.2f); // FIXED: Uniform Z scaling
+                guiGraphics.pose().scale(1.2f, 1.2f, 1.2f); 
                 guiGraphics.renderItem(attachmentPool[i], 0, 0);
                 guiGraphics.pose().popPose();
             }
@@ -1676,7 +1682,7 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
         if (!primaryStack.isEmpty()) {
             guiGraphics.pose().pushPose();
             guiGraphics.pose().translate(110, 44, 350.0F); 
-            guiGraphics.pose().scale(2.5f, 2.5f, 2.5f); // FIXED: Uniform Z scaling
+            guiGraphics.pose().scale(2.5f, 2.5f, 2.5f); 
             guiGraphics.renderItem(primaryStack, 0, 0);
             guiGraphics.pose().popPose();
         }
@@ -1686,7 +1692,7 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
         if (!secondaryStack.isEmpty()) {
             guiGraphics.pose().pushPose();
             guiGraphics.pose().translate(110, 89, 350.0F); 
-            guiGraphics.pose().scale(2.5f, 2.5f, 2.5f); // FIXED: Uniform Z scaling
+            guiGraphics.pose().scale(2.5f, 2.5f, 2.5f); 
             guiGraphics.renderItem(secondaryStack, 0, 0);
             guiGraphics.pose().popPose();
         }
@@ -1717,7 +1723,8 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
             if (!headStack.isEmpty() && (
                 headStack.getItem() instanceof com.k1ngtle.taticalsuit.item.HelmetItem ||
                 headStack.getItem() instanceof com.k1ngtle.taticalsuit.item.HelmetPVS31Item ||
-                headStack.getItem() instanceof com.k1ngtle.taticalsuit.item.HelmetGPNVG18Item)) {
+                headStack.getItem() instanceof com.k1ngtle.taticalsuit.item.HelmetGPNVG18Item ||
+                headStack.getItem() instanceof com.k1ngtle.taticalsuit.item.HelmetGhillieItem)) {
                 
                 guiGraphics.pose().pushPose();
                 guiGraphics.pose().translate(39, 357, 150.0F); // Positioned inside the box
@@ -1903,7 +1910,7 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
         currentY += 45;
         
         if (this.expandedHeadwearCategory.equals("HELMET")) {
-            String[] list = {"NO HELMET", "HELMET ONLY"};
+            String[] list = {"NO HELMET", "HELMET ONLY", "GHILLIE HELMET"};
             for (String item : list) {
                 renderTextListItem(guiGraphics, item, 20, currentY, mouseX, mouseY);
                 currentY += 35;
@@ -2346,7 +2353,7 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
         if (!weaponStack.isEmpty()) {
             guiGraphics.pose().pushPose();
             guiGraphics.pose().translate(110, currentY + 8, 350.0F); 
-            guiGraphics.pose().scale(3.5f, 3.5f, 1.0f); 
+            guiGraphics.pose().scale(3.5f, 3.5f, 3.5f); // FIXED: Uniform 3D Z Scaling
             guiGraphics.renderItem(weaponStack, 0, 0);
             guiGraphics.pose().popPose();
         } else {
@@ -2376,7 +2383,7 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
             if (!attachments[i].stack.isEmpty()) {
                 guiGraphics.pose().pushPose();
                 guiGraphics.pose().translate(175, currentY + 4, 350.0F); 
-                guiGraphics.pose().scale(2.0f, 2.0f, 1.0f); 
+                guiGraphics.pose().scale(2.0f, 2.0f, 2.0f); // FIXED: Uniform 3D Z Scaling
                 guiGraphics.renderItem(attachments[i].stack, 0, 0);
                 guiGraphics.pose().popPose();
             }
@@ -2416,7 +2423,7 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
                 if (!pAmmoInfos[i].stack.isEmpty()) {
                     guiGraphics.pose().pushPose();
                     guiGraphics.pose().translate(185, currentY + 4, 350.0F); 
-                    guiGraphics.pose().scale(1.5f, 1.5f, 1.0f); 
+                    guiGraphics.pose().scale(1.5f, 1.5f, 1.5f); // FIXED: Uniform 3D Z Scaling
                     guiGraphics.renderItem(pAmmoInfos[i].stack, 0, 0);
                     guiGraphics.pose().popPose();
                 }
@@ -2432,7 +2439,7 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
                 if (!sAmmoInfos[i].stack.isEmpty()) {
                     guiGraphics.pose().pushPose();
                     guiGraphics.pose().translate(185, currentY + 4, 350.0F); 
-                    guiGraphics.pose().scale(1.5f, 1.5f, 1.0f); 
+                    guiGraphics.pose().scale(1.5f, 1.5f, 1.5f); // FIXED: Uniform 3D Z Scaling
                     guiGraphics.renderItem(sAmmoInfos[i].stack, 0, 0);
                     guiGraphics.pose().popPose();
                 }
@@ -2575,6 +2582,8 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
             } else if (this.selectedMount.equals("GPNVGS")) {
                 targetId = "taticalsuit:helmet_gpnvg18";
             }
+        } else if (this.selectedHelmet.equals("GHILLIE HELMET")) {
+            targetId = "taticalsuit:helmet_ghillie";
         }
         
         net.minecraft.world.item.Item targetItem = null;
@@ -2587,7 +2596,8 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
                 for (net.minecraft.world.item.Item regItem : net.minecraftforge.registries.ForgeRegistries.ITEMS) {
                     if (regItem instanceof com.k1ngtle.taticalsuit.item.HelmetItem && 
                        !(regItem instanceof com.k1ngtle.taticalsuit.item.HelmetPVS31Item) && 
-                       !(regItem instanceof com.k1ngtle.taticalsuit.item.HelmetGPNVG18Item)) {
+                       !(regItem instanceof com.k1ngtle.taticalsuit.item.HelmetGPNVG18Item) &&
+                       !(regItem instanceof com.k1ngtle.taticalsuit.item.HelmetGhillieItem)) {
                         targetItem = regItem;
                         targetId = net.minecraftforge.registries.ForgeRegistries.ITEMS.getKey(regItem).toString();
                         break;
@@ -2604,7 +2614,8 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
                     ItemStack stack = Minecraft.getInstance().player.getInventory().getItem(i);
                     if (stack.getItem() instanceof com.k1ngtle.taticalsuit.item.HelmetItem ||
                         stack.getItem() instanceof com.k1ngtle.taticalsuit.item.HelmetPVS31Item ||
-                        stack.getItem() instanceof com.k1ngtle.taticalsuit.item.HelmetGPNVG18Item) {
+                        stack.getItem() instanceof com.k1ngtle.taticalsuit.item.HelmetGPNVG18Item ||
+                        stack.getItem() instanceof com.k1ngtle.taticalsuit.item.HelmetGhillieItem) {
                         Minecraft.getInstance().player.getInventory().setItem(i, ItemStack.EMPTY);
                     }
                 }
@@ -2615,7 +2626,8 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
                     ItemStack stack = Minecraft.getInstance().player.getInventory().getItem(i);
                     if (stack.getItem() instanceof com.k1ngtle.taticalsuit.item.HelmetItem ||
                         stack.getItem() instanceof com.k1ngtle.taticalsuit.item.HelmetPVS31Item ||
-                        stack.getItem() instanceof com.k1ngtle.taticalsuit.item.HelmetGPNVG18Item) {
+                        stack.getItem() instanceof com.k1ngtle.taticalsuit.item.HelmetGPNVG18Item ||
+                        stack.getItem() instanceof com.k1ngtle.taticalsuit.item.HelmetGhillieItem) {
                         Minecraft.getInstance().player.getInventory().setItem(i, ItemStack.EMPTY);
                     }
                 }

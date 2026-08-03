@@ -4,6 +4,7 @@ import com.k1ngtle.taticalsuit.TaticalSuit;
 import com.k1ngtle.taticalsuit.item.HelmetGPNVG18Item;
 import com.k1ngtle.taticalsuit.item.HelmetItem;
 import com.k1ngtle.taticalsuit.item.HelmetPVS31Item;
+import com.k1ngtle.taticalsuit.item.HelmetGhillieItem;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
@@ -124,7 +125,8 @@ public class HeadwearNetwork {
         private boolean isTacticalHelmet(ItemStack stack) {
             return stack.getItem() instanceof HelmetItem || 
                    stack.getItem() instanceof HelmetPVS31Item || 
-                   stack.getItem() instanceof HelmetGPNVG18Item;
+                   stack.getItem() instanceof HelmetGPNVG18Item ||
+                   stack.getItem() instanceof HelmetGhillieItem;
         }
     }
 }
