@@ -35,7 +35,7 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
     public boolean inHeadwearSelection = false;
     public boolean inArmorSelection = false; 
     public boolean inCustomizationSelection = false; 
-    public boolean inStyleSelection = false; // NEW STATE
+    public boolean inStyleSelection = false; 
     
     public String editingAttachmentCategory = "";
     public String editingMunitionCategory = "";
@@ -86,7 +86,8 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
 
     private ItemStack[] helmetStacks;
     
-    private WorkbenchDesign designLayer;
+    public WorkbenchDesign designLayer;
+    private WorkbenchRenderDesign renderLayer;
 
     public WorkbenchScreen(WorkbenchMenu menu, Inventory inventory, Component title) {
         super(menu, inventory, title);
@@ -101,6 +102,7 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
         this.topPos = 0;
         
         this.designLayer = new WorkbenchDesign(this);
+        this.renderLayer = new WorkbenchRenderDesign(this);
         
         // Ensure ALL states are strictly reset when the menu is opened!
         this.inCustomizationTab = false;
@@ -112,7 +114,7 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
         this.inHeadwearSelection = false;
         this.inArmorSelection = false;
         this.inCustomizationSelection = false;
-        this.inStyleSelection = false; // Reset
+        this.inStyleSelection = false; 
         
         this.editingMunitionCategory = "";
         this.expandedHeadwearCategory = "";
@@ -138,8 +140,14 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
                 } else if (helmetStack.getItem() instanceof com.k1ngtle.taticalsuit.item.HelmetGhillieItem) {
                     this.selectedHelmet = "GHILLIE HELMET";
                     this.selectedMount = "NONE";
+                } else if (helmetStack.getItem() instanceof com.k1ngtle.taticalsuit.item.HelmetGPNVG18GhillieItem) {
+                    this.selectedHelmet = "GHILLIE HELMET";
+                    this.selectedMount = "GPNVGS";
                 } else if (helmetStack.getItem() instanceof com.k1ngtle.taticalsuit.item.HelmetSandItem) {
                     this.selectedHelmet = "SAND GHILLIE HELMET";
+                    this.selectedMount = "NONE";
+                } else if (helmetStack.getItem() instanceof com.k1ngtle.taticalsuit.item.HelmetSnowItem) {
+                    this.selectedHelmet = "SNOW GHILLIE HELMET";
                     this.selectedMount = "NONE";
                 }
                 
@@ -402,9 +410,15 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
                 targetId = "taticalsuit:helmet_gpnvg18";
             }
         } else if (this.selectedHelmet.equals("GHILLIE HELMET")) {
-            targetId = "taticalsuit:helmet_ghillie";
+            if (this.selectedMount.equals("NONE")) {
+                targetId = "taticalsuit:helmet_ghillie";
+            } else if (this.selectedMount.equals("GPNVGS")) {
+                targetId = "taticalsuit:helmet_gpnvg18_ghillie";
+            }
         } else if (this.selectedHelmet.equals("SAND GHILLIE HELMET")) {
             targetId = "taticalsuit:helmet_sand";
+        } else if (this.selectedHelmet.equals("SNOW GHILLIE HELMET")) {
+            targetId = "taticalsuit:helmet_snow";
         }
         
         net.minecraft.world.item.Item targetItem = null;
@@ -417,8 +431,10 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
                     if (regItem instanceof com.k1ngtle.taticalsuit.item.HelmetItem && 
                        !(regItem instanceof com.k1ngtle.taticalsuit.item.HelmetPVS31Item) && 
                        !(regItem instanceof com.k1ngtle.taticalsuit.item.HelmetGPNVG18Item) &&
+                       !(regItem instanceof com.k1ngtle.taticalsuit.item.HelmetGPNVG18GhillieItem) &&
                        !(regItem instanceof com.k1ngtle.taticalsuit.item.HelmetGhillieItem) &&
-                       !(regItem instanceof com.k1ngtle.taticalsuit.item.HelmetSandItem)) {
+                       !(regItem instanceof com.k1ngtle.taticalsuit.item.HelmetSandItem) &&
+                       !(regItem instanceof com.k1ngtle.taticalsuit.item.HelmetSnowItem)) {
                         targetItem = regItem;
                         targetId = net.minecraftforge.registries.ForgeRegistries.ITEMS.getKey(regItem).toString();
                         break;
@@ -428,30 +444,32 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
         }
         
         if (Minecraft.getInstance().player != null) {
-            if (targetId.equals("NONE")) {
-                for (int i = 0; i < Minecraft.getInstance().player.getInventory().getContainerSize(); i++) {
-                    ItemStack stack = Minecraft.getInstance().player.getInventory().getItem(i);
-                    if (stack.getItem() instanceof com.k1ngtle.taticalsuit.item.HelmetItem ||
-                        stack.getItem() instanceof com.k1ngtle.taticalsuit.item.HelmetPVS31Item ||
-                        stack.getItem() instanceof com.k1ngtle.taticalsuit.item.HelmetGPNVG18Item ||
-                        stack.getItem() instanceof com.k1ngtle.taticalsuit.item.HelmetGhillieItem ||
-                        stack.getItem() instanceof com.k1ngtle.taticalsuit.item.HelmetSandItem) {
-                        Minecraft.getInstance().player.getInventory().setItem(i, ItemStack.EMPTY);
-                    }
+            for (int i = 0; i < Minecraft.getInstance().player.getInventory().getContainerSize(); i++) {
+                ItemStack stack = Minecraft.getInstance().player.getInventory().getItem(i);
+                if (stack.getItem() instanceof com.k1ngtle.taticalsuit.item.HelmetItem ||
+                    stack.getItem() instanceof com.k1ngtle.taticalsuit.item.HelmetPVS31Item ||
+                    stack.getItem() instanceof com.k1ngtle.taticalsuit.item.HelmetGPNVG18Item ||
+                    stack.getItem() instanceof com.k1ngtle.taticalsuit.item.HelmetGPNVG18GhillieItem ||
+                    stack.getItem() instanceof com.k1ngtle.taticalsuit.item.HelmetGhillieItem ||
+                    stack.getItem() instanceof com.k1ngtle.taticalsuit.item.HelmetSandItem ||
+                    stack.getItem() instanceof com.k1ngtle.taticalsuit.item.HelmetSnowItem) {
+                    Minecraft.getInstance().player.getInventory().setItem(i, ItemStack.EMPTY);
                 }
+            }
+            
+            if (this.menu.getCarried().getItem() instanceof com.k1ngtle.taticalsuit.item.HelmetItem ||
+                this.menu.getCarried().getItem() instanceof com.k1ngtle.taticalsuit.item.HelmetPVS31Item ||
+                this.menu.getCarried().getItem() instanceof com.k1ngtle.taticalsuit.item.HelmetGPNVG18Item ||
+                this.menu.getCarried().getItem() instanceof com.k1ngtle.taticalsuit.item.HelmetGPNVG18GhillieItem ||
+                this.menu.getCarried().getItem() instanceof com.k1ngtle.taticalsuit.item.HelmetGhillieItem ||
+                this.menu.getCarried().getItem() instanceof com.k1ngtle.taticalsuit.item.HelmetSandItem ||
+                this.menu.getCarried().getItem() instanceof com.k1ngtle.taticalsuit.item.HelmetSnowItem) {
+                this.menu.setCarried(ItemStack.EMPTY);
+            }
+
+            if (targetId.equals("NONE")) {
                 Minecraft.getInstance().player.setItemSlot(net.minecraft.world.entity.EquipmentSlot.HEAD, ItemStack.EMPTY);
             } else if (targetItem != null && targetItem != net.minecraft.world.item.Items.AIR) {
-                for (int i = 0; i < Minecraft.getInstance().player.getInventory().getContainerSize(); i++) {
-                    ItemStack stack = Minecraft.getInstance().player.getInventory().getItem(i);
-                    if (stack.getItem() instanceof com.k1ngtle.taticalsuit.item.HelmetItem ||
-                        stack.getItem() instanceof com.k1ngtle.taticalsuit.item.HelmetPVS31Item ||
-                        stack.getItem() instanceof com.k1ngtle.taticalsuit.item.HelmetGPNVG18Item ||
-                        stack.getItem() instanceof com.k1ngtle.taticalsuit.item.HelmetGhillieItem ||
-                        stack.getItem() instanceof com.k1ngtle.taticalsuit.item.HelmetSandItem) {
-                        Minecraft.getInstance().player.getInventory().setItem(i, ItemStack.EMPTY);
-                    }
-                }
-                
                 ItemStack localEquip = new ItemStack(targetItem);
                 localEquip.getOrCreateTag().putString("phosphor", this.selectedPhosphor);
                 Minecraft.getInstance().player.setItemSlot(net.minecraft.world.entity.EquipmentSlot.HEAD, localEquip);
@@ -510,12 +528,12 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
         }
         
         super.render(guiGraphics, renderMouseX, renderMouseY, delta);
-        this.designLayer.renderMain(guiGraphics, mouseX, mouseY, delta);
+        this.renderLayer.renderMain(guiGraphics, mouseX, mouseY, delta);
     }
 
     @Override
     protected void renderBg(GuiGraphics guiGraphics, float partialTick, int mouseX, int mouseY) {
-        this.designLayer.renderBg(guiGraphics, mouseX, mouseY);
+        this.renderLayer.renderBg(guiGraphics, mouseX, mouseY);
     }
 
     @Override
@@ -533,7 +551,7 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
             int customX = slashX + this.font.width("/") + 4;
             guiGraphics.drawString(this.font, "CUSTOMIZATION", customX, 6, customColor, false);
             
-            this.designLayer.renderLabels(guiGraphics, mouseX, mouseY);
+            this.renderLayer.renderLabels(guiGraphics, mouseX, mouseY);
         }
     }
 }

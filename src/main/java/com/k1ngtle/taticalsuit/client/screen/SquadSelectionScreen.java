@@ -3,8 +3,10 @@ package com.k1ngtle.taticalsuit.client.screen;
 import com.k1ngtle.taticalsuit.item.HelmetItem;
 import com.k1ngtle.taticalsuit.item.HelmetPVS31Item;
 import com.k1ngtle.taticalsuit.item.HelmetGPNVG18Item;
+import com.k1ngtle.taticalsuit.item.HelmetGPNVG18GhillieItem;
 import com.k1ngtle.taticalsuit.item.HelmetGhillieItem;
 import com.k1ngtle.taticalsuit.item.HelmetSandItem;
+import com.k1ngtle.taticalsuit.item.HelmetSnowItem;
 import com.k1ngtle.taticalsuit.network.SquadNetwork;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
@@ -70,8 +72,8 @@ public class SquadSelectionScreen extends Screen {
     private boolean hasTacticalHelmet(LivingEntity entity) {
         ItemStack head = entity.getItemBySlot(EquipmentSlot.HEAD);
         ItemStack hand = entity.getMainHandItem(); 
-        boolean wearing = head.getItem() instanceof HelmetItem || head.getItem() instanceof HelmetPVS31Item || head.getItem() instanceof HelmetGPNVG18Item || head.getItem() instanceof HelmetGhillieItem || head.getItem() instanceof HelmetSandItem;
-        boolean holding = hand.getItem() instanceof HelmetItem || hand.getItem() instanceof HelmetPVS31Item || hand.getItem() instanceof HelmetGPNVG18Item || hand.getItem() instanceof HelmetGhillieItem || hand.getItem() instanceof HelmetSandItem;
+        boolean wearing = head.getItem() instanceof HelmetItem || head.getItem() instanceof HelmetPVS31Item || head.getItem() instanceof HelmetGPNVG18Item || head.getItem() instanceof HelmetGPNVG18GhillieItem || head.getItem() instanceof HelmetGhillieItem || head.getItem() instanceof HelmetSandItem || head.getItem() instanceof HelmetSnowItem;
+        boolean holding = hand.getItem() instanceof HelmetItem || hand.getItem() instanceof HelmetPVS31Item || hand.getItem() instanceof HelmetGPNVG18Item || hand.getItem() instanceof HelmetGPNVG18GhillieItem || hand.getItem() instanceof HelmetGhillieItem || hand.getItem() instanceof HelmetSandItem || hand.getItem() instanceof HelmetSnowItem;
         return wearing || holding;
     }
 

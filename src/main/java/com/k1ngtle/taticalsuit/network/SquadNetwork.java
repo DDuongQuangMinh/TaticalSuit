@@ -4,8 +4,10 @@ import com.k1ngtle.taticalsuit.TaticalSuit;
 import com.k1ngtle.taticalsuit.item.HelmetItem;
 import com.k1ngtle.taticalsuit.item.HelmetGPNVG18Item;
 import com.k1ngtle.taticalsuit.item.HelmetPVS31Item;
+import com.k1ngtle.taticalsuit.item.HelmetGPNVG18GhillieItem;
 import com.k1ngtle.taticalsuit.item.HelmetGhillieItem;
 import com.k1ngtle.taticalsuit.item.HelmetSandItem;
+import com.k1ngtle.taticalsuit.item.HelmetSnowItem;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
@@ -25,7 +27,7 @@ public class SquadNetwork {
     private static final String PROTOCOL_VERSION = "1";
     
     public static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(
-            new ResourceLocation(TaticalSuit.MODID, "squad_channel"),
+            ResourceLocation.tryParse(TaticalSuit.MODID + ":squad_channel"),
             () -> PROTOCOL_VERSION, PROTOCOL_VERSION::equals, PROTOCOL_VERSION::equals);
 
     public static void register() {
@@ -62,8 +64,10 @@ public class SquadNetwork {
                     if (helmet.getItem() instanceof HelmetItem || 
                         helmet.getItem() instanceof HelmetPVS31Item || 
                         helmet.getItem() instanceof HelmetGPNVG18Item ||
+                        helmet.getItem() instanceof HelmetGPNVG18GhillieItem ||
                         helmet.getItem() instanceof HelmetGhillieItem ||
-                        helmet.getItem() instanceof HelmetSandItem) {
+                        helmet.getItem() instanceof HelmetSandItem ||
+                        helmet.getItem() instanceof HelmetSnowItem) {
                         
                         CompoundTag tag = helmet.getOrCreateTag();
                         tag.putString("squad_name", squadName);
