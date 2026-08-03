@@ -1,5 +1,10 @@
 package com.k1ngtle.taticalsuit.client.screen;
 
+import com.k1ngtle.taticalsuit.item.HelmetGhillieItem;
+import com.k1ngtle.taticalsuit.item.HelmetSandItem;
+import com.k1ngtle.taticalsuit.item.HelmetSnowItem;
+import com.k1ngtle.taticalsuit.item.HelmetGPNVG18GhillieItem;
+import com.k1ngtle.taticalsuit.item.HelmetGPNVG18SandItem;
 import com.k1ngtle.taticalsuit.menu.WorkbenchMenu;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
@@ -146,6 +151,9 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
                 } else if (helmetStack.getItem() instanceof com.k1ngtle.taticalsuit.item.HelmetSandItem) {
                     this.selectedHelmet = "SAND GHILLIE HELMET";
                     this.selectedMount = "NONE";
+                } else if (helmetStack.getItem() instanceof com.k1ngtle.taticalsuit.item.HelmetGPNVG18SandItem) {
+                    this.selectedHelmet = "SAND GHILLIE HELMET";
+                    this.selectedMount = "GPNVGS";
                 } else if (helmetStack.getItem() instanceof com.k1ngtle.taticalsuit.item.HelmetSnowItem) {
                     this.selectedHelmet = "SNOW GHILLIE HELMET";
                     this.selectedMount = "NONE";
@@ -416,7 +424,11 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
                 targetId = "taticalsuit:helmet_gpnvg18_ghillie";
             }
         } else if (this.selectedHelmet.equals("SAND GHILLIE HELMET")) {
-            targetId = "taticalsuit:helmet_sand";
+            if (this.selectedMount.equals("NONE")) {
+                targetId = "taticalsuit:helmet_sand";
+            } else if (this.selectedMount.equals("GPNVGS")) {
+                targetId = "taticalsuit:helmet_gpnvg18_sand";
+            }
         } else if (this.selectedHelmet.equals("SNOW GHILLIE HELMET")) {
             targetId = "taticalsuit:helmet_snow";
         }
@@ -432,6 +444,7 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
                        !(regItem instanceof com.k1ngtle.taticalsuit.item.HelmetPVS31Item) && 
                        !(regItem instanceof com.k1ngtle.taticalsuit.item.HelmetGPNVG18Item) &&
                        !(regItem instanceof com.k1ngtle.taticalsuit.item.HelmetGPNVG18GhillieItem) &&
+                       !(regItem instanceof com.k1ngtle.taticalsuit.item.HelmetGPNVG18SandItem) &&
                        !(regItem instanceof com.k1ngtle.taticalsuit.item.HelmetGhillieItem) &&
                        !(regItem instanceof com.k1ngtle.taticalsuit.item.HelmetSandItem) &&
                        !(regItem instanceof com.k1ngtle.taticalsuit.item.HelmetSnowItem)) {
@@ -450,6 +463,7 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
                     stack.getItem() instanceof com.k1ngtle.taticalsuit.item.HelmetPVS31Item ||
                     stack.getItem() instanceof com.k1ngtle.taticalsuit.item.HelmetGPNVG18Item ||
                     stack.getItem() instanceof com.k1ngtle.taticalsuit.item.HelmetGPNVG18GhillieItem ||
+                    stack.getItem() instanceof com.k1ngtle.taticalsuit.item.HelmetGPNVG18SandItem ||
                     stack.getItem() instanceof com.k1ngtle.taticalsuit.item.HelmetGhillieItem ||
                     stack.getItem() instanceof com.k1ngtle.taticalsuit.item.HelmetSandItem ||
                     stack.getItem() instanceof com.k1ngtle.taticalsuit.item.HelmetSnowItem) {
@@ -461,6 +475,7 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
                 this.menu.getCarried().getItem() instanceof com.k1ngtle.taticalsuit.item.HelmetPVS31Item ||
                 this.menu.getCarried().getItem() instanceof com.k1ngtle.taticalsuit.item.HelmetGPNVG18Item ||
                 this.menu.getCarried().getItem() instanceof com.k1ngtle.taticalsuit.item.HelmetGPNVG18GhillieItem ||
+                this.menu.getCarried().getItem() instanceof com.k1ngtle.taticalsuit.item.HelmetGPNVG18SandItem ||
                 this.menu.getCarried().getItem() instanceof com.k1ngtle.taticalsuit.item.HelmetGhillieItem ||
                 this.menu.getCarried().getItem() instanceof com.k1ngtle.taticalsuit.item.HelmetSandItem ||
                 this.menu.getCarried().getItem() instanceof com.k1ngtle.taticalsuit.item.HelmetSnowItem) {

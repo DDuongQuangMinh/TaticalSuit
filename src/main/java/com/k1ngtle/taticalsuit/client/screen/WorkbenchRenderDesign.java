@@ -843,6 +843,7 @@ public class WorkbenchRenderDesign {
                 headStack.getItem() instanceof com.k1ngtle.taticalsuit.item.HelmetPVS31Item ||
                 headStack.getItem() instanceof com.k1ngtle.taticalsuit.item.HelmetGPNVG18Item ||
                 headStack.getItem() instanceof com.k1ngtle.taticalsuit.item.HelmetGPNVG18GhillieItem ||
+                headStack.getItem() instanceof com.k1ngtle.taticalsuit.item.HelmetGPNVG18SandItem ||
                 headStack.getItem() instanceof com.k1ngtle.taticalsuit.item.HelmetGhillieItem ||
                 headStack.getItem() instanceof com.k1ngtle.taticalsuit.item.HelmetSandItem ||
                 headStack.getItem() instanceof com.k1ngtle.taticalsuit.item.HelmetSnowItem)) {

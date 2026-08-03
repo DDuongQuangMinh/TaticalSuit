@@ -11,5 +11,7 @@
   "item.taticalsuit.helmet_sand": "Sand Helmet",
   "item.taticalsuit.helmet_snow": "Snow Helmet",
   "item.taticalsuit.helmet_pvs31": "PVS-31 Helmet",
-  "item.taticalsuit.helmet_gpnvg18": "GPNVG-18 Helmet"
+  "item.taticalsuit.helmet_gpnvg18": "GPNVG-18 Helmet",
+  "item.taticalsuit.helmet_gpnvg18_ghillie": "GPNVG-18 Ghillie Helmet",
+  "item.taticalsuit.helmet_gpnvg18_sand": "GPNVG-18 Sand Helmet"
 }

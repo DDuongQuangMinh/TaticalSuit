@@ -233,16 +233,9 @@ public class WorkbenchDesign {
                         screen.selectedMount = item;
                         screen.expandedHeadwearCategory = "";
                         
-                        // Ghillie allows GPNVG18s, but Sand and Snow don't (per your current models)
                         if (!screen.selectedHelmet.equals("GHILLIE HELMET") && !screen.selectedHelmet.equals("SAND GHILLIE HELMET") && !screen.selectedHelmet.equals("SNOW GHILLIE HELMET")) {
                             screen.selectedHelmet = "HELMET ONLY";
                         }
-                        
-                        // If they select NVGS while wearing Ghillie, force it back to default helmet, as you don't have a PVS-31 Ghillie model yet
-                        if (screen.selectedHelmet.equals("GHILLIE HELMET") && screen.selectedMount.equals("NVGS")) {
-                             screen.selectedHelmet = "HELMET ONLY";
-                        }
-
                         screen.updateHelmetEquip();
                         return true;
                     }
