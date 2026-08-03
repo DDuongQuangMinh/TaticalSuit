@@ -4,7 +4,6 @@ import com.k1ngtle.taticalsuit.menu.WorkbenchMenu;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
-import net.minecraft.client.gui.screens.inventory.InventoryScreen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Inventory;
@@ -18,52 +17,45 @@ import java.util.Set;
 
 public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
     
-    private boolean isDraggingModel = false;
-    private float playerRotation = 0f;
+    public boolean isDraggingModel = false;
+    public float playerRotation = 0f;
     
-    // UI State Trackers
-    private boolean inCustomizationTab = false; 
-    private boolean inGunsmith = false; 
-    private boolean showAmmunitionTab = true; 
+    public boolean inCustomizationTab = false; 
+    public boolean inGunsmith = false; 
+    public boolean showAmmunitionTab = true; 
     
     // 0=AR, 1=BR, 2=LMG, 3=PDW, 4=SMG, 5=Shotgun, 6=Sniper, 7=Launcher, 8=Sidearm
-    private int currentWeaponTab = 0; 
+    public int currentWeaponTab = 0; 
     
-    private boolean inWeaponSelection = false; 
-    private boolean inAttachmentSelection = false;
-    private boolean inTacticalSelection = false;
-    private boolean inMunitionSelection = false; 
-    private boolean inHeadwearSelection = false;
-    private boolean inArmorSelection = false; 
-    private boolean inCustomizationSelection = false; 
+    public boolean inWeaponSelection = false; 
+    public boolean inAttachmentSelection = false;
+    public boolean inTacticalSelection = false;
+    public boolean inMunitionSelection = false; 
+    public boolean inHeadwearSelection = false;
+    public boolean inArmorSelection = false; 
+    public boolean inCustomizationSelection = false; 
     
-    private String editingAttachmentCategory = "";
-    private String editingMunitionCategory = "";
-    private String expandedHeadwearCategory = ""; 
-    private String expandedArmorCategory = ""; 
-    private String customizationCategory = "";
+    public String editingAttachmentCategory = "";
+    public String editingMunitionCategory = "";
+    public String expandedHeadwearCategory = ""; 
+    public String expandedArmorCategory = ""; 
+    public String customizationCategory = "";
     
-    // Default Equipment Loadouts
-    private String selectedTactical = "MIRRORGUN";
-    
-    private String selectedHelmet = "HELMET ONLY";
-    private String selectedMount = "GPNVGS";
-    private String selectedFacewear = "ANTI-FLASH GOGGLES";
-    private String selectedPhosphor = "WHITE PHOSPHOR";
+    public String selectedTactical = "MIRRORGUN";
+    public String selectedHelmet = "HELMET ONLY";
+    public String selectedMount = "GPNVGS";
+    public String selectedFacewear = "ANTI-FLASH GOGGLES";
+    public String selectedPhosphor = "WHITE PHOSPHOR";
 
-    private String selectedVest = "LIGHT ARMOR";
-    private String selectedMaterial = "STEEL";
-    private String selectedCoverage = "FRONT/BACK";
-    private String selectedAmmunitionDeployable = "13 SLOTS";
+    public String selectedVest = "LIGHT ARMOR";
+    public String selectedMaterial = "STEEL";
+    public String selectedCoverage = "FRONT/BACK";
+    public String selectedAmmunitionDeployable = "13 SLOTS";
     
-    // Scroll Trackers
-    private float scrollOffset = 0f;
-    private float maxScroll = 0f;
-    
-    // Anti-Duplication Security Timer
-    private long lastClickTime = 0;
+    public float scrollOffset = 0f;
+    public float maxScroll = 0f;
+    public long lastClickTime = 0;
 
-    // Dynamic Lists for Auto-Sorting Datapacks
     private List<String> dynamicAR = new ArrayList<>();
     private List<String> dynamicBR = new ArrayList<>();
     private List<String> dynamicLMG = new ArrayList<>();
@@ -83,9 +75,9 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
     private ItemStack[] sniperRifleStacks;
     private ItemStack[] launcherStacks;
     private ItemStack[] sidearmWeaponStacks;
-
-    // Added Helmet Stacks
     private ItemStack[] helmetStacks;
+    
+    private WorkbenchDesign designLayer;
 
     public WorkbenchScreen(WorkbenchMenu menu, Inventory inventory, Component title) {
         super(menu, inventory, title);
@@ -99,7 +91,8 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
         this.leftPos = 0;
         this.topPos = 0;
         
-        // Ensure ALL states are strictly reset when the menu is opened!
+        this.designLayer = new WorkbenchDesign(this);
+        
         this.inCustomizationTab = false;
         this.inGunsmith = false;
         this.inWeaponSelection = false;
@@ -145,7 +138,6 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
             }
         }
 
-        // Auto-sort new datapack guns and mix with hardcoded defaults
         buildDynamicPools();
 
         this.assaultRifleStacks = resolveStacks(dynamicAR.toArray(new String[0]), "WEAPON");
@@ -157,8 +149,6 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
         this.sniperRifleStacks = resolveStacks(dynamicSniper.toArray(new String[0]), "WEAPON");
         this.launcherStacks = resolveStacks(dynamicLauncher.toArray(new String[0]), "WEAPON");
         this.sidearmWeaponStacks = resolveStacks(dynamicSidearm.toArray(new String[0]), "WEAPON");
-
-        // Resolve Helmet Stacks
         this.helmetStacks = resolveStacks(WorkbenchData.HELMET_IDS, "GEAR");
     }
 
@@ -190,7 +180,6 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
                 String id = loc.toString();
                 if (processed.contains(id)) continue;
                 
-                // CRUCIAL: Guns never stack. This instantly eliminates 90% of junk items (ammo, boxes, icons, crafting parts)
                 if (item.getDefaultInstance().getMaxStackSize() > 1) continue; 
                 
                 String path = loc.getPath().toLowerCase();
@@ -203,7 +192,6 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
                 }
                 if (isAccessory) continue;
 
-                // Auto-Sort unknown datapack guns by keyword matching
                 if (path.contains("pistol") || path.contains("glock") || path.contains("m9") || path.contains("eagle") || path.contains("revolver") || path.contains("hg") || path.contains("makarov") || path.contains("1911") || path.contains("usp")) {
                     dynamicSidearm.add(id);
                 } else if (path.contains("shotgun") || path.contains("spas") || path.contains("870") || path.contains("12g") || path.contains("m1014") || path.contains("saiga") || path.contains("super90") || path.contains("mossberg")) {
@@ -221,7 +209,7 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
                 } else if (path.contains("launcher") || path.contains("rpg") || path.contains("m32") || path.contains("smaw") || path.contains("thumper") || path.contains("m203") || path.contains("m320")) {
                     dynamicLauncher.add(id);
                 } else {
-                    dynamicAR.add(id); // Default fallback
+                    dynamicAR.add(id); 
                 }
                 processed.add(id);
             }
@@ -238,7 +226,7 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
             case "BARREL": keywords = new String[]{"barrel", "handguard", "choke"}; break;
             case "MUZZLE": keywords = new String[]{"muzzle", "silencer", "suppressor", "compensator", "flash", "osprey", "omega", "ti_rant", "rotor"}; break;
             case "LASER": keywords = new String[]{"laser", "tactical", "light", "peq", "flashlight", "tlr", "x300", "surefire", "m600"}; break;
-            case "GEAR": keywords = new String[]{""}; break; // Fallback for gears, handled directly by exact ID match
+            case "GEAR": keywords = new String[]{""}; break; 
             default: keywords = new String[]{category.toLowerCase()}; break;
         }
 
@@ -300,7 +288,7 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
         return stacks;
     }
 
-    private String getFormattedHelmetName(String id) {
+    public String getFormattedHelmetName(String id) {
         if (id.equals("NONE")) return "NO HELMET";
         if (id.equals("taticalsuit:base_helmet")) return "BASE HELMET";
         if (id.equals("taticalsuit:helmet_pvs31")) return "HELMET (PVS-31)";
@@ -309,7 +297,7 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
         return id.replace("taticalsuit:", "").replace("_", " ").toUpperCase();
     }
 
-    private String[] getActiveWeaponPool() {
+    public String[] getActiveWeaponPool() {
         return switch (this.currentWeaponTab) {
             case 0 -> dynamicAR.toArray(new String[0]);
             case 1 -> dynamicBR.toArray(new String[0]);
@@ -324,7 +312,7 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
         };
     }
 
-    private ItemStack[] getActiveWeaponStacks() {
+    public ItemStack[] getActiveWeaponStacks() {
         return switch (this.currentWeaponTab) {
             case 0 -> assaultRifleStacks;
             case 1 -> battleRifleStacks;
@@ -339,7 +327,7 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
         };
     }
 
-    private String[] getActiveAttachmentPool() {
+    public String[] getActiveAttachmentPool() {
         boolean isSidearm = this.currentWeaponTab == 8;
         
         return switch (this.editingAttachmentCategory) {
@@ -352,2187 +340,12 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
             default -> new String[]{"NONE"};
         };
     }
-
-    @Override
-    public boolean mouseClicked(double pMouseX, double pMouseY, int pButton) {
-        if (pButton != 0) return super.mouseClicked(pMouseX, pMouseY, pButton);
-        
-        // --- CUSTOMIZATION GRID SELECTION LOGIC ---
-        if (this.inCustomizationTab && this.inCustomizationSelection) {
-            boolean isLargeGrid = this.customizationCategory.equals("SHIRT") || this.customizationCategory.equals("PANTS") || this.customizationCategory.equals("ARMOR");
-            int cols = isLargeGrid ? 3 : 2;
-            int rows = isLargeGrid ? 7 : 6;
-            
-            int panelWidth = isLargeGrid ? 170 : 120;
-            int panelX = this.width - panelWidth;
-
-            if (pMouseX < panelX) {
-                // Clicked outside the right-side grid panel, close it
-                this.inCustomizationSelection = false;
-                this.scrollOffset = 0f;
-                return true;
-            }
-
-            int gridStartX = panelX + 15;
-            int startY = 50 - (int)this.scrollOffset;
-            
-            for (int i = 0; i < (rows * cols); i++) {
-                int col = i % cols;
-                int row = i / cols;
-                int boxX = gridStartX + (col * 45); // 40px box + 5px gap
-                int boxY = startY + (row * 45);
-                
-                if (pMouseX >= boxX && pMouseX <= boxX + 40 && pMouseY >= boxY && pMouseY <= boxY + 40) {
-                    if (System.currentTimeMillis() - this.lastClickTime < 500) return true;
-                    this.lastClickTime = System.currentTimeMillis();
-                    
-                    // Future equipped logic here
-                    
-                    this.inCustomizationSelection = false;
-                    this.scrollOffset = 0f;
-                    return true;
-                }
-            }
-            return true;
-        }
-
-        if (this.inTacticalSelection) {
-            if (pMouseX >= 20 && pMouseX <= 100 && pMouseY >= 15 && pMouseY <= 35) {
-                this.inTacticalSelection = false;
-                this.scrollOffset = 0f;
-                return true;
-            }
-
-            int currentY = 100 - (int)this.scrollOffset;
-            for (int i = 0; i < 6; i++) {
-                int boxY = currentY + (i * 45);
-                if (pMouseX >= 20 && pMouseX <= 220 && pMouseY >= boxY && pMouseY <= boxY + 40) {
-                    if (System.currentTimeMillis() - this.lastClickTime < 500) return true;
-                    this.lastClickTime = System.currentTimeMillis();
-                    
-                    String[] tacticals = {"MIRRORGUN", "BREACHING SHOTGUN", "RIOT SHIELD", "TACTICAL DRONE", "BOLT CUTTERS", "BATTERING RAM"};
-                    this.selectedTactical = tacticals[i];
-                    this.inTacticalSelection = false;
-                    this.scrollOffset = 0f;
-                    return true;
-                }
-            }
-            return true;
-        } else if (this.inArmorSelection) {
-            if (pMouseX >= 20 && pMouseX <= 100 && pMouseY >= 15 && pMouseY <= 35) {
-                this.inArmorSelection = false;
-                this.scrollOffset = 0f;
-                return true;
-            }
-
-            int currentY = 100 - (int)this.scrollOffset;
-            
-            // --- VEST LOGIC ---
-            int vestDropdownY = currentY + 45;
-            
-            if (this.expandedArmorCategory.equals("VEST")) {
-                String[] vestList = {"NO ARMOR", "LIGHT ARMOR", "HEAVY ARMOR", "STAB VEST"};
-                int listY = vestDropdownY;
-                for (String item : vestList) {
-                    if (pMouseY >= listY && pMouseY <= listY + 35 && pMouseX >= 20 && pMouseX <= 220) {
-                        this.selectedVest = item;
-                        this.expandedArmorCategory = "";
-                        return true;
-                    }
-                    listY += 35;
-                }
-                
-                // Block clicks to elements underneath if dropdown is open
-                if (pMouseY >= vestDropdownY && pMouseY <= listY && pMouseX >= 20 && pMouseX <= 220) {
-                    return true;
-                }
-            } else {
-                if (pMouseY >= currentY && pMouseY <= currentY + 30 && pMouseX >= 20 && pMouseX <= 220) {
-                    this.expandedArmorCategory = "VEST";
-                    return true;
-                }
-            }
-            currentY += 45;
-            
-            // --- COVERAGE LOGIC ---
-            currentY += 20;
-            if (pMouseY >= currentY && pMouseY <= currentY + 30) {
-                String[] covList = {"NONE", "FRONT", "FRONT/BACK", "FULL"};
-                for(int i = 0; i < 4; i++) {
-                    int boxX = 20 + (i * 50);
-                    if (pMouseX >= boxX && pMouseX <= boxX + 45) {
-                        this.selectedCoverage = covList[i];
-                        return true;
-                    }
-                }
-            }
-            currentY += 40;
-            
-            // --- MATERIAL LOGIC ---
-            currentY += 20; 
-            if (pMouseY >= currentY && pMouseY <= currentY + 30) {
-                String[] matList = {"KEVLAR", "STEEL", "CERAMIC"};
-                for(int i = 0; i < 3; i++) {
-                    int boxX = 20 + (i * 66);
-                    if (pMouseX >= boxX && pMouseX <= boxX + 60) {
-                        this.selectedMaterial = matList[i];
-                        return true;
-                    }
-                }
-            }
-            currentY += 40; 
-
-            currentY += 20; // Added spacing before ammo tabs
-
-            // --- AMMUNITION & DEPLOYABLE TABS LOGIC ---
-            if (pMouseY >= currentY && pMouseY <= currentY + 20) {
-                if (pMouseX >= 20 && pMouseX <= 110) {
-                    this.showAmmunitionTab = true;
-                    return true;
-                } else if (pMouseX > 110 && pMouseX <= 220) {
-                    this.showAmmunitionTab = false;
-                    return true;
-                }
-            }
-            currentY += 20;
-            
-            return true;
-        } else if (this.inHeadwearSelection) {
-            if (pMouseX >= 20 && pMouseX <= 100 && pMouseY >= 15 && pMouseY <= 35) {
-                this.inHeadwearSelection = false;
-                this.scrollOffset = 0f;
-                return true;
-            }
-
-            int currentY = 100 - (int)this.scrollOffset;
-            
-            // --- HELMET LOGIC ---
-            if (pMouseY >= currentY && pMouseY <= currentY + 40 && pMouseX >= 20 && pMouseX <= 220) {
-                this.expandedHeadwearCategory = this.expandedHeadwearCategory.equals("HELMET") ? "" : "HELMET";
-                return true;
-            }
-            currentY += 45;
-            
-            if (this.expandedHeadwearCategory.equals("HELMET")) {
-                String[] list = {"NO HELMET", "HELMET ONLY", "GHILLIE HELMET"};
-                for (String item : list) {
-                    if (pMouseY >= currentY && pMouseY <= currentY + 35 && pMouseX >= 20 && pMouseX <= 220) {
-                        this.selectedHelmet = item;
-                        this.expandedHeadwearCategory = "";
-                        
-                        // If taking off helmet, remove the mount too
-                        if (item.equals("NO HELMET")) {
-                            this.selectedMount = "NONE";
-                        }
-                        updateHelmetEquip();
-                        
-                        return true;
-                    }
-                    currentY += 35;
-                }
-            }
-            
-            // --- MOUNT LOGIC ---
-            if (pMouseY >= currentY && pMouseY <= currentY + 40 && pMouseX >= 20 && pMouseX <= 220) {
-                this.expandedHeadwearCategory = this.expandedHeadwearCategory.equals("MOUNT") ? "" : "MOUNT";
-                return true;
-            }
-            currentY += 45;
-            
-            if (this.expandedHeadwearCategory.equals("MOUNT")) {
-                String[] list = {"NONE", "NVGS", "GPNVGS"};
-                for (String item : list) {
-                    if (pMouseY >= currentY && pMouseY <= currentY + 35 && pMouseX >= 20 && pMouseX <= 220) {
-                        this.selectedMount = item;
-                        this.expandedHeadwearCategory = "";
-                        
-                        // ALWAYS force the helmet ON when interacting with the Mount dropdown. (NONE = Base Helmet)
-                        if (!this.selectedHelmet.equals("GHILLIE HELMET")) {
-                            this.selectedHelmet = "HELMET ONLY";
-                        }
-                        updateHelmetEquip();
-                        
-                        return true;
-                    }
-                    currentY += 35;
-                }
-            }
-            
-            if (!this.selectedMount.equals("NONE")) {
-                if (pMouseY >= currentY && pMouseY <= currentY + 40) {
-                    if (pMouseX >= 20 && pMouseX <= 120) {
-                        this.selectedPhosphor = "GREEN PHOSPHOR";
-                        updateHelmetEquip();
-                        return true;
-                    } else if (pMouseX > 120 && pMouseX <= 220) {
-                        this.selectedPhosphor = "WHITE PHOSPHOR";
-                        updateHelmetEquip();
-                        return true;
-                    }
-                }
-                currentY += 45;
-            }
-            
-            // --- FACEWEAR LOGIC ---
-            if (pMouseY >= currentY && pMouseY <= currentY + 40 && pMouseX >= 20 && pMouseX <= 220) {
-                this.expandedHeadwearCategory = this.expandedHeadwearCategory.equals("FACEWEAR") ? "" : "FACEWEAR";
-                return true;
-            }
-            currentY += 45;
-            
-            if (this.expandedHeadwearCategory.equals("FACEWEAR")) {
-                String[] list = {"NONE", "GOGGLES", "GAS MASK"};
-                for (String item : list) {
-                    if (pMouseY >= currentY && pMouseY <= currentY + 35 && pMouseX >= 20 && pMouseX <= 220) {
-                        this.selectedFacewear = item;
-                        this.expandedHeadwearCategory = "";
-                        return true;
-                    }
-                    currentY += 35;
-                }
-            }
-            
-            return true;
-        } else if (this.inMunitionSelection) {
-            if (pMouseX >= 20 && pMouseX <= 100 && pMouseY >= 15 && pMouseY <= 35) {
-                this.inMunitionSelection = false;
-                this.scrollOffset = 0f;
-                return true;
-            }
-
-            if (pMouseX >= 20 && pMouseX <= 220 && pMouseY >= 90) {
-                if (System.currentTimeMillis() - this.lastClickTime < 500) return true;
-                this.lastClickTime = System.currentTimeMillis();
-
-                this.inMunitionSelection = false; 
-                this.scrollOffset = 0f;
-                return true;
-            }
-            return true;
-        } else if (this.inAttachmentSelection) {
-            if (pMouseX >= 20 && pMouseX <= 100 && pMouseY >= 15 && pMouseY <= 35) {
-                this.inAttachmentSelection = false;
-                this.scrollOffset = 0f;
-                return true;
-            }
-
-            String[] idPool = getActiveAttachmentPool();
-            int startY = 100 - (int)this.scrollOffset;
-            
-            for (int i = 0; i < idPool.length; i++) {
-                int boxY = startY + (i * 45);
-                if (pMouseX >= 20 && pMouseX <= 220 && pMouseY >= boxY && pMouseY <= boxY + 40) {
-                    if (System.currentTimeMillis() - this.lastClickTime < 500) return true;
-                    this.lastClickTime = System.currentTimeMillis();
-
-                    int menuSlotIndex = (this.currentWeaponTab == 8) ? 1 : 0; 
-
-                    String vpbCategory = switch (this.editingAttachmentCategory) {
-                        case "OPTIC"       -> "scope";
-                        case "BARREL"      -> "barrel";
-                        case "MUZZLE"      -> "muzzle";
-                        case "UNDERBARREL" -> "underbarrel";
-                        case "LASER"       -> "rail";
-                        case "STOCK"       -> "stock";
-                        case "MAGAZINE"    -> "magazine";
-                        default -> this.editingAttachmentCategory.toLowerCase();
-                    };
-
-                    ItemStack currentWeapon = this.menu.getSlot(menuSlotIndex).getItem().copy();
-                    if (currentWeapon.isEmpty() && Minecraft.getInstance().player != null) {
-                        currentWeapon = Minecraft.getInstance().player.getInventory().getItem(menuSlotIndex).copy();
-                    }
-                    if (!currentWeapon.isEmpty()) {
-                        net.minecraft.nbt.CompoundTag tag = currentWeapon.getOrCreateTag();
-
-                        net.minecraft.nbt.CompoundTag saTag = tag.contains("sa", net.minecraft.nbt.Tag.TAG_COMPOUND)
-                                ? tag.getCompound("sa").copy() : new net.minecraft.nbt.CompoundTag();
-                        net.minecraft.nbt.ListTag asList = tag.contains("as", net.minecraft.nbt.Tag.TAG_LIST)
-                                ? tag.getList("as", net.minecraft.nbt.Tag.TAG_COMPOUND).copy() : new net.minecraft.nbt.ListTag();
-
-                        if (idPool[i].equals("NONE")) {
-                            saTag.remove(vpbCategory);
-                            net.minecraft.nbt.ListTag newAs = new net.minecraft.nbt.ListTag();
-                            for (int k = 0; k < asList.size(); k++) {
-                                net.minecraft.nbt.CompoundTag entry = asList.getCompound(k);
-                                String eid = entry.getString("id");
-                                ResourceLocation resLoc = ResourceLocation.tryParse(eid.isEmpty() ? "minecraft:air" : eid);
-                                net.minecraft.world.item.Item eItem = resLoc == null ? net.minecraft.world.item.Items.AIR : net.minecraftforge.registries.ForgeRegistries.ITEMS.getValue(resLoc);
-                                if (eItem != null && eItem != net.minecraft.world.item.Items.AIR
-                                        && !com.k1ngtle.taticalsuit.network.EquipWeaponPacket.isItemInCategory(eItem, vpbCategory)) {
-                                    newAs.add(entry);
-                                }
-                            }
-                            asList = newAs;
-                        } else {
-                            saTag.putString(vpbCategory, idPool[i]);
-                            net.minecraft.nbt.ListTag newAs = new net.minecraft.nbt.ListTag();
-                            for (int k = 0; k < asList.size(); k++) {
-                                net.minecraft.nbt.CompoundTag entry = asList.getCompound(k);
-                                String eid = entry.getString("id");
-                                ResourceLocation resLoc = ResourceLocation.tryParse(eid.isEmpty() ? "minecraft:air" : eid);
-                                net.minecraft.world.item.Item eItem = resLoc == null ? net.minecraft.world.item.Items.AIR : net.minecraftforge.registries.ForgeRegistries.ITEMS.getValue(resLoc);
-                                if (eItem != null && eItem != net.minecraft.world.item.Items.AIR
-                                        && !com.k1ngtle.taticalsuit.network.EquipWeaponPacket.isItemInCategory(eItem, vpbCategory)) {
-                                    newAs.add(entry);
-                                }
-                            }
-                            net.minecraft.nbt.CompoundTag newEntry = new net.minecraft.nbt.CompoundTag();
-                            newEntry.putString("id", idPool[i]);
-                            newEntry.putBoolean("rmv", true);
-                            newAs.add(newEntry);
-                            asList = newAs;
-                        }
-
-                        tag.put("sa", saTag);
-                        tag.put("as", asList);
-                        this.menu.getSlot(menuSlotIndex).set(currentWeapon);
-                    }
-
-                    com.k1ngtle.taticalsuit.network.ModNetworking.CHANNEL.sendToServer(
-                            new com.k1ngtle.taticalsuit.network.EquipWeaponPacket(menuSlotIndex, idPool[i], true, vpbCategory)
-                    );
-                    
-                    this.inAttachmentSelection = false; 
-                    this.scrollOffset = 0f;
-                    return true;
-                }
-            }
-            return true;
-        } else if (this.inWeaponSelection) {
-            if (pMouseX >= 20 && pMouseX <= 100 && pMouseY >= 15 && pMouseY <= 35) {
-                this.inWeaponSelection = false;
-                this.scrollOffset = 0f;
-                return true;
-            }
-
-            // --- 8 HORIZONTAL TAB SCROLLER FOR PRIMARIES ---
-            if (pMouseY >= 70 && pMouseY <= 85 && this.currentWeaponTab != 8) {
-                int currentX = 8;
-                int[] tabWidths = {20, 20, 25, 25, 25, 38, 35, 44};
-                for (int i = 0; i < 8; i++) {
-                    int tabWidth = tabWidths[i];
-                    if (pMouseX >= currentX && pMouseX <= currentX + tabWidth - 1) {
-                        this.currentWeaponTab = i;
-                        this.scrollOffset = 0f;
-                        return true;
-                    }
-                    currentX += tabWidth;
-                }
-            }
-
-            String[] idPool = getActiveWeaponPool();
-            int startY = 100 - (int)this.scrollOffset;
-            
-            for (int i = 0; i < idPool.length; i++) {
-                int boxY = startY + (i * 45);
-                if (pMouseX >= 20 && pMouseX <= 220 && pMouseY >= boxY && pMouseY <= boxY + 40) {
-                    if (System.currentTimeMillis() - this.lastClickTime < 500) return true;
-                    this.lastClickTime = System.currentTimeMillis();
-                    
-                    ItemStack currentEquipped = (this.currentWeaponTab == 8) ? getDisplayedSidearm() : getDisplayedPrimary();
-                    if (!currentEquipped.isEmpty()) {
-                        ResourceLocation currentLoc = net.minecraftforge.registries.ForgeRegistries.ITEMS.getKey(currentEquipped.getItem());
-                        if (currentLoc != null && currentLoc.toString().equals(idPool[i])) {
-                            this.inWeaponSelection = false; 
-                            this.scrollOffset = 0f;
-                            return true;
-                        }
-                    }
-
-                    int menuSlotIndex = (this.currentWeaponTab == 8) ? 1 : 0; 
-
-                    ItemStack optimisticStack = ItemStack.EMPTY;
-                    if (Minecraft.getInstance().player != null) {
-                        for (int j = 0; j < Minecraft.getInstance().player.getInventory().getContainerSize(); j++) {
-                            ItemStack invStack = Minecraft.getInstance().player.getInventory().getItem(j);
-                            if (!invStack.isEmpty()) {
-                                ResourceLocation invLoc = net.minecraftforge.registries.ForgeRegistries.ITEMS.getKey(invStack.getItem());
-                                if (invLoc != null && invLoc.toString().equals(idPool[i])) {
-                                    optimisticStack = invStack.copy();
-                                    break;
-                                }
-                            }
-                        }
-                    }
-                    
-                    if (optimisticStack.isEmpty()) {
-                        ResourceLocation resLoc = ResourceLocation.tryParse(idPool[i]);
-                        if(resLoc != null) {
-                            net.minecraft.world.item.Item newItem = net.minecraftforge.registries.ForgeRegistries.ITEMS.getValue(resLoc);
-                            if (newItem != null && newItem != net.minecraft.world.item.Items.AIR) {
-                                optimisticStack = newItem.getDefaultInstance().copy();
-                            }
-                        }
-                    }
-                    
-                    if (!optimisticStack.isEmpty()) {
-                        this.menu.getSlot(menuSlotIndex).set(optimisticStack);
-                    }
-
-                    com.k1ngtle.taticalsuit.network.ModNetworking.CHANNEL.sendToServer(
-                            new com.k1ngtle.taticalsuit.network.EquipWeaponPacket(menuSlotIndex, idPool[i])
-                    );
-                    this.inWeaponSelection = false; 
-                    this.scrollOffset = 0f;
-                    return true;
-                }
-            }
-            return true; 
-        } else if (this.inGunsmith) {
-            if (pMouseX >= 20 && pMouseX <= 100 && pMouseY >= 15 && pMouseY <= 35) {
-                this.inGunsmith = false;
-                return true;
-            }
-
-            // --- RESTORED: PRIMARY vs SIDE ARM TOGGLE ---
-            if (pMouseY >= 70 && pMouseY <= 90) {
-                if (pMouseX >= 20 && pMouseX <= 90) {
-                    if (this.currentWeaponTab == 8) this.currentWeaponTab = 0; // Default back to AR
-                    this.scrollOffset = 0f; 
-                    return true;
-                } else if (pMouseX > 90 && pMouseX <= 180) {
-                    this.currentWeaponTab = 8; // Lock onto sidearm
-                    this.scrollOffset = 0f; 
-                    return true;
-                }
-            }
-
-            int weaponBoxY = 100 - (int)this.scrollOffset;
-            if (pMouseX >= 20 && pMouseX <= 220 && pMouseY >= weaponBoxY && pMouseY <= weaponBoxY + 70) {
-                this.inWeaponSelection = true; 
-                this.scrollOffset = 0f;
-                return true;
-            }
-
-            int numCoreAttachments = (this.currentWeaponTab == 8) ? 3 : 5;
-            String[] boxCats = (this.currentWeaponTab == 8) 
-                    ? new String[]{"OPTIC", "MUZZLE", "STOCK"} 
-                    : new String[]{"OPTIC", "BARREL", "MUZZLE", "UNDERBARREL", "LASER"};
-
-            int currentY = 100 - (int)this.scrollOffset + 75 + 30;
-            for (int i = 0; i < numCoreAttachments; i++) {
-                int boxY = currentY;
-                if (pMouseX >= 20 && pMouseX <= 220 && pMouseY >= boxY && pMouseY <= boxY + 40) {
-                    this.inAttachmentSelection = true;
-                    this.editingAttachmentCategory = boxCats[i];
-                    this.scrollOffset = 0f;
-                    return true;
-                }
-                currentY += 45;
-            }
-
-            int baseTabY = 100 + 75 + 30 + (numCoreAttachments * 45) + 10; 
-            int scrolledTabY = baseTabY - (int)this.scrollOffset;
-            if (pMouseY >= scrolledTabY && pMouseY <= scrolledTabY + 20) {
-                if (pMouseX >= 20 && pMouseX <= 110) {
-                    this.showAmmunitionTab = true;
-                    return true;
-                } else if (pMouseX > 110 && pMouseX <= 220) {
-                    this.showAmmunitionTab = false;
-                    return true;
-                }
-            }
-            return true; 
-        } else {
-            // Main Top Tabs Interception
-            if (pMouseY >= 4 && pMouseY <= 16) {
-                int loadoutWidth = this.font.width("LOADOUT");
-                int customX = 20 + loadoutWidth + this.font.width(" / ");
-                if (pMouseX >= 20 && pMouseX <= 20 + loadoutWidth) {
-                    this.inCustomizationTab = false;
-                    this.inCustomizationSelection = false;
-                    return true;
-                } else if (pMouseX >= customX && pMouseX <= customX + this.font.width("CUSTOMIZATION")) {
-                    this.inCustomizationTab = true;
-                    this.inCustomizationSelection = false;
-                    return true;
-                }
-            }
-
-            if (this.inCustomizationTab) {
-                int startY = 30;
-                int currentY = startY + 15;
-                
-                // UNIFORM
-                if (pMouseY >= currentY && pMouseY <= currentY + 40) {
-                    if (pMouseX >= 20 && pMouseX <= 115) { this.inCustomizationSelection = true; this.customizationCategory = "SHIRT"; this.scrollOffset = 0f; return true; }
-                    if (pMouseX >= 125 && pMouseX <= 220) { this.inCustomizationSelection = true; this.customizationCategory = "PANTS"; this.scrollOffset = 0f; return true; }
-                }
-                currentY += 45;
-                if (pMouseY >= currentY && pMouseY <= currentY + 40) {
-                    if (pMouseX >= 20 && pMouseX <= 80) { this.inCustomizationSelection = true; this.customizationCategory = "GLOVES"; this.scrollOffset = 0f; return true; }
-                    if (pMouseX >= 90 && pMouseX <= 150) { this.inCustomizationSelection = true; this.customizationCategory = "BOOTS"; this.scrollOffset = 0f; return true; }
-                    if (pMouseX >= 160 && pMouseX <= 220) { this.inCustomizationSelection = true; this.customizationCategory = "BELT"; this.scrollOffset = 0f; return true; }
-                }
-                
-                // TACTICAL GEAR
-                currentY += 60; 
-                if (pMouseY >= currentY && pMouseY <= currentY + 40) {
-                    if (pMouseX >= 20 && pMouseX <= 115) { this.inCustomizationSelection = true; this.customizationCategory = "ARMOR"; this.scrollOffset = 0f; return true; }
-                    if (pMouseX >= 125 && pMouseX <= 220) { this.inCustomizationSelection = true; this.customizationCategory = "HELMET"; this.scrollOffset = 0f; return true; }
-                }
-                currentY += 45;
-                if (pMouseY >= currentY && pMouseY <= currentY + 40) {
-                    if (pMouseX >= 20 && pMouseX <= 80) { this.inCustomizationSelection = true; this.customizationCategory = "FACEWEAR"; this.scrollOffset = 0f; return true; }
-                    if (pMouseX >= 90 && pMouseX <= 150) { this.inCustomizationSelection = true; this.customizationCategory = "NVG"; this.scrollOffset = 0f; return true; }
-                    if (pMouseX >= 160 && pMouseX <= 220) { this.inCustomizationSelection = true; this.customizationCategory = "BALLISTIC MASK"; this.scrollOffset = 0f; return true; }
-                }
-                
-                // ACCESSORIES
-                currentY += 60;
-                if (pMouseY >= currentY && pMouseY <= currentY + 40) {
-                    if (pMouseX >= 20 && pMouseX <= 80) { this.inCustomizationSelection = true; this.customizationCategory = "TATTOO"; this.scrollOffset = 0f; return true; }
-                    if (pMouseX >= 90 && pMouseX <= 150) { this.inCustomizationSelection = true; this.customizationCategory = "EYEWEAR"; this.scrollOffset = 0f; return true; }
-                    if (pMouseX >= 160 && pMouseX <= 220) { this.inCustomizationSelection = true; this.customizationCategory = "WATCH"; this.scrollOffset = 0f; return true; }
-                }
-                
-            } else {
-                if (pMouseX >= 20 && pMouseX <= 220 && pMouseY >= 40 && pMouseY <= 85) {
-                    this.inGunsmith = true;
-                    this.scrollOffset = 0f; 
-                    this.showAmmunitionTab = true; 
-                    if (this.currentWeaponTab == 8) this.currentWeaponTab = 0; // Return to primary if currently sidearm
-                    return true;
-                }
-                if (pMouseX >= 20 && pMouseX <= 220 && pMouseY >= 85 && pMouseY <= 130) {
-                    this.inGunsmith = true;
-                    this.scrollOffset = 0f; 
-                    this.showAmmunitionTab = true; 
-                    this.currentWeaponTab = 8; // Instantly lock onto Sidearm category
-                    return true;
-                }
-                
-                // Trigger Tactical Selection Tab
-                if (pMouseX >= 20 && pMouseX <= 220 && pMouseY >= 130 && pMouseY <= 175) {
-                    this.inTacticalSelection = true;
-                    this.scrollOffset = 0f;
-                    return true;
-                }
-                
-                // Trigger Armor Selection Tab
-                if (pMouseY >= 190 && pMouseY <= 265 && pMouseX >= 20 && pMouseX <= 220) {
-                    this.inArmorSelection = true;
-                    this.scrollOffset = 0f;
-                    return true;
-                }
-                
-                // Trigger Munition Selection Tab
-                if (pMouseY >= 285 && pMouseY <= 309 && pMouseX >= 20 && pMouseX <= 220) {
-                    this.inMunitionSelection = true;
-                    this.scrollOffset = 0f;
-                    return true;
-                }
-                
-                // Trigger Headwear Selection Tab
-                if (pMouseY >= 330 && pMouseY <= 400 && pMouseX >= 20 && pMouseX <= 220) {
-                    this.inHeadwearSelection = true;
-                    this.scrollOffset = 0f;
-                    return true;
-                }
-            }
-            
-            // Allow drag rotation of the model only if clicking the correct active free-space
-            int rightPanelX = this.width;
-            if (this.inCustomizationTab && this.inCustomizationSelection) {
-                boolean isLargeGrid = this.customizationCategory.equals("SHIRT") || this.customizationCategory.equals("PANTS") || this.customizationCategory.equals("ARMOR");
-                rightPanelX = this.width - (isLargeGrid ? 170 : 120);
-            }
-            if (pMouseX >= 240 && pMouseX < rightPanelX) {
-                this.isDraggingModel = true;
-            }
-            
-            return super.mouseClicked(pMouseX, pMouseY, pButton);
-        }
+    
+    public ItemStack[] resolveAttachmentStacks(String[] ids, String category) {
+        return resolveStacks(ids, category);
     }
 
-    @Override
-    public boolean mouseReleased(double pMouseX, double pMouseY, int pButton) {
-        this.isDraggingModel = false;
-        return super.mouseReleased(pMouseX, pMouseY, pButton);
-    }
-
-    @Override
-    public boolean mouseDragged(double pMouseX, double pMouseY, int pButton, double pDragX, double pDragY) {
-        int rightPanelX = this.width;
-        if (this.inCustomizationTab && this.inCustomizationSelection) {
-            boolean isLargeGrid = this.customizationCategory.equals("SHIRT") || this.customizationCategory.equals("PANTS") || this.customizationCategory.equals("ARMOR");
-            rightPanelX = this.width - (isLargeGrid ? 170 : 120);
-        }
-
-        if (this.inCustomizationSelection && pMouseX >= rightPanelX) {
-            this.scrollOffset -= (float) pDragY;
-            this.scrollOffset = Math.max(0f, Math.min(this.scrollOffset, this.maxScroll));
-            return true;
-        } else if ((this.inGunsmith || this.inWeaponSelection || this.inAttachmentSelection || this.inMunitionSelection || this.inHeadwearSelection || this.inArmorSelection || this.inTacticalSelection) && pMouseX < 240 && pMouseY >= 90) {
-            this.scrollOffset -= (float) pDragY;
-            this.scrollOffset = Math.max(0f, Math.min(this.scrollOffset, this.maxScroll));
-            return true;
-        }
-        
-        if (this.isDraggingModel && pMouseX < rightPanelX && !this.inGunsmith && !this.inWeaponSelection && !this.inAttachmentSelection && !this.inMunitionSelection && !this.inHeadwearSelection && !this.inArmorSelection && !this.inCustomizationSelection && !this.inTacticalSelection) {
-            this.playerRotation += (float) pDragX * 1.5f; 
-            return true;
-        }
-        return super.mouseDragged(pMouseX, pMouseY, pButton, pDragX, pDragY);
-    }
-
-    @Override
-    public boolean mouseScrolled(double pMouseX, double pMouseY, double pDelta) {
-        float scrollSpeed = 25.0f; // Multiplier for mouse wheel scrolling speed
-        
-        int rightPanelX = this.width;
-        if (this.inCustomizationTab && this.inCustomizationSelection) {
-            boolean isLargeGrid = this.customizationCategory.equals("SHIRT") || this.customizationCategory.equals("PANTS") || this.customizationCategory.equals("ARMOR");
-            rightPanelX = this.width - (isLargeGrid ? 170 : 120);
-        }
-
-        // Scroll Customization Right-Panel Grid
-        if (this.inCustomizationSelection && pMouseX >= rightPanelX) {
-            this.scrollOffset -= (float) (pDelta * scrollSpeed);
-            this.scrollOffset = Math.max(0f, Math.min(this.scrollOffset, this.maxScroll));
-            return true;
-        } 
-        // Scroll Loadout Left-Panel Menus
-        else if ((this.inGunsmith || this.inWeaponSelection || this.inAttachmentSelection || this.inMunitionSelection || this.inHeadwearSelection || this.inArmorSelection || this.inTacticalSelection) && pMouseX < 240) {
-            this.scrollOffset -= (float) (pDelta * scrollSpeed);
-            this.scrollOffset = Math.max(0f, Math.min(this.scrollOffset, this.maxScroll));
-            return true;
-        }
-
-        return super.mouseScrolled(pMouseX, pMouseY, pDelta);
-    }
-
-    @Override
-    public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float delta) {
-        if (this.inAttachmentSelection) {
-            guiGraphics.fill(0, 0, this.width, this.height, 0xFF070707); 
-            this.renderAttachmentSelectionBg(guiGraphics, this.width, this.height);
-            this.renderAttachmentSelectionLabels(guiGraphics, mouseX, mouseY, this.width, this.height);
-        } else if (this.inWeaponSelection) {
-            guiGraphics.fill(0, 0, this.width, this.height, 0xFF070707); 
-            this.renderWeaponSelectionBg(guiGraphics, this.width, this.height);
-            this.renderWeaponSelectionLabels(guiGraphics, mouseX, mouseY, this.width, this.height);
-        } else if (this.inArmorSelection) {
-            guiGraphics.fill(0, 0, this.width, this.height, 0xFF070707); 
-            this.renderArmorSelectionBg(guiGraphics, this.width, this.height);
-            this.renderArmorSelectionLabels(guiGraphics, mouseX, mouseY, this.width, this.height);
-        } else if (this.inMunitionSelection) {
-            guiGraphics.fill(0, 0, this.width, this.height, 0xFF070707); 
-            this.renderMunitionSelectionBg(guiGraphics, this.width, this.height);
-            this.renderMunitionSelectionLabels(guiGraphics, mouseX, mouseY, this.width, this.height);
-        } else if (this.inHeadwearSelection) {
-            guiGraphics.fill(0, 0, this.width, this.height, 0xFF070707); 
-            this.renderHeadwearSelectionBg(guiGraphics, this.width, this.height);
-            this.renderHeadwearSelectionLabels(guiGraphics, mouseX, mouseY, this.width, this.height);
-        } else if (this.inTacticalSelection) {
-            guiGraphics.fill(0, 0, this.width, this.height, 0xFF070707); 
-            this.renderTacticalSelectionBg(guiGraphics, this.width, this.height);
-            this.renderTacticalSelectionLabels(guiGraphics, mouseX, mouseY, this.width, this.height);
-        } else if (this.inGunsmith) {
-            guiGraphics.fill(0, 0, this.width, this.height, 0xFF070707); 
-            this.renderGunsmithBg(guiGraphics, this.width, this.height);
-            this.renderGunsmithLabels(guiGraphics);
-        } else {
-            int renderMouseX = mouseX;
-            int renderMouseY = mouseY;
-            
-            // Hide vanilla slot hover highlight for the invisible right-side slots and bottom left layout
-            if (!this.inGunsmith && !this.inWeaponSelection && !this.inAttachmentSelection && !this.inMunitionSelection && !this.inHeadwearSelection && !this.inArmorSelection && !this.inTacticalSelection) {
-                if (this.inCustomizationTab) {
-                    // Hide all slot hovers when in customization tab
-                    if (mouseX < 240) {
-                        renderMouseX = -999;
-                        renderMouseY = -999;
-                    }
-                } else {
-                    if (mouseX >= 165 && mouseX <= 195 && mouseY >= 35 && mouseY <= 165) {
-                        renderMouseX = -999;
-                        renderMouseY = -999;
-                    } else if (mouseX < 240 && mouseY >= 190) {
-                        // Hide vanilla gray highlights for Armor, Munition, and Headwear slot sections
-                        renderMouseX = -999;
-                        renderMouseY = -999;
-                    }
-                }
-            }
-            
-            super.render(guiGraphics, renderMouseX, renderMouseY, delta);
-        }
-    }
-
-    @Override
-    protected void renderBg(GuiGraphics guiGraphics, float partialTick, int mouseX, int mouseY) {
-        guiGraphics.fill(0, 0, this.width, this.height, 0xFF070707);
-        if (this.inCustomizationTab) {
-            renderCustomizationBg(guiGraphics, this.width, this.height, mouseX, mouseY);
-            if (this.inCustomizationSelection) {
-                renderCustomizationGridBg(guiGraphics, this.width, this.height, mouseX, mouseY);
-            }
-        } else {
-            renderLoadoutBg(guiGraphics, this.width, this.height, mouseX, mouseY);
-        }
-    }
-
-    @Override
-    protected void renderLabels(GuiGraphics guiGraphics, int mouseX, int mouseY) {
-        if (!this.inGunsmith && !this.inWeaponSelection && !this.inAttachmentSelection && !this.inMunitionSelection && !this.inHeadwearSelection && !this.inArmorSelection && !this.inTacticalSelection) {
-            
-            int loadoutColor = !this.inCustomizationTab ? 0xFFFFFFFF : 0xFF7A818C;
-            int customColor = this.inCustomizationTab ? 0xFFFFFFFF : 0xFF7A818C;
-            
-            guiGraphics.drawString(this.font, "LOADOUT", 20, 6, loadoutColor, false);
-            
-            int slashX = 20 + this.font.width("LOADOUT") + 4;
-            guiGraphics.drawString(this.font, "/", slashX, 6, 0xFF555555, false);
-            
-            int customX = slashX + this.font.width("/") + 4;
-            guiGraphics.drawString(this.font, "CUSTOMIZATION", customX, 6, customColor, false);
-            
-            if (this.inCustomizationTab) {
-                renderCustomizationLabels(guiGraphics, mouseX, mouseY);
-                if (this.inCustomizationSelection) {
-                    renderCustomizationGridLabels(guiGraphics, mouseX, mouseY, this.width, this.height);
-                }
-            } else {
-                renderLoadoutLabels(guiGraphics);
-            }
-        }
-    }
-
-    private void render3DOperator(GuiGraphics guiGraphics, int trueWidth, int trueHeight) {
-        if (Minecraft.getInstance().player != null) {
-            
-            int rightBound = trueWidth;
-            
-            // If the customization side grid is open, dynamically shift the operator left to stay centered!
-            if (this.inCustomizationTab && this.inCustomizationSelection) {
-                boolean isLargeGrid = this.customizationCategory.equals("SHIRT") || this.customizationCategory.equals("PANTS") || this.customizationCategory.equals("ARMOR");
-                int panelWidth = isLargeGrid ? 170 : 120;
-                rightBound -= panelWidth;
-            }
-            
-            int openSpaceCenter = 240 + (rightBound - 240) / 2; 
-            int operatorScale = 260; 
-            int operatorFloorAnchor = trueHeight + 170; 
-
-            guiGraphics.pose().pushPose();
-            guiGraphics.pose().translate(openSpaceCenter, operatorFloorAnchor, 50.0);
-            guiGraphics.pose().mulPose(com.mojang.math.Axis.YP.rotationDegrees(this.playerRotation));
-            guiGraphics.pose().translate(0, 0, -50.0);
-
-            InventoryScreen.renderEntityInInventoryFollowsMouse(
-                    guiGraphics,
-                    0, 0, operatorScale, 0f, 0f, Minecraft.getInstance().player 
-            );
-
-            guiGraphics.pose().popPose();
-        }
-    }
-
-    private void renderCustomizationBg(GuiGraphics guiGraphics, int trueWidth, int trueHeight, int mouseX, int mouseY) {
-        guiGraphics.fill(0, 0, 240, trueHeight, 0xFF121212);
-        guiGraphics.fill(20, 16, 220, 18, 0xFFD62929);
-
-        int startY = 30;
-        
-        // UNIFORM
-        int currentY = startY + 15;
-        WorkbenchDesign.drawCleanBox(guiGraphics, 20, currentY, 95, 40);
-        WorkbenchDesign.drawCleanBox(guiGraphics, 125, currentY, 95, 40);
-        currentY += 45;
-        WorkbenchDesign.drawCleanBox(guiGraphics, 20, currentY, 60, 40);
-        WorkbenchDesign.drawCleanBox(guiGraphics, 90, currentY, 60, 40);
-        WorkbenchDesign.drawCleanBox(guiGraphics, 160, currentY, 60, 40);
-        
-        // TACTICAL GEAR
-        currentY += 60;
-        WorkbenchDesign.drawCleanBox(guiGraphics, 20, currentY, 95, 40);
-        WorkbenchDesign.drawCleanBox(guiGraphics, 125, currentY, 95, 40);
-        currentY += 45;
-        WorkbenchDesign.drawCleanBox(guiGraphics, 20, currentY, 60, 40);
-        WorkbenchDesign.drawCleanBox(guiGraphics, 90, currentY, 60, 40);
-        WorkbenchDesign.drawCleanBox(guiGraphics, 160, currentY, 60, 40);
-        
-        // ACCESSORIES
-        currentY += 60;
-        WorkbenchDesign.drawCleanBox(guiGraphics, 20, currentY, 60, 40);
-        WorkbenchDesign.drawCleanBox(guiGraphics, 90, currentY, 60, 40);
-        WorkbenchDesign.drawCleanBox(guiGraphics, 160, currentY, 60, 40);
-
-        render3DOperator(guiGraphics, trueWidth, trueHeight);
-    }
-
-    private void renderCustomizationGridBg(GuiGraphics guiGraphics, int trueWidth, int trueHeight, int mouseX, int mouseY) {
-        boolean isLargeGrid = this.customizationCategory.equals("SHIRT") || this.customizationCategory.equals("PANTS") || this.customizationCategory.equals("ARMOR");
-        int cols = isLargeGrid ? 3 : 2;
-        int rows = isLargeGrid ? 7 : 6;
-        
-        int panelWidth = isLargeGrid ? 170 : 120;
-        int panelX = trueWidth - panelWidth;
-        int gridStartX = panelX + 15;
-        int startY = 50 - (int)this.scrollOffset;
-        
-        int listHeight = (rows * 45); 
-        int visibleHeight = trueHeight - 50;
-        this.maxScroll = Math.max(0f, (float)(listHeight - visibleHeight + 20));
-        this.scrollOffset = Math.max(0f, Math.min(this.scrollOffset, this.maxScroll));
-
-        // Draw solid right-side panel
-        guiGraphics.fill(panelX, 0, trueWidth, trueHeight, 0xFF121212);
-        guiGraphics.fill(panelX, 16, trueWidth, 18, 0xFFD62929);
-
-        guiGraphics.enableScissor(panelX, 40, trueWidth, trueHeight);
-        
-        for (int i = 0; i < (rows * cols); i++) {
-            int col = i % cols;
-            int row = i / cols;
-            int boxX = gridStartX + (col * 45);
-            int boxY = startY + (row * 45);
-            
-            WorkbenchDesign.drawCleanBox(guiGraphics, boxX, boxY, 40, 40);
-        }
-        
-        if (this.maxScroll > 0) {
-            int scrollX = trueWidth - 10;
-            guiGraphics.fill(scrollX, 50, scrollX + 2, trueHeight - 20, 0xFF2E3136);
-            int thumbHeight = Math.max(20, visibleHeight * visibleHeight / listHeight);
-            int thumbY = 50 + (int)((this.scrollOffset / this.maxScroll) * (visibleHeight - 20 - thumbHeight));
-            guiGraphics.fill(scrollX - 1, thumbY, scrollX + 3, thumbY + thumbHeight, 0xFFD2D6DE);
-        }
-        guiGraphics.disableScissor();
-    }
-
-    private void renderCustomizationLabels(GuiGraphics guiGraphics, int mouseX, int mouseY) {
-        int startY = 30;
-        
-        // UNIFORM
-        WorkbenchDesign.drawSmallText(guiGraphics, this.font, "UNIFORM", 20, startY, 0.65f, 0xFFAAAAAA);
-        int currentY = startY + 15;
-        WorkbenchDesign.drawSmallText(guiGraphics, this.font, "SHIRT", 24, currentY + 4, 0.45f, 0xFF7A818C);
-        WorkbenchDesign.drawSmallText(guiGraphics, this.font, "PANTS", 129, currentY + 4, 0.45f, 0xFF7A818C);
-        currentY += 45;
-        WorkbenchDesign.drawSmallText(guiGraphics, this.font, "GLOVES", 24, currentY + 4, 0.45f, 0xFF7A818C);
-        WorkbenchDesign.drawSmallText(guiGraphics, this.font, "BOOTS", 94, currentY + 4, 0.45f, 0xFF7A818C);
-        WorkbenchDesign.drawSmallText(guiGraphics, this.font, "BELT", 164, currentY + 4, 0.45f, 0xFF7A818C);
-        
-        // TACTICAL GEAR
-        currentY += 60;
-        WorkbenchDesign.drawSmallText(guiGraphics, this.font, "TACTICAL GEAR", 20, currentY - 15, 0.65f, 0xFFAAAAAA);
-        WorkbenchDesign.drawSmallText(guiGraphics, this.font, "ARMOR", 24, currentY + 4, 0.45f, 0xFF7A818C);
-        WorkbenchDesign.drawSmallText(guiGraphics, this.font, "HELMET", 129, currentY + 4, 0.45f, 0xFF7A818C);
-        currentY += 45;
-        WorkbenchDesign.drawSmallText(guiGraphics, this.font, "FACEWEAR", 24, currentY + 4, 0.45f, 0xFF7A818C);
-        WorkbenchDesign.drawSmallText(guiGraphics, this.font, "NVG", 94, currentY + 4, 0.45f, 0xFF7A818C);
-        WorkbenchDesign.drawSmallText(guiGraphics, this.font, "BALLISTIC MASK", 164, currentY + 4, 0.45f, 0xFF7A818C);
-        
-        // ACCESSORIES
-        currentY += 60;
-        WorkbenchDesign.drawSmallText(guiGraphics, this.font, "ACCESSORIES", 20, currentY - 15, 0.65f, 0xFFAAAAAA);
-        WorkbenchDesign.drawSmallText(guiGraphics, this.font, "TATTOO", 24, currentY + 4, 0.45f, 0xFF7A818C);
-        WorkbenchDesign.drawSmallText(guiGraphics, this.font, "EYEWEAR", 94, currentY + 4, 0.45f, 0xFF7A818C);
-        WorkbenchDesign.drawSmallText(guiGraphics, this.font, "WATCH", 164, currentY + 4, 0.45f, 0xFF7A818C);
-    }
-
-    private void renderCustomizationGridLabels(GuiGraphics guiGraphics, int mouseX, int mouseY, int trueWidth, int trueHeight) {
-        boolean isLargeGrid = this.customizationCategory.equals("SHIRT") || this.customizationCategory.equals("PANTS") || this.customizationCategory.equals("ARMOR");
-        int cols = isLargeGrid ? 3 : 2;
-        int rows = isLargeGrid ? 7 : 6;
-        
-        int panelWidth = isLargeGrid ? 170 : 120;
-        int panelX = trueWidth - panelWidth;
-        int gridStartX = panelX + 15;
-        int startY = 50 - (int)this.scrollOffset;
-        
-        WorkbenchDesign.drawSmallText(guiGraphics, this.font, "SELECT " + this.customizationCategory, panelX + 15, 25, 0.75f, 0xFFFFFFFF);
-        
-        guiGraphics.enableScissor(panelX, 40, trueWidth, trueHeight);
-        for (int i = 0; i < (rows * cols); i++) {
-            int col = i % cols;
-            int row = i / cols;
-            int boxX = gridStartX + (col * 45);
-            int boxY = startY + (row * 45);
-            
-            if (mouseX >= boxX && mouseX <= boxX + 40 && mouseY >= boxY && mouseY <= boxY + 40) {
-                guiGraphics.fill(boxX + 1, boxY + 1, boxX + 39, boxY + 39, 0xFF3E4249);
-            }
-        }
-        guiGraphics.disableScissor();
-    }
-
-    private void renderLoadoutBg(GuiGraphics guiGraphics, int trueWidth, int trueHeight, int mouseX, int mouseY) {
-        guiGraphics.fill(0, 0, 240, trueHeight, 0xFF121212);
-        guiGraphics.fill(20, 16, 220, 18, 0xFFD62929);
-
-        WorkbenchDesign.drawCleanBox(guiGraphics, 20, 40, 200, 45);  
-        WorkbenchDesign.drawCleanBox(guiGraphics, 20, 85, 200, 45);  
-        WorkbenchDesign.drawCleanBox(guiGraphics, 20, 130, 200, 45); 
-
-        WorkbenchDesign.drawCleanBox(guiGraphics, 20, 205, 80, 55);  
-        WorkbenchDesign.drawCleanBox(guiGraphics, 100, 205, 120, 55); 
-        guiGraphics.fill(100, 232, 220, 233, 0xFF2E3136); 
-
-        // Removed the drawCleanBox generation loop for munition slots, leaving only vertical dividers
-        guiGraphics.fill(20, 309, 120, 317, 0xFF2E3136); 
-        guiGraphics.fill(123, 285, 124, 317, 0xFF2E3136); 
-
-        guiGraphics.fill(127, 309, 187, 317, 0xFF2E3136); 
-        guiGraphics.fill(190, 285, 191, 317, 0xFF2E3136); 
-
-        guiGraphics.fill(194, 309, 214, 317, 0xFF2E3136); 
-
-        WorkbenchDesign.drawCleanBox(guiGraphics, 20, 345, 80, 55);  
-        WorkbenchDesign.drawCleanBox(guiGraphics, 100, 345, 120, 55); 
-        guiGraphics.fill(100, 372, 220, 373, 0xFF2E3136); 
-
-        render3DOperator(guiGraphics, trueWidth, trueHeight);
-    }
-
-    private void renderTacticalSelectionBg(GuiGraphics guiGraphics, int trueWidth, int trueHeight) {
-        int startY = 100;
-        int visibleHeight = trueHeight - 100;
-        int listHeight = 6 * 45; 
-        
-        this.maxScroll = Math.max(0f, (float)(listHeight - visibleHeight + 20));
-        this.scrollOffset = Math.max(0f, Math.min(this.scrollOffset, this.maxScroll));
-
-        guiGraphics.enableScissor(0, 90, 240, trueHeight);
-        int currentY = startY - (int)this.scrollOffset;
-        
-        for (int i = 0; i < 6; i++) {
-            // Intentionally left blank: No border box rendered for tacticals
-            currentY += 45;
-        }
-        
-        if (this.maxScroll > 0) {
-            guiGraphics.fill(225, 100, 227, trueHeight - 20, 0xFF2E3136);
-            int thumbHeight = Math.max(20, visibleHeight * visibleHeight / listHeight);
-            int thumbY = 100 + (int)((this.scrollOffset / this.maxScroll) * (visibleHeight - 20 - thumbHeight));
-            guiGraphics.fill(224, thumbY, 228, thumbY + thumbHeight, 0xFFD2D6DE);
-        }
-        guiGraphics.disableScissor();
-
-        render3DOperator(guiGraphics, trueWidth, trueHeight);
-    }
-
-    private void renderArmorSelectionBg(GuiGraphics guiGraphics, int trueWidth, int trueHeight) {
-        int visibleHeight = trueHeight - 100;
-        
-        int currentY = 0;
-        currentY += 45; // Vest area text gap
-        
-        currentY += 20; // Coverage header
-        currentY += 40; // Coverage boxes
-        
-        currentY += 20; // Material header
-        currentY += 40; // Material boxes
-        
-        currentY += 20; // Added spacing before ammo tabs
-        
-        currentY += 20; // Ammo tabs
-        int dynamicItemsHeight = this.showAmmunitionTab 
-                ? (16 + (2 * 31) + 10 + 16 + (2 * 31)) 
-                : (16 + (4 * 31) + 10 + 16 + (5 * 31));
-        currentY += dynamicItemsHeight;
-        
-        int listHeight = currentY + 20;
-        this.maxScroll = Math.max(0f, (float)(listHeight - visibleHeight));
-        this.scrollOffset = Math.max(0f, Math.min(this.scrollOffset, this.maxScroll));
-
-        guiGraphics.fill(20, 16, 220, 18, 0xFFD62929);
-
-        guiGraphics.enableScissor(0, 90, 240, trueHeight);
-        int drawY = 100 - (int)this.scrollOffset;
-        
-        // VEST
-        drawY += 45;
-        
-        // COVERAGE Boxes
-        drawY += 20;
-        for(int i = 0; i < 4; i++) {
-            WorkbenchDesign.drawCleanBox(guiGraphics, 20 + (i * 50), drawY, 45, 30);
-        }
-        drawY += 40;
-        
-        // MATERIAL Boxes
-        drawY += 20;
-        for(int i = 0; i < 3; i++) {
-            WorkbenchDesign.drawCleanBox(guiGraphics, 20 + (i * 66), drawY, 60, 30);
-        }
-        drawY += 40;
-
-        drawY += 20; // Added spacing before ammo tabs
-
-        // AMMUNITION & DEPLOYABLE BG (Mirrored from Gunsmith)
-        guiGraphics.fill(20, drawY + 14, 220, drawY + 15, 0xFF2E3136); 
-        if (this.showAmmunitionTab) {
-            guiGraphics.fill(20, drawY + 14, 110, drawY + 15, 0xFFD62929); 
-        } else {
-            guiGraphics.fill(110, drawY + 14, 220, drawY + 15, 0xFFD62929); 
-        }
-        drawY += 20; 
-        
-        if (this.showAmmunitionTab) {
-            guiGraphics.fill(20, drawY + 15, 220, drawY + 16, 0xFF2E3136);
-            drawY += 16;
-            for (int i = 0; i < 2; i++) {
-                guiGraphics.fill(20, drawY + 30, 220, drawY + 31, 0xFF2E3136);
-                drawY += 31; 
-            }
-            
-            drawY += 10; 
-            guiGraphics.fill(20, drawY + 15, 220, drawY + 16, 0xFF2E3136);
-            drawY += 16;
-            for (int i = 0; i < 2; i++) {
-                guiGraphics.fill(20, drawY + 30, 220, drawY + 31, 0xFF2E3136);
-                drawY += 31; 
-            }
-        } else {
-            guiGraphics.fill(20, drawY + 15, 220, drawY + 16, 0xFF2E3136);
-            drawY += 16;
-            for (int i = 0; i < 4; i++) {
-                guiGraphics.fill(20, drawY + 30, 220, drawY + 31, 0xFF2E3136);
-                drawY += 31; 
-            }
-
-            drawY += 10; 
-            guiGraphics.fill(20, drawY + 15, 220, drawY + 16, 0xFF2E3136);
-            drawY += 16;
-            for (int i = 0; i < 5; i++) {
-                guiGraphics.fill(20, drawY + 30, 220, drawY + 31, 0xFF2E3136);
-                drawY += 31; 
-            }
-        }
-        
-        if (this.maxScroll > 0) {
-            guiGraphics.fill(225, 100, 227, trueHeight - 20, 0xFF2E3136);
-            int thumbHeight = Math.max(20, visibleHeight * visibleHeight / listHeight);
-            int thumbY = 100 + (int)((this.scrollOffset / this.maxScroll) * (visibleHeight - 20 - thumbHeight));
-            guiGraphics.fill(224, thumbY, 228, thumbY + thumbHeight, 0xFFD2D6DE);
-        }
-        guiGraphics.disableScissor();
-
-        render3DOperator(guiGraphics, trueWidth, trueHeight);
-    }
-
-    private void renderHeadwearSelectionBg(GuiGraphics guiGraphics, int trueWidth, int trueHeight) {
-        int visibleHeight = trueHeight - 100;
-        
-        int currentY = 0;
-        currentY += 45; // Helmet box height
-        if (this.expandedHeadwearCategory.equals("HELMET")) currentY += 3 * 35;
-        
-        currentY += 45; // Mount box height
-        if (this.expandedHeadwearCategory.equals("MOUNT")) currentY += 3 * 35;
-        if (!this.selectedMount.equals("NONE")) {
-            currentY += 45; // Phosphor boxes height
-        }
-        
-        currentY += 45; // Facewear box height
-        if (this.expandedHeadwearCategory.equals("FACEWEAR")) currentY += 3 * 35;
-        
-        int listHeight = currentY + 20;
-        this.maxScroll = Math.max(0f, (float)(listHeight - visibleHeight));
-        this.scrollOffset = Math.max(0f, Math.min(this.scrollOffset, this.maxScroll));
-
-        guiGraphics.fill(20, 16, 220, 18, 0xFFD62929);
-
-        guiGraphics.enableScissor(0, 90, 240, trueHeight);
-        int drawY = 100 - (int)this.scrollOffset;
-        
-        // HELMET Box
-        WorkbenchDesign.drawCleanBox(guiGraphics, 20, drawY, 200, 40);
-        drawY += 45;
-        if (this.expandedHeadwearCategory.equals("HELMET")) drawY += 3 * 35;
-        
-        // MOUNT Box
-        WorkbenchDesign.drawCleanBox(guiGraphics, 20, drawY, 200, 40);
-        drawY += 45;
-        if (this.expandedHeadwearCategory.equals("MOUNT")) drawY += 3 * 35;
-        if (!this.selectedMount.equals("NONE")) {
-            WorkbenchDesign.drawCleanBox(guiGraphics, 20, drawY, 100, 40);
-            WorkbenchDesign.drawCleanBox(guiGraphics, 120, drawY, 100, 40);
-            drawY += 45;
-        }
-        
-        // FACEWEAR Box
-        WorkbenchDesign.drawCleanBox(guiGraphics, 20, drawY, 200, 40);
-        drawY += 45;
-        if (this.expandedHeadwearCategory.equals("FACEWEAR")) drawY += 3 * 35;
-        
-        if (this.maxScroll > 0) {
-            guiGraphics.fill(225, 100, 227, trueHeight - 20, 0xFF2E3136);
-            int thumbHeight = Math.max(20, visibleHeight * visibleHeight / listHeight);
-            int thumbY = 100 + (int)((this.scrollOffset / this.maxScroll) * (visibleHeight - 20 - thumbHeight));
-            guiGraphics.fill(224, thumbY, 228, thumbY + thumbHeight, 0xFFD2D6DE);
-        }
-        guiGraphics.disableScissor();
-
-        render3DOperator(guiGraphics, trueWidth, trueHeight);
-    }
-
-    private void renderWeaponSelectionBg(GuiGraphics guiGraphics, int trueWidth, int trueHeight) {
-        int startY = 100;
-        int visibleHeight = trueHeight - 100;
-        
-        ItemStack[] weaponPool = getActiveWeaponStacks();
-        int numBoxes = weaponPool.length; 
-        int listHeight = numBoxes * 45; 
-        
-        this.maxScroll = Math.max(0f, (float)(listHeight - visibleHeight + 20));
-        this.scrollOffset = Math.max(0f, Math.min(this.scrollOffset, this.maxScroll));
-
-        guiGraphics.enableScissor(0, 90, 240, trueHeight);
-        int currentY = startY - (int)this.scrollOffset;
-        
-        for (int i = 0; i < numBoxes; i++) {
-            WorkbenchDesign.drawCleanBox(guiGraphics, 20, currentY, 200, 40);
-            
-            if (weaponPool[i] != null && !weaponPool[i].isEmpty()) {
-                guiGraphics.pose().pushPose();
-                guiGraphics.pose().translate(30, currentY + 8, 250); 
-                guiGraphics.pose().scale(1.8f, 1.8f, 1.8f); 
-                guiGraphics.renderItem(weaponPool[i], 0, 0);
-                guiGraphics.pose().popPose();
-            }
-            
-            currentY += 45;
-        }
-        
-        if (this.maxScroll > 0) {
-            guiGraphics.fill(225, 100, 227, trueHeight - 20, 0xFF2E3136);
-            int thumbHeight = Math.max(20, visibleHeight * visibleHeight / listHeight);
-            int thumbY = 100 + (int)((this.scrollOffset / this.maxScroll) * (visibleHeight - 20 - thumbHeight));
-            guiGraphics.fill(224, thumbY, 228, thumbY + thumbHeight, 0xFFD2D6DE);
-        }
-        guiGraphics.disableScissor();
-
-        render3DOperator(guiGraphics, trueWidth, trueHeight);
-    }
-
-    private void renderAttachmentSelectionBg(GuiGraphics guiGraphics, int trueWidth, int trueHeight) {
-        int startY = 100;
-        int visibleHeight = trueHeight - 100;
-        
-        String[] idPool = getActiveAttachmentPool();
-        ItemStack[] attachmentPool = resolveStacks(idPool, this.editingAttachmentCategory);
-        int numBoxes = attachmentPool.length; 
-        int listHeight = numBoxes * 45; 
-        
-        this.maxScroll = Math.max(0f, (float)(listHeight - visibleHeight + 20));
-        this.scrollOffset = Math.max(0f, Math.min(this.scrollOffset, this.maxScroll));
-
-        guiGraphics.enableScissor(0, 90, 240, trueHeight);
-        int currentY = startY - (int)this.scrollOffset;
-        
-        for (int i = 0; i < numBoxes; i++) {
-            WorkbenchDesign.drawCleanBox(guiGraphics, 20, currentY, 200, 40);
-            
-            if (attachmentPool[i] != null && !attachmentPool[i].isEmpty()) {
-                guiGraphics.pose().pushPose();
-                guiGraphics.pose().translate(30, currentY + 12, 250); 
-                guiGraphics.pose().scale(1.2f, 1.2f, 1.2f); 
-                guiGraphics.renderItem(attachmentPool[i], 0, 0);
-                guiGraphics.pose().popPose();
-            }
-            currentY += 45;
-        }
-        
-        if (this.maxScroll > 0) {
-            guiGraphics.fill(225, 100, 227, trueHeight - 20, 0xFF2E3136);
-            int thumbHeight = Math.max(20, visibleHeight * visibleHeight / listHeight);
-            int thumbY = 100 + (int)((this.scrollOffset / this.maxScroll) * (visibleHeight - 20 - thumbHeight));
-            guiGraphics.fill(224, thumbY, 228, thumbY + thumbHeight, 0xFFD2D6DE);
-        }
-        guiGraphics.disableScissor();
-
-        render3DOperator(guiGraphics, trueWidth, trueHeight);
-    }
-
-    private void renderMunitionSelectionBg(GuiGraphics guiGraphics, int trueWidth, int trueHeight) {
-        int visibleHeight = trueHeight - 100;
-        
-        // 3 Headers (20px each), 2 gaps (10px each), 13 total items (35px each)
-        int listHeight = 60 + 20 + (13 * 35); 
-        
-        this.maxScroll = Math.max(0f, (float)(listHeight - visibleHeight + 20));
-        this.scrollOffset = Math.max(0f, Math.min(this.scrollOffset, this.maxScroll));
-
-        guiGraphics.enableScissor(0, 90, 240, trueHeight);
-        
-        // Purposely left completely blank to remove the "slot boxes" behind the munitions!
-        
-        if (this.maxScroll > 0) {
-            guiGraphics.fill(225, 100, 227, trueHeight - 20, 0xFF2E3136);
-            int thumbHeight = Math.max(20, visibleHeight * visibleHeight / listHeight);
-            int thumbY = 100 + (int)((this.scrollOffset / this.maxScroll) * (visibleHeight - 20 - thumbHeight));
-            guiGraphics.fill(224, thumbY, 228, thumbY + thumbHeight, 0xFFD2D6DE);
-        }
-        guiGraphics.disableScissor();
-
-        render3DOperator(guiGraphics, trueWidth, trueHeight);
-    }
-
-    private void renderGunsmithBg(GuiGraphics guiGraphics, int trueWidth, int trueHeight) {
-        int startY = 100;
-        int visibleHeight = trueHeight - 100;
-        
-        int numPrimary = 2; 
-        int numSidearm = 2; 
-        int numGrenade = 4; 
-        int numTactical = 5; 
-        
-        int numCoreAttachments = (this.currentWeaponTab == 8) ? 3 : 5; 
-        
-        int dynamicItemsHeight = this.showAmmunitionTab 
-                ? (20 + 16 + (numPrimary * 31) + 10 + 16 + (numSidearm * 31)) 
-                : (20 + 16 + (numGrenade * 31) + 10 + 16 + (numTactical * 31));
-                
-        int listHeight = 75 + 30 + (numCoreAttachments * 45) + 35 + dynamicItemsHeight; 
-        
-        this.maxScroll = Math.max(0f, (float)(listHeight - visibleHeight + 20));
-        this.scrollOffset = Math.max(0f, Math.min(this.scrollOffset, this.maxScroll));
-
-        guiGraphics.enableScissor(0, 90, 240, trueHeight);
-        int currentY = startY - (int)this.scrollOffset;
-        
-        WorkbenchDesign.drawCleanBox(guiGraphics, 20, currentY, 200, 70); 
-        currentY += 75;
-
-        currentY += 5; 
-        guiGraphics.fill(20, currentY + 15, 220, currentY + 16, 0xFF2E3136);
-        currentY += 25;
-
-        for (int i = 0; i < numCoreAttachments; i++) {
-            WorkbenchDesign.drawCleanBox(guiGraphics, 20, currentY, 200, 40);
-            currentY += 45; 
-        }
-
-        int tabY = currentY + 10;
-        guiGraphics.fill(20, tabY + 14, 220, tabY + 15, 0xFF2E3136); 
-        
-        if (this.showAmmunitionTab) {
-            guiGraphics.fill(20, tabY + 14, 110, tabY + 15, 0xFFD62929); 
-        } else {
-            guiGraphics.fill(110, tabY + 14, 220, tabY + 15, 0xFFD62929); 
-        }
-        currentY = tabY + 20; 
-        
-        if (this.showAmmunitionTab) {
-            guiGraphics.fill(20, currentY + 15, 220, currentY + 16, 0xFF2E3136);
-            currentY += 16;
-            for (int i = 0; i < numPrimary; i++) {
-                guiGraphics.fill(20, currentY + 30, 220, currentY + 31, 0xFF2E3136);
-                currentY += 31; 
-            }
-            
-            currentY += 10; 
-            guiGraphics.fill(20, currentY + 15, 220, currentY + 16, 0xFF2E3136);
-            currentY += 16;
-            for (int i = 0; i < numSidearm; i++) {
-                guiGraphics.fill(20, currentY + 30, 220, currentY + 31, 0xFF2E3136);
-                currentY += 31; 
-            }
-        } else {
-            guiGraphics.fill(20, currentY + 15, 220, currentY + 16, 0xFF2E3136);
-            currentY += 16;
-            for (int i = 0; i < numGrenade; i++) {
-                guiGraphics.fill(20, currentY + 30, 220, currentY + 31, 0xFF2E3136);
-                currentY += 31; 
-            }
-
-            currentY += 10; 
-            guiGraphics.fill(20, currentY + 15, 220, currentY + 16, 0xFF2E3136);
-            currentY += 16;
-            for (int i = 0; i < numTactical; i++) {
-                guiGraphics.fill(20, currentY + 30, 220, currentY + 31, 0xFF2E3136);
-                currentY += 31; 
-            }
-        }
-
-        if (this.maxScroll > 0) {
-            guiGraphics.fill(225, 100, 227, trueHeight - 20, 0xFF2E3136);
-            int thumbHeight = Math.max(20, visibleHeight * visibleHeight / listHeight);
-            int thumbY = 100 + (int)((this.scrollOffset / this.maxScroll) * (visibleHeight - 20 - thumbHeight));
-            guiGraphics.fill(224, thumbY, 228, thumbY + thumbHeight, 0xFFD2D6DE);
-        }
-        guiGraphics.disableScissor();
-
-        render3DOperator(guiGraphics, trueWidth, trueHeight);
-    }
-
-    private void renderLoadoutLabels(GuiGraphics guiGraphics) {
-        guiGraphics.pose().pushPose();
-        guiGraphics.pose().translate(0, 0, 300.0F); 
-        guiGraphics.fill(176, 50, 198, 72, 0xFF0B0C0E); 
-        guiGraphics.fill(176, 95, 198, 117, 0xFF0B0C0E); 
-        guiGraphics.fill(176, 140, 198, 162, 0xFF0B0C0E); 
-        guiGraphics.pose().popPose();
-
-        ItemStack primaryStack = getDisplayedPrimary();
-        String primaryName = primaryStack.isEmpty() ? "UNARMED" : primaryStack.getHoverName().getString().toUpperCase();
-        
-        ItemStack secondaryStack = getDisplayedSidearm();
-        String secondaryName = secondaryStack.isEmpty() ? "UNARMED" : secondaryStack.getHoverName().getString().toUpperCase();
-
-        WorkbenchDesign.drawSmallText(guiGraphics, this.font, "WEAPONS", 20, 26, 0.65f, 0xFFAAAAAA);
-        
-        WorkbenchDesign.drawSmallText(guiGraphics, this.font, "PRIMARY", 26, 68, 0.55f, 0xFF7A818C);
-        WorkbenchDesign.drawSmallText(guiGraphics, this.font, primaryName, 26, 74, 0.75f, 0xFFD2D6DE);
-        if (!primaryStack.isEmpty()) {
-            guiGraphics.pose().pushPose();
-            guiGraphics.pose().translate(110, 44, 350.0F); 
-            guiGraphics.pose().scale(2.5f, 2.5f, 2.5f); 
-            guiGraphics.renderItem(primaryStack, 0, 0);
-            guiGraphics.pose().popPose();
-        }
-        
-        WorkbenchDesign.drawSmallText(guiGraphics, this.font, "SIDE ARM", 26, 113, 0.55f, 0xFF7A818C);
-        WorkbenchDesign.drawSmallText(guiGraphics, this.font, secondaryName, 26, 119, 0.75f, 0xFFD2D6DE);
-        if (!secondaryStack.isEmpty()) {
-            guiGraphics.pose().pushPose();
-            guiGraphics.pose().translate(110, 89, 350.0F); 
-            guiGraphics.pose().scale(2.5f, 2.5f, 2.5f); 
-            guiGraphics.renderItem(secondaryStack, 0, 0);
-            guiGraphics.pose().popPose();
-        }
-        
-        WorkbenchDesign.drawSmallText(guiGraphics, this.font, "LONG TACTICAL", 26, 158, 0.55f, 0xFF7A818C);
-        WorkbenchDesign.drawSmallText(guiGraphics, this.font, this.selectedTactical, 26, 164, 0.75f, 0xFFD2D6DE);
-
-        WorkbenchDesign.drawSmallText(guiGraphics, this.font, "ARMOR & MUNITIONS", 20, 190, 0.65f, 0xFFAAAAAA);
-        WorkbenchDesign.drawSmallText(guiGraphics, this.font, "VEST | ", 26, 243, 0.55f, 0xFF7A818C);
-        WorkbenchDesign.drawSmallText(guiGraphics, this.font, this.selectedAmmunitionDeployable, 26 + (int)(this.font.width("VEST | ") * 0.55f), 243, 0.55f, 0xFFD62929);
-        WorkbenchDesign.drawSmallText(guiGraphics, this.font, this.selectedVest, 26, 249, 0.75f, 0xFFD2D6DE);
-
-        WorkbenchDesign.drawSmallText(guiGraphics, this.font, "MATERIAL", 106, 218, 0.55f, 0xFF7A818C);
-        WorkbenchDesign.drawSmallText(guiGraphics, this.font, this.selectedMaterial, 106, 224, 0.75f, 0xFFD2D6DE);
-        WorkbenchDesign.drawSmallText(guiGraphics, this.font, "COVERAGE", 106, 244, 0.55f, 0xFF7A818C);
-        WorkbenchDesign.drawSmallText(guiGraphics, this.font, this.selectedCoverage, 106, 250, 0.75f, 0xFFD2D6DE);
-
-        WorkbenchDesign.drawSmallText(guiGraphics, this.font, "MUNITION SLOTS", 20, 275, 0.65f, 0xFFAAAAAA);
-        WorkbenchDesign.drawSmallText(guiGraphics, this.font, this.menu.getMunitionCount() + "/" + this.selectedAmmunitionDeployable, 165, 275, 0.65f, 0xFFD62929);
-
-        WorkbenchDesign.drawSmallText(guiGraphics, this.font, "AP", 66, 310, 0.55f, 0xFFFFFFFF);
-        WorkbenchDesign.drawSmallText(guiGraphics, this.font, "AP", 153, 310, 0.55f, 0xFFFFFFFF);
-        WorkbenchDesign.drawSmallText(guiGraphics, this.font, "5", 201, 310, 0.55f, 0xFFFFFFFF);
-
-        // --- 3D HELMET PREVIEW ---
-        if (Minecraft.getInstance().player != null) {
-            ItemStack headStack = Minecraft.getInstance().player.getItemBySlot(net.minecraft.world.entity.EquipmentSlot.HEAD);
-            if (!headStack.isEmpty() && (
-                headStack.getItem() instanceof com.k1ngtle.taticalsuit.item.HelmetItem ||
-                headStack.getItem() instanceof com.k1ngtle.taticalsuit.item.HelmetPVS31Item ||
-                headStack.getItem() instanceof com.k1ngtle.taticalsuit.item.HelmetGPNVG18Item ||
-                headStack.getItem() instanceof com.k1ngtle.taticalsuit.item.HelmetGhillieItem)) {
-                
-                guiGraphics.pose().pushPose();
-                guiGraphics.pose().translate(39, 357, 150.0F); // Positioned inside the box
-                guiGraphics.pose().scale(2.5f, 2.5f, 2.5f); // Scaled down to fit properly
-                guiGraphics.renderItem(headStack, 0, 0);
-                guiGraphics.pose().popPose();
-            }
-        }
-
-        // --- HEADWEAR DYNAMIC LABELS ---
-        WorkbenchDesign.drawSmallText(guiGraphics, this.font, "HEADWEAR", 20, 330, 0.65f, 0xFFAAAAAA);
-        
-        guiGraphics.pose().pushPose();
-        guiGraphics.pose().translate(0, 0, 400.0F); // Force text into EXTREME FOREGROUND above the 3D model
-        WorkbenchDesign.drawSmallText(guiGraphics, this.font, "HELMET", 26, 383, 0.55f, 0xFF7A818C);
-        WorkbenchDesign.drawSmallText(guiGraphics, this.font, this.selectedHelmet, 26, 389, 0.75f, 0xFFD2D6DE);
-        guiGraphics.pose().popPose();
-        
-        WorkbenchDesign.drawSmallText(guiGraphics, this.font, "MOUNT | ", 106, 358, 0.55f, 0xFF7A818C);
-        if (!this.selectedMount.equals("NONE")) {
-            String phosphorTrim = this.selectedPhosphor.equals("WHITE PHOSPHOR") ? "WHITE" : "GREEN";
-            WorkbenchDesign.drawSmallText(guiGraphics, this.font, phosphorTrim, 106 + (int)(this.font.width("MOUNT | ") * 0.55f), 358, 0.55f, 0xFFD62929);
-        }
-        WorkbenchDesign.drawSmallText(guiGraphics, this.font, this.selectedMount, 106, 364, 0.75f, 0xFFD2D6DE);
-        
-        WorkbenchDesign.drawSmallText(guiGraphics, this.font, "FACEWEAR", 106, 384, 0.55f, 0xFF7A818C);
-        WorkbenchDesign.drawSmallText(guiGraphics, this.font, this.selectedFacewear, 106, 390, 0.75f, 0xFFD2D6DE);
-    }
-
-    private void renderArmorSelectionLabels(GuiGraphics guiGraphics, int mouseX, int mouseY, int trueWidth, int trueHeight) {
-        WorkbenchDesign.drawSmallText(guiGraphics, this.font, "< LOADOUT", 20, 25, 0.75f, 0xFFFFFF);
-        WorkbenchDesign.drawSmallText(guiGraphics, this.font, "ARMOR", 20, 55, 1.1f, 0xFFFFFF); 
-        WorkbenchDesign.drawSmallText(guiGraphics, this.font, "SELECT EQUIPMENT", 20, 75, 0.65f, 0xFFD62929); 
-
-        int currentY = 100 - (int)this.scrollOffset;
-        
-        // Define effective mouse to prevent underlying items lighting up when Vest Dropdown is open
-        int effMouseX = mouseX;
-        int effMouseY = mouseY;
-        if (this.expandedArmorCategory.equals("VEST")) {
-            effMouseX = -999;
-            effMouseY = -999;
-        }
-        
-        guiGraphics.enableScissor(0, 90, 240, trueHeight);
-        
-        // --- VEST SECTION ---
-        WorkbenchDesign.drawSmallText(guiGraphics, this.font, "VEST", 20, currentY + 8, 0.65f, 0xFF7A818C);
-        WorkbenchDesign.drawSmallText(guiGraphics, this.font, this.selectedVest, 20, currentY + 18, 0.75f, 0xFFFFFFFF);
-        
-        int vestDropdownY = currentY + 45;
-        currentY += 45;
-        
-        // --- COVERAGE SECTION ---
-        WorkbenchDesign.drawSmallText(guiGraphics, this.font, "COVERAGE", 20, currentY + 8, 0.65f, 0xFF7A818C);
-        currentY += 20;
-        
-        String[] covList = {"NONE", "FRONT", "FRONT/BACK", "FULL"};
-        for(int i = 0; i < 4; i++) {
-            int boxX = 20 + (i * 50);
-            boolean isSelected = this.selectedCoverage.equals(covList[i]);
-            boolean isHovered = effMouseY >= currentY && effMouseY <= currentY + 30 && effMouseX >= boxX && effMouseX <= boxX + 45;
-            
-            int color = isSelected ? 0xFFD62929 : (isHovered ? 0xFFFFFFFF : 0xFF7A818C);
-            float textScale = (i == 2) ? 0.45f : 0.55f;
-            int textX = boxX + (i == 2 ? 2 : 8); 
-            
-            WorkbenchDesign.drawSmallText(guiGraphics, this.font, covList[i], textX, currentY + 12, textScale, color);
-        }
-        currentY += 40;
-
-        // --- MATERIAL SECTION ---
-        WorkbenchDesign.drawSmallText(guiGraphics, this.font, "MATERIAL", 20, currentY + 8, 0.65f, 0xFF7A818C);
-        currentY += 20;
-        
-        String[] matList = {"KEVLAR", "STEEL", "CERAMIC"};
-        for(int i = 0; i < 3; i++) {
-            int boxX = 20 + (i * 66);
-            boolean isSelected = this.selectedMaterial.equals(matList[i]);
-            boolean isHovered = effMouseY >= currentY && effMouseY <= currentY + 30 && effMouseX >= boxX && effMouseX <= boxX + 60;
-            
-            int color = isSelected ? 0xFFD62929 : (isHovered ? 0xFFFFFFFF : 0xFF7A818C);
-            int textX = boxX + 12;
-            
-            WorkbenchDesign.drawSmallText(guiGraphics, this.font, matList[i], textX, currentY + 12, 0.55f, color);
-        }
-        currentY += 40;
-
-        currentY += 20; // Added spacing before ammo tabs
-
-        // --- AMMUNITION & DEPLOYABLE SECTION ---
-        WorkbenchDesign.drawSmallText(guiGraphics, this.font, "AMMUNITION", 26, currentY + 6, 0.55f, this.showAmmunitionTab ? 0xFFFFFFFF : 0xFF7A818C);
-        WorkbenchDesign.drawSmallText(guiGraphics, this.font, "DEPLOYABLE", 116, currentY + 6, 0.55f, !this.showAmmunitionTab ? 0xFFFFFFFF : 0xFF7A818C);
-        currentY += 20;
-
-        if (this.showAmmunitionTab) {
-            String[] primaryCats = {"MAGAZINE", "AMMUNITION"};
-            String[] primaryNames = {"STANDARD MAG", "5.56X45MM NATO"};
-            
-            String[] sidearmCats = {"MAGAZINE", "AMMUNITION"};
-            String[] sidearmNames = {"STANDARD MAG", "9X19MM PARABELLUM"};
-            
-            WorkbenchDesign.drawSmallText(guiGraphics, this.font, "PRIMARY AMMUNITION", 26, currentY + 6, 0.65f, 0xFF7A818C);
-            currentY += 16;
-            for (int i = 0; i < primaryCats.length; i++) {
-                WorkbenchDesign.drawSmallText(guiGraphics, this.font, primaryCats[i], 26, currentY + 8, 0.45f, 0xFF7A818C);
-                WorkbenchDesign.drawSmallText(guiGraphics, this.font, primaryNames[i], 26, currentY + 18, 0.65f, 0xFFFFFFFF);
-                currentY += 31;
-            }
-
-            currentY += 10; 
-            WorkbenchDesign.drawSmallText(guiGraphics, this.font, "SIDEARM AMMUNITION", 26, currentY + 6, 0.65f, 0xFF7A818C);
-            currentY += 16;
-            for (int i = 0; i < sidearmCats.length; i++) {
-                WorkbenchDesign.drawSmallText(guiGraphics, this.font, sidearmCats[i], 26, currentY + 8, 0.45f, 0xFF7A818C);
-                WorkbenchDesign.drawSmallText(guiGraphics, this.font, sidearmNames[i], 26, currentY + 18, 0.65f, 0xFFFFFFFF);
-                currentY += 31;
-            }
-        } else {
-            String[] grenadeCats = {"GRENADE", "GRENADE", "GRENADE", "GRENADE"};
-            String[] grenadeNames = {"9-BANG FLASH GRENADE", "CS GAS", "FLASHBANGS", "STINGER"};
-            String[] tacticalCats = {"TACTICAL", "TACTICAL", "TACTICAL", "TACTICAL", "TACTICAL"};
-            String[] tacticalNames = {"C2", "LOCKPICK GUN", "PEPPER SPRAY", "TASER", "WEDGE"};
-            
-            WorkbenchDesign.drawSmallText(guiGraphics, this.font, "GRENADE", 26, currentY + 6, 0.65f, 0xFF7A818C);
-            currentY += 16;
-            for (int i = 0; i < grenadeCats.length; i++) {
-                WorkbenchDesign.drawSmallText(guiGraphics, this.font, grenadeCats[i], 26, currentY + 8, 0.45f, 0xFF7A818C);
-                WorkbenchDesign.drawSmallText(guiGraphics, this.font, grenadeNames[i], 26, currentY + 18, 0.65f, 0xFFFFFFFF);
-                currentY += 31;
-            }
-
-            currentY += 10; 
-            WorkbenchDesign.drawSmallText(guiGraphics, this.font, "TACTICAL", 26, currentY + 6, 0.65f, 0xFF7A818C);
-            currentY += 16;
-            for (int i = 0; i < tacticalCats.length; i++) {
-                WorkbenchDesign.drawSmallText(guiGraphics, this.font, tacticalCats[i], 26, currentY + 8, 0.45f, 0xFF7A818C);
-                WorkbenchDesign.drawSmallText(guiGraphics, this.font, tacticalNames[i], 26, currentY + 18, 0.65f, 0xFFFFFFFF);
-                currentY += 31;
-            }
-        }
-        
-        // --- DRAW VEST DROPDOWN ON TOP ---
-        if (this.expandedArmorCategory.equals("VEST")) {
-            guiGraphics.pose().pushPose();
-            guiGraphics.pose().translate(0, 0, 150); // Elevate Z-index to cover underlying elements
-            
-            String[] vestList = {"NO ARMOR", "LIGHT ARMOR", "HEAVY ARMOR", "STAB VEST"};
-            int bgHeight = vestList.length * 35 + 10;
-            
-            // Pure Black background to effectively hide the text underneath it
-            guiGraphics.fill(15, vestDropdownY - 5, 235, vestDropdownY + bgHeight, 0xFF000000);
-            
-            int listY = vestDropdownY;
-            for (String item : vestList) {
-                // Use ACTUAL mouseX/Y here so this overlay remains interactive
-                renderTextListItem(guiGraphics, item, 20, listY, mouseX, mouseY); 
-                if (this.selectedVest.equals(item)) {
-                    WorkbenchDesign.drawSmallText(guiGraphics, this.font, "[EQUIPPED]", 160, listY + 10, 0.6f, 0xFFD62929);
-                }
-                listY += 35;
-            }
-            
-            guiGraphics.pose().popPose();
-        }
-        
-        guiGraphics.disableScissor();
-    }
-
-    private void renderHeadwearSelectionLabels(GuiGraphics guiGraphics, int mouseX, int mouseY, int trueWidth, int trueHeight) {
-        WorkbenchDesign.drawSmallText(guiGraphics, this.font, "< LOADOUT", 20, 25, 0.75f, 0xFFFFFF);
-        WorkbenchDesign.drawSmallText(guiGraphics, this.font, "HEADWEAR", 20, 55, 1.1f, 0xFFFFFF); 
-        WorkbenchDesign.drawSmallText(guiGraphics, this.font, "SELECT EQUIPMENT", 20, 75, 0.65f, 0xFFD62929); 
-
-        int currentY = 100 - (int)this.scrollOffset;
-        int leftX = 26;
-        
-        guiGraphics.enableScissor(0, 90, 240, trueHeight);
-        
-        // --- HELMET SECTION ---
-        WorkbenchDesign.drawSmallText(guiGraphics, this.font, "HELMET", leftX, currentY + 12, 0.45f, 0xFF7A818C);
-        WorkbenchDesign.drawSmallText(guiGraphics, this.font, this.selectedHelmet, leftX, currentY + 22, 0.75f, 0xFFFFFFFF);
-        currentY += 45;
-        
-        if (this.expandedHeadwearCategory.equals("HELMET")) {
-            String[] list = {"NO HELMET", "HELMET ONLY", "GHILLIE HELMET"};
-            for (String item : list) {
-                renderTextListItem(guiGraphics, item, 20, currentY, mouseX, mouseY);
-                currentY += 35;
-            }
-        }
-        
-        // --- MOUNT SECTION ---
-        WorkbenchDesign.drawSmallText(guiGraphics, this.font, "MOUNT", leftX, currentY + 12, 0.45f, 0xFF7A818C);
-        WorkbenchDesign.drawSmallText(guiGraphics, this.font, this.selectedMount, leftX, currentY + 22, 0.75f, 0xFFFFFFFF);
-        currentY += 45;
-        
-        if (this.expandedHeadwearCategory.equals("MOUNT")) {
-            String[] list = {"NONE", "NVGS", "GPNVGS"};
-            for (String item : list) {
-                renderTextListItem(guiGraphics, item, 20, currentY, mouseX, mouseY);
-                currentY += 35;
-            }
-        }
-        
-        // PHOSPHOR SUB-OPTIONS (Only show if NVGs are active)
-        if (!this.selectedMount.equals("NONE")) {
-            boolean greenHover = mouseY >= currentY && mouseY <= currentY + 40 && mouseX >= 20 && mouseX <= 120;
-            boolean whiteHover = mouseY >= currentY && mouseY <= currentY + 40 && mouseX > 120 && mouseX <= 220;
-            
-            int greenColor = this.selectedPhosphor.equals("GREEN PHOSPHOR") ? 0xFFD62929 : (greenHover ? 0xFFFFFFFF : 0xFF7A818C);
-            int whiteColor = this.selectedPhosphor.equals("WHITE PHOSPHOR") ? 0xFFD62929 : (whiteHover ? 0xFFFFFFFF : 0xFF7A818C);
-            
-            WorkbenchDesign.drawSmallText(guiGraphics, this.font, "GREEN", 26, currentY + 10, 0.65f, greenColor);
-            WorkbenchDesign.drawSmallText(guiGraphics, this.font, "PHOSPHOR", 26, currentY + 22, 0.65f, greenColor);
-            
-            WorkbenchDesign.drawSmallText(guiGraphics, this.font, "WHITE", 126, currentY + 10, 0.65f, whiteColor);
-            WorkbenchDesign.drawSmallText(guiGraphics, this.font, "PHOSPHOR", 126, currentY + 22, 0.65f, whiteColor);
-            
-            if (this.selectedPhosphor.equals("GREEN PHOSPHOR")) guiGraphics.fill(20, currentY + 38, 120, currentY + 40, 0xFFD62929);
-            if (this.selectedPhosphor.equals("WHITE PHOSPHOR")) guiGraphics.fill(120, currentY + 38, 220, currentY + 40, 0xFFD62929);
-            
-            currentY += 45;
-        }
-        
-        // --- FACEWEAR SECTION ---
-        WorkbenchDesign.drawSmallText(guiGraphics, this.font, "FACEWEAR", leftX, currentY + 12, 0.45f, 0xFF7A818C);
-        WorkbenchDesign.drawSmallText(guiGraphics, this.font, this.selectedFacewear, leftX, currentY + 22, 0.75f, 0xFFFFFFFF);
-        currentY += 45;
-        
-        if (this.expandedHeadwearCategory.equals("FACEWEAR")) {
-            String[] list = {"NONE", "GOGGLES", "GAS MASK"};
-            for (String item : list) {
-                renderTextListItem(guiGraphics, item, 20, currentY, mouseX, mouseY);
-                currentY += 35;
-            }
-        }
-        
-        guiGraphics.disableScissor();
-    }
-
-    private void renderTacticalSelectionLabels(GuiGraphics guiGraphics, int mouseX, int mouseY, int trueWidth, int trueHeight) {
-        WorkbenchDesign.drawSmallText(guiGraphics, this.font, "< LOADOUT", 20, 25, 0.75f, 0xFFFFFF);
-        WorkbenchDesign.drawSmallText(guiGraphics, this.font, "LONG TACTICAL", 20, 55, 1.1f, 0xFFFFFF); 
-        WorkbenchDesign.drawSmallText(guiGraphics, this.font, "SELECT EQUIPMENT", 20, 75, 0.65f, 0xFFD62929); 
-
-        String[] tacticals = {"MIRRORGUN", "BREACHING SHOTGUN", "RIOT SHIELD", "TACTICAL DRONE", "BOLT CUTTERS", "BATTERING RAM"};
-        String[] descriptions = {
-            "PEEK UNDER DOORS AND CORNERS",
-            "DESTROY DOOR LOCKS AND HINGES",
-            "BLOCK INCOMING PROJECTILES",
-            "RECON SCOUTING DEVICE",
-            "CUT THROUGH CHAINLINK AND LOCKS",
-            "HEAVY DOOR BREACHING TOOL"
-        };
-
-        int currentY = 100 - (int)this.scrollOffset;
-        int leftX = 26;
-        
-        guiGraphics.enableScissor(0, 90, 240, trueHeight);
-        for (int i = 0; i < 6; i++) {
-            int y = currentY + (i * 45);
-            
-            boolean isSelected = this.selectedTactical.equals(tacticals[i]);
-            int textColor = isSelected ? 0xFFD62929 : 0xFFFFFFFF;
-            
-            // Draw the small description text above
-            WorkbenchDesign.drawSmallText(guiGraphics, this.font, descriptions[i], leftX, y + 14, 0.45f, 0xFF7A818C);
-            // Draw the Tactical Name
-            WorkbenchDesign.drawSmallText(guiGraphics, this.font, tacticals[i], leftX, y + 24, 0.7f, textColor);
-            
-            // Base grey underline
-            guiGraphics.fill(20, y + 40, 220, y + 41, 0xFF2E3136);
-            
-            // Red underline for equipped (covers the entire width now)
-            if (isSelected) {
-                guiGraphics.fill(20, y + 40, 220, y + 41, 0xFFD62929);
-            }
-        }
-        guiGraphics.disableScissor();
-    }
-
-    private void renderAttachmentSelectionLabels(GuiGraphics guiGraphics, int mouseX, int mouseY, int trueWidth, int trueHeight) {
-        WorkbenchDesign.drawSmallText(guiGraphics, this.font, "< ATTACHMENT BUILD", 20, 25, 0.75f, 0xFFFFFF);
-        
-        String title = this.editingAttachmentCategory;
-        
-        WorkbenchDesign.drawSmallText(guiGraphics, this.font, title, 20, 55, 1.1f, 0xFFFFFF); 
-        WorkbenchDesign.drawSmallText(guiGraphics, this.font, "SELECT MODIFICATION", 20, 75, 0.65f, 0xFFD62929); 
-
-        String[] idPool = getActiveAttachmentPool();
-        ItemStack[] attachmentPool = resolveStacks(idPool, this.editingAttachmentCategory);
-        int numBoxes = attachmentPool.length;
-
-        int currentY = 100 - (int)this.scrollOffset;
-        int leftX = 26;
-        
-        guiGraphics.enableScissor(0, 90, 240, trueHeight);
-        for (int i = 0; i < numBoxes; i++) {
-            int y = currentY + (i * 45);
-            
-            if (attachmentPool[i] != null && !attachmentPool[i].isEmpty()) {
-                String cleanName = idPool[i].replace("pointblank:", "").replace("_", " ").toUpperCase();
-                WorkbenchDesign.drawSmallText(guiGraphics, this.font, cleanName, leftX + 45, y + 16, 0.7f, 0xFFFFFFFF);
-            } else {
-                if (idPool[i].equals("NONE")) {
-                    WorkbenchDesign.drawSmallText(guiGraphics, this.font, "REMOVE ATTACHMENT", leftX + 45, y + 16, 0.7f, 0xFFD62929);
-                } else {
-                    String rawName = idPool[i].replace("pointblank:", "").replace("_", " ").toUpperCase();
-                    WorkbenchDesign.drawSmallText(guiGraphics, this.font, rawName + " (MISSING)", leftX + 45, y + 16, 0.65f, 0xFF555555);
-                }
-            }
-        }
-        guiGraphics.disableScissor();
-    }
-
-    private void renderWeaponSelectionLabels(GuiGraphics guiGraphics, int mouseX, int mouseY, int trueWidth, int trueHeight) {
-        WorkbenchDesign.drawSmallText(guiGraphics, this.font, "< WEAPON BUILD", 20, 25, 0.75f, 0xFFFFFF);
-        
-        if (this.currentWeaponTab != 8) {
-            int currentX = 8;
-            // Expanded widths to add more gaps between AR, BR, LMG, PDW, SMG
-            int[] tabWidths = {20, 20, 25, 25, 25, 38, 35, 44};
-            for (int i = 0; i < 8; i++) {
-                int tabWidth = tabWidths[i];
-                
-                String name = WorkbenchData.SHORT_TAB_NAMES[i];
-                float scale = 0.55f;
-                int textColor = (this.currentWeaponTab == i) ? 0xFFFFFFFF : 0xFF7A818C; // White if active, Gray if inactive
-                int textWidth = this.font.width(name);
-                int textX = currentX + (tabWidth / 2) - (int)((textWidth * scale) / 2);
-                
-                // Draw just the text, no box
-                WorkbenchDesign.drawSmallText(guiGraphics, this.font, name, textX, 74, scale, textColor);
-                
-                // Draw bold red underline if this tab is active
-                if (this.currentWeaponTab == i) {
-                    guiGraphics.fill(currentX + 2, 83, currentX + tabWidth - 3, 85, 0xFFD62929);
-                }
-                
-                currentX += tabWidth;
-            }
-        } else {
-            WorkbenchDesign.drawSmallText(guiGraphics, this.font, "SIDE ARM", 20, 75, 0.85f, 0xFFD62929);
-        }
-
-        ItemStack[] weaponPool = getActiveWeaponStacks();
-        String[] idPool = getActiveWeaponPool();
-        int numBoxes = weaponPool.length;
-
-        int currentY = 100 - (int)this.scrollOffset;
-        int leftX = 26;
-        
-        ItemStack equippedStack = (this.currentWeaponTab == 8) ? getDisplayedSidearm() : getDisplayedPrimary(); 
-        ItemStack previewStack = equippedStack;
-        boolean hoveringAny = false;
-
-        guiGraphics.enableScissor(0, 90, 240, trueHeight);
-        for (int i = 0; i < numBoxes; i++) {
-            int y = currentY + (i * 45);
-            
-            // Re-map the preview stack on hover to render off to the right
-            if (mouseY >= Math.max(90, y) && mouseY <= Math.min(trueHeight, y + 40) && mouseX >= 20 && mouseX <= 220) {
-                if (weaponPool[i] != null && !weaponPool[i].isEmpty()) {
-                    if (ItemStack.isSameItem(equippedStack, weaponPool[i])) {
-                        previewStack = equippedStack; // Has equipped tags
-                    } else {
-                        // Check inventory for a match to preview existing attachments!
-                        ItemStack invMatch = ItemStack.EMPTY;
-                        if (Minecraft.getInstance().player != null) {
-                            for (int j = 0; j < Minecraft.getInstance().player.getInventory().getContainerSize(); j++) {
-                                ItemStack invStack = Minecraft.getInstance().player.getInventory().getItem(j);
-                                if (!invStack.isEmpty() && ItemStack.isSameItem(invStack, weaponPool[i])) {
-                                    invMatch = invStack;
-                                    break;
-                                }
-                            }
-                        }
-                        previewStack = invMatch.isEmpty() ? weaponPool[i] : invMatch;
-                    }
-                    hoveringAny = true;
-                }
-            }
-            
-            if (weaponPool[i] != null && !weaponPool[i].isEmpty()) {
-                String gunName = idPool[i].replace("pointblank:", "").replace("_", " ").toUpperCase();
-                WorkbenchDesign.drawSmallText(guiGraphics, this.font, gunName, leftX + 45, y + 16, 0.7f, 0xFFFFFFFF);
-            } else {
-                String rawName = idPool[i].replace("pointblank:", "").replace("_", " ").toUpperCase();
-                WorkbenchDesign.drawSmallText(guiGraphics, this.font, rawName + " (MISSING)", leftX + 45, y + 16, 0.65f, 0xFF555555);
-            }
-        }
-        guiGraphics.disableScissor();
-
-        if (!hoveringAny) {
-            previewStack = equippedStack;
-        }
-
-        if (!previewStack.isEmpty()) {
-            int infoX = 260;
-            int infoY = 35; // Moved up to make room for the 3D model!
-            
-            // DRAW LARGE 3D PREVIEW MODEL ABOVE TEXT
-            guiGraphics.pose().pushPose();
-            guiGraphics.pose().translate(infoX + 15, infoY, 350.0F); 
-            guiGraphics.pose().scale(4.0f, 4.0f, 4.0f); // UNIFORM Z scaling to render perfectly
-            guiGraphics.renderItem(previewStack, 0, 0);
-            guiGraphics.pose().popPose();
-
-            infoY += 80; // Push text down to start directly below the weapon
-
-            String gunName = previewStack.getHoverName().getString().toUpperCase();
-            WorkbenchDesign.drawSmallText(guiGraphics, this.font, gunName, infoX, infoY, 1.2f, 0xFFFFFFFF);
-            
-            infoY += 25;
-            WorkbenchDesign.drawSmallText(guiGraphics, this.font, "BRIEF", infoX, infoY, 0.65f, 0xFF7A818C);
-            infoY += 12;
-            
-            String brief1 = "A standardized tactical weapon designed for";
-            String brief2 = "modern combat operations.";
-            String round = "5.56X45MM NATO";
-            String recoil = "MODERATE";
-            String fireRate = "750 RPM";
-            String capacity = "30 ROUNDS";
-            String platform = "TACTICAL PLATFORM";
-            
-            switch (this.currentWeaponTab) {
-                case 0: // AR
-                    brief1 = "A versatile assault rifle providing high fire";
-                    brief2 = "rate and reliable medium range accuracy.";
-                    round = "5.56X45MM NATO"; recoil = "MODERATE"; fireRate = "750 RPM"; capacity = "30 ROUNDS";
-                    platform = "ASSAULT RIFLE PLATFORM";
-                    break;
-                case 1: // BR
-                    brief1 = "Heavy hitting battle rifle firing high caliber";
-                    brief2 = "rounds for maximum stopping power.";
-                    round = "7.62X51MM NATO"; recoil = "HIGH"; fireRate = "600 RPM"; capacity = "20 ROUNDS";
-                    platform = "BATTLE RIFLE PLATFORM";
-                    break;
-                case 2: // LMG
-                    brief1 = "Light machine gun designed to lay down";
-                    brief2 = "sustained suppressive fire in combat.";
-                    round = "5.56X45MM NATO"; recoil = "MODERATE"; fireRate = "800 RPM"; capacity = "100 ROUNDS";
-                    platform = "LMG PLATFORM";
-                    break;
-                case 3: // PDW
-                    brief1 = "Personal defense weapon prioritizing mobility";
-                    brief2 = "and high fire rate for close quarters.";
-                    round = "5.7X28MM"; recoil = "LOW"; fireRate = "900 RPM"; capacity = "50 ROUNDS";
-                    platform = "PDW PLATFORM";
-                    break;
-                case 4: // SMG
-                    brief1 = "Submachine gun offering excellent handling";
-                    brief2 = "and extreme fire rate in tight spaces.";
-                    round = "9X19MM PARABELLUM"; recoil = "LOW"; fireRate = "850 RPM"; capacity = "30 ROUNDS";
-                    platform = "SMG PLATFORM";
-                    break;
-                case 5: // SHOTGUN
-                    brief1 = "Devastating close-range scattergun capable";
-                    brief2 = "of breaching doors and clearing rooms.";
-                    round = "12 GAUGE"; recoil = "HIGH"; fireRate = "PUMP-ACTION"; capacity = "8 ROUNDS";
-                    platform = "SHOTGUN PLATFORM";
-                    break;
-                case 6: // SNIPER
-                    brief1 = "High-precision marksman rifle designed for";
-                    brief2 = "extreme long-range engagements.";
-                    round = ".338 LAPUA MAGNUM"; recoil = "VERY HIGH"; fireRate = "BOLT-ACTION"; capacity = "5 ROUNDS";
-                    platform = "SNIPER PLATFORM";
-                    break;
-                case 7: // LAUNCHER
-                    brief1 = "Anti-armor munition launcher intended to";
-                    brief2 = "destroy heavy vehicles and emplacements.";
-                    round = "84MM HE"; recoil = "EXTREME"; fireRate = "SINGLE SHOT"; capacity = "1 TUBE";
-                    platform = "LAUNCHER PLATFORM";
-                    break;
-                case 8: // SIDEARM
-                    brief1 = "Compact sidearm providing reliable backup";
-                    brief2 = "firepower when the primary weapon is dry.";
-                    round = "9X19MM PARABELLUM"; recoil = "LOW"; fireRate = "SEMI-AUTO"; capacity = "15 ROUNDS";
-                    platform = "SIDEARM PLATFORM";
-                    break;
-            }
-            
-            WorkbenchDesign.drawSmallText(guiGraphics, this.font, brief1, infoX, infoY, 0.65f, 0xFFFFFFFF);
-            infoY += 12;
-            WorkbenchDesign.drawSmallText(guiGraphics, this.font, brief2, infoX, infoY, 0.65f, 0xFFFFFFFF);
-            
-            infoY += 25;
-            
-            // Draw the Platform title
-            WorkbenchDesign.drawSmallText(guiGraphics, this.font, "PLATFORM", infoX + 75, infoY, 0.65f, 0xFF7A818C);
-            infoY += 12;
-            
-            // Create the 2-Column Grid
-            int col1X = infoX;
-            int col2X = infoX + 75; // Adjust this if the text overlaps
-            
-            WorkbenchDesign.drawSmallText(guiGraphics, this.font, "ROUND", col1X, infoY, 0.65f, 0xFF7A818C);
-            WorkbenchDesign.drawSmallText(guiGraphics, this.font, platform, col2X, infoY, 0.65f, 0xFFFFFFFF);
-            infoY += 14;
-            
-            WorkbenchDesign.drawSmallText(guiGraphics, this.font, round, col1X, infoY, 0.65f, 0xFFFFFFFF);
-            infoY += 14;
-            
-            WorkbenchDesign.drawSmallText(guiGraphics, this.font, "RECOIL", col1X, infoY, 0.65f, 0xFF7A818C);
-            infoY += 14;
-            
-            WorkbenchDesign.drawSmallText(guiGraphics, this.font, recoil, col1X, infoY, 0.65f, 0xFFFFFFFF);
-            infoY += 14;
-            
-            WorkbenchDesign.drawSmallText(guiGraphics, this.font, "FIRE-RATE", col1X, infoY, 0.65f, 0xFF7A818C);
-            infoY += 14;
-            
-            WorkbenchDesign.drawSmallText(guiGraphics, this.font, fireRate, col1X, infoY, 0.65f, 0xFFFFFFFF);
-            infoY += 14;
-            
-            WorkbenchDesign.drawSmallText(guiGraphics, this.font, "CAPACITY", col1X, infoY, 0.65f, 0xFF7A818C);
-            infoY += 14;
-            
-            WorkbenchDesign.drawSmallText(guiGraphics, this.font, capacity, col1X, infoY, 0.65f, 0xFFFFFFFF);
-            
-            infoY += 25;
-            WorkbenchDesign.drawSmallText(guiGraphics, this.font, "ATTACHMENTS", infoX, infoY, 0.65f, 0xFF7A818C);
-            infoY += 12;
-            
-            String[] cats = (this.currentWeaponTab == 8) ? new String[]{"OPTIC", "MUZZLE", "STOCK", "MAGAZINE"} : new String[]{"OPTIC", "BARREL", "MUZZLE", "UNDERBARREL", "LASER", "MAGAZINE"};
-            int attachY = infoY;
-            boolean hasAtt = false;
-            for (String cat : cats) {
-                AttachmentInfo att = getAttachmentInfo(previewStack, cat);
-                if (!att.name.equals("NONE")) {
-                    WorkbenchDesign.drawSmallText(guiGraphics, this.font, "- " + att.name, infoX, attachY, 0.65f, 0xFFD2D6DE);
-                    attachY += 12;
-                    hasAtt = true;
-                }
-            }
-            if (!hasAtt) {
-                WorkbenchDesign.drawSmallText(guiGraphics, this.font, "FACTORY STANDARD", infoX, attachY, 0.65f, 0xFF555555);
-                WorkbenchDesign.drawSmallText(guiGraphics, this.font, "(NO ATTACHMENTS)", infoX, attachY+12, 0.65f, 0xFF555555);
-            }
-        }
-    }
-
-    private void renderMunitionSelectionLabels(GuiGraphics guiGraphics, int mouseX, int mouseY, int trueWidth, int trueHeight) {
-        WorkbenchDesign.drawSmallText(guiGraphics, this.font, "< LOADOUT", 20, 25, 0.75f, 0xFFFFFF);
-        WorkbenchDesign.drawSmallText(guiGraphics, this.font, "MUNITIONS", 20, 55, 1.1f, 0xFFFFFF); 
-        WorkbenchDesign.drawSmallText(guiGraphics, this.font, "SELECT EQUIPMENT", 20, 75, 0.65f, 0xFFD62929); 
-
-        String[] ammoNames = {"5.56X45MM NATO", "9X19MM PARABELLUM", "12 GAUGE BUCKSHOT", ".300 BLACKOUT"};
-        String[] grenadeNames = {"9-BANG FLASH GRENADE", "CS GAS", "FLASHBANGS", "STINGER"};
-        String[] tacticalNames = {"C2", "LOCKPICK GUN", "PEPPER SPRAY", "TASER", "WEDGE"};
-
-        int currentY = 100 - (int)this.scrollOffset;
-        int leftX = 20;
-        
-        guiGraphics.enableScissor(0, 90, 240, trueHeight);
-        
-        // --- PRIMARY AMMUNITION SECTION ---
-        WorkbenchDesign.drawSmallText(guiGraphics, this.font, "PRIMARY AMMUNITION", leftX, currentY, 0.65f, 0xFF7A818C);
-        currentY += 20;
-        for (String name : ammoNames) {
-            renderTextListItem(guiGraphics, name, leftX, currentY, mouseX, mouseY);
-            currentY += 35;
-        }
-        
-        currentY += 10; 
-        
-        // --- GRENADE SECTION ---
-        WorkbenchDesign.drawSmallText(guiGraphics, this.font, "GRENADE", leftX, currentY, 0.65f, 0xFF7A818C);
-        currentY += 20;
-        for (String name : grenadeNames) {
-            renderTextListItem(guiGraphics, name, leftX, currentY, mouseX, mouseY);
-            currentY += 35;
-        }
-        
-        currentY += 10;
-        
-        // --- TACTICAL SECTION ---
-        WorkbenchDesign.drawSmallText(guiGraphics, this.font, "TACTICAL", leftX, currentY, 0.65f, 0xFF7A818C);
-        currentY += 20;
-        for (String name : tacticalNames) {
-            renderTextListItem(guiGraphics, name, leftX, currentY, mouseX, mouseY);
-            currentY += 35;
-        }
-
-        guiGraphics.disableScissor();
-    }
-
-    private void renderTextListItem(GuiGraphics guiGraphics, String name, int x, int y, int mouseX, int mouseY) {
-        boolean isHovered = mouseY >= y && mouseY <= y + 35 && mouseX >= x && mouseX <= x + 200;
-        int textColor = isHovered ? 0xFFFFFFFF : 0xFF7A818C;
-        
-        WorkbenchDesign.drawSmallText(guiGraphics, this.font, name, x, y + 10, 0.8f, textColor);
-        guiGraphics.fill(x, y + 25, 220, y + 26, 0xFF2E3136);
-        
-        if (isHovered) {
-            int textWidth = this.font.width(name);
-            int scaledWidth = (int)(textWidth * 0.8f);
-            guiGraphics.fill(x, y + 25, x + scaledWidth, y + 26, 0xFFD62929); 
-        }
-    }
-
-    private void renderGunsmithLabels(GuiGraphics guiGraphics) {
-        WorkbenchDesign.drawSmallText(guiGraphics, this.font, "< WEAPON BUILD", 20, 25, 0.75f, 0xFFFFFF);
-        
-        boolean isPrimary = (this.currentWeaponTab != 8);
-        WorkbenchDesign.drawSmallText(guiGraphics, this.font, "PRIMARY", 20, 75, 0.85f, isPrimary ? 0xFFFFFFFF : 0xFF7A818C);
-        WorkbenchDesign.drawSmallText(guiGraphics, this.font, "SIDE ARM", 100, 75, 0.85f, !isPrimary ? 0xFFFFFFFF : 0xFF7A818C);
-        
-        if (isPrimary) {
-            guiGraphics.fill(20, 87, 80, 89, 0xFFD62929); 
-        } else {
-            guiGraphics.fill(100, 87, 160, 89, 0xFFD62929); 
-        }
-
-        int startY = 100;
-        int currentY = startY - (int)this.scrollOffset;
-        int leftX = 26;
-
-        guiGraphics.enableScissor(0, 90, 240, guiGraphics.guiHeight());
-        
-        WorkbenchDesign.drawSmallText(guiGraphics, this.font, "WEAPON", leftX, currentY + 50, 0.45f, 0xFF7A818C);
-        WorkbenchDesign.drawSmallText(guiGraphics, this.font, "CURRENT", leftX, currentY + 58, 0.65f, 0xFFD2D6DE);
-        
-        ItemStack weaponStack = (this.currentWeaponTab == 8) ? getDisplayedSidearm() : getDisplayedPrimary();
-        if (!weaponStack.isEmpty()) {
-            guiGraphics.pose().pushPose();
-            guiGraphics.pose().translate(110, currentY + 8, 350.0F); 
-            guiGraphics.pose().scale(3.5f, 3.5f, 3.5f); // FIXED: Uniform 3D Z Scaling
-            guiGraphics.renderItem(weaponStack, 0, 0);
-            guiGraphics.pose().popPose();
-        } else {
-            WorkbenchDesign.drawSmallText(guiGraphics, this.font, "NO WEAPON EQUIPPED", 90, currentY + 32, 0.55f, 0xFF555555);
-        }
-
-        currentY += 75;
-
-        currentY += 5; 
-        WorkbenchDesign.drawSmallText(guiGraphics, this.font, "ATTACHMENTS", leftX, currentY + 6, 0.65f, 0xFF7A818C);
-        currentY += 25;
-
-        int numCoreAttachments = (this.currentWeaponTab == 8) ? 3 : 5;
-        String[] boxCats = (this.currentWeaponTab == 8) 
-                ? new String[]{"OPTIC", "MUZZLE", "STOCK"} 
-                : new String[]{"OPTIC", "BARREL", "MUZZLE", "UNDERBARREL", "LASER"};
-
-        AttachmentInfo[] attachments = new AttachmentInfo[numCoreAttachments];
-        for (int i = 0; i < numCoreAttachments; i++) {
-            attachments[i] = getAttachmentInfo(weaponStack, boxCats[i]);
-        }
-
-        for (int i = 0; i < numCoreAttachments; i++) {
-            WorkbenchDesign.drawSmallText(guiGraphics, this.font, boxCats[i], leftX, currentY + 12, 0.45f, 0xFF7A818C);
-            WorkbenchDesign.drawSmallText(guiGraphics, this.font, attachments[i].name, leftX, currentY + 22, 0.65f, 0xFFD2D6DE);
-            
-            if (!attachments[i].stack.isEmpty()) {
-                guiGraphics.pose().pushPose();
-                guiGraphics.pose().translate(175, currentY + 4, 350.0F); 
-                guiGraphics.pose().scale(2.0f, 2.0f, 2.0f); // FIXED: Uniform 3D Z Scaling
-                guiGraphics.renderItem(attachments[i].stack, 0, 0);
-                guiGraphics.pose().popPose();
-            }
-            
-            currentY += 45; 
-        }
-
-        int tabY = currentY + 10;
-        WorkbenchDesign.drawSmallText(guiGraphics, this.font, "AMMUNITION", leftX, tabY + 6, 0.55f, this.showAmmunitionTab ? 0xFFFFFFFF : 0xFF7A818C);
-        WorkbenchDesign.drawSmallText(guiGraphics, this.font, "DEPLOYABLE", 116, tabY + 6, 0.55f, !this.showAmmunitionTab ? 0xFFFFFFFF : 0xFF7A818C);
-        currentY = tabY + 20;
-
-        if (this.showAmmunitionTab) {
-            String[] primaryCats = {"MAGAZINE", "AMMUNITION"};
-            AttachmentInfo pMagInfo = getAttachmentInfo(getDisplayedPrimary(), "MAGAZINE");
-            AttachmentInfo pAmmoInfo = getAttachmentInfo(getDisplayedPrimary(), "AMMO");
-            AttachmentInfo[] pAmmoInfos = {pMagInfo, pAmmoInfo};
-            String[] primaryNames = {
-                    pMagInfo.name.equals("NONE") ? "STANDARD MAG" : pMagInfo.name, 
-                    pAmmoInfo.name.equals("NONE") ? "5.56X45MM NATO" : pAmmoInfo.name
-            };
-            
-            String[] sidearmCats = {"MAGAZINE", "AMMUNITION"};
-            AttachmentInfo sMagInfo = getAttachmentInfo(getDisplayedSidearm(), "MAGAZINE");
-            AttachmentInfo sAmmoInfo = getAttachmentInfo(getDisplayedSidearm(), "AMMO");
-            AttachmentInfo[] sAmmoInfos = {sMagInfo, sAmmoInfo};
-            String[] sidearmNames = {
-                    sMagInfo.name.equals("NONE") ? "STANDARD MAG" : sMagInfo.name, 
-                    sAmmoInfo.name.equals("NONE") ? "9X19MM PARABELLUM" : sAmmoInfo.name
-            };
-            
-            WorkbenchDesign.drawSmallText(guiGraphics, this.font, "PRIMARY AMMUNITION", leftX, currentY + 6, 0.65f, 0xFF7A818C);
-            currentY += 16;
-            for (int i = 0; i < primaryCats.length; i++) {
-                WorkbenchDesign.drawSmallText(guiGraphics, this.font, primaryCats[i], leftX, currentY + 8, 0.45f, 0xFF7A818C);
-                WorkbenchDesign.drawSmallText(guiGraphics, this.font, primaryNames[i], leftX, currentY + 18, 0.65f, 0xFFFFFFFF);
-                if (!pAmmoInfos[i].stack.isEmpty()) {
-                    guiGraphics.pose().pushPose();
-                    guiGraphics.pose().translate(185, currentY + 4, 350.0F); 
-                    guiGraphics.pose().scale(1.5f, 1.5f, 1.5f); // FIXED: Uniform 3D Z Scaling
-                    guiGraphics.renderItem(pAmmoInfos[i].stack, 0, 0);
-                    guiGraphics.pose().popPose();
-                }
-                currentY += 31;
-            }
-
-            currentY += 10; 
-            WorkbenchDesign.drawSmallText(guiGraphics, this.font, "SIDEARM AMMUNITION", leftX, currentY + 6, 0.65f, 0xFF7A818C);
-            currentY += 16;
-            for (int i = 0; i < sidearmCats.length; i++) {
-                WorkbenchDesign.drawSmallText(guiGraphics, this.font, sidearmCats[i], leftX, currentY + 8, 0.45f, 0xFF7A818C);
-                WorkbenchDesign.drawSmallText(guiGraphics, this.font, sidearmNames[i], leftX, currentY + 18, 0.65f, 0xFFFFFFFF);
-                if (!sAmmoInfos[i].stack.isEmpty()) {
-                    guiGraphics.pose().pushPose();
-                    guiGraphics.pose().translate(185, currentY + 4, 350.0F); 
-                    guiGraphics.pose().scale(1.5f, 1.5f, 1.5f); // FIXED: Uniform 3D Z Scaling
-                    guiGraphics.renderItem(sAmmoInfos[i].stack, 0, 0);
-                    guiGraphics.pose().popPose();
-                }
-                currentY += 31;
-            }
-        } else {
-            String[] grenadeCats = {"GRENADE", "GRENADE", "GRENADE", "GRENADE"};
-            String[] grenadeNames = {"9-BANG FLASH GRENADE", "CS GAS", "FLASHBANGS", "STINGER"};
-            String[] tacticalCats = {"TACTICAL", "TACTICAL", "TACTICAL", "TACTICAL", "TACTICAL"};
-            String[] tacticalNames = {"C2", "LOCKPICK GUN", "PEPPER SPRAY", "TASER", "WEDGE"};
-            
-            WorkbenchDesign.drawSmallText(guiGraphics, this.font, "GRENADE", leftX, currentY + 6, 0.65f, 0xFF7A818C);
-            currentY += 16;
-            for (int i = 0; i < grenadeCats.length; i++) {
-                WorkbenchDesign.drawSmallText(guiGraphics, this.font, grenadeCats[i], leftX, currentY + 8, 0.45f, 0xFF7A818C);
-                WorkbenchDesign.drawSmallText(guiGraphics, this.font, grenadeNames[i], leftX, currentY + 18, 0.65f, 0xFFFFFFFF);
-                currentY += 31;
-            }
-
-            currentY += 10; 
-            WorkbenchDesign.drawSmallText(guiGraphics, this.font, "TACTICAL", leftX, currentY + 6, 0.65f, 0xFF7A818C);
-            currentY += 16;
-            for (int i = 0; i < tacticalCats.length; i++) {
-                WorkbenchDesign.drawSmallText(guiGraphics, this.font, tacticalCats[i], leftX, currentY + 8, 0.45f, 0xFF7A818C);
-                WorkbenchDesign.drawSmallText(guiGraphics, this.font, tacticalNames[i], leftX, currentY + 18, 0.65f, 0xFFFFFFFF);
-                currentY += 31;
-            }
-        }
-
-        guiGraphics.disableScissor();
-    }
-
-    private static class AttachmentInfo {
-        public final ItemStack stack;
-        public final String name;
-        public AttachmentInfo(ItemStack stack, String name) {
-            this.stack = stack;
-            this.name = name;
-        }
-    }
-
-    private AttachmentInfo getAttachmentInfo(ItemStack weaponStack, String category) {
-        if (weaponStack == null || weaponStack.isEmpty() || !weaponStack.hasTag()) {
-            return new AttachmentInfo(ItemStack.EMPTY, "NONE");
-        }
-
-        net.minecraft.nbt.CompoundTag tag = weaponStack.getTag();
-        String vpbCategory = switch (category.toUpperCase()) {
-            case "OPTIC"       -> "scope";
-            case "BARREL"      -> "barrel";
-            case "MUZZLE"      -> "muzzle";
-            case "UNDERBARREL" -> "underbarrel";
-            case "LASER"       -> "rail";
-            case "STOCK"       -> "stock";
-            case "MAGAZINE"    -> "magazine";
-            default -> category.toLowerCase();
-        };
-
-        if (tag.contains("sa", net.minecraft.nbt.Tag.TAG_COMPOUND)) {
-            net.minecraft.nbt.CompoundTag sa = tag.getCompound("sa");
-            if (sa.contains(vpbCategory, net.minecraft.nbt.Tag.TAG_STRING)) {
-                String rl = sa.getString(vpbCategory);
-                if (!rl.isEmpty()) {
-                    net.minecraft.world.item.Item item = net.minecraftforge.registries.ForgeRegistries.ITEMS
-                            .getValue(ResourceLocation.tryParse(rl));
-                    if (item != null && item != net.minecraft.world.item.Items.AIR) {
-                        String name = rl.contains(":") ? rl.substring(rl.indexOf(':') + 1).replace("_", " ").toUpperCase() : rl.toUpperCase();
-                        return new AttachmentInfo(new ItemStack(item), name);
-                    }
-                }
-            }
-        }
-
-        if (tag.contains("as", net.minecraft.nbt.Tag.TAG_LIST)) {
-            net.minecraft.nbt.ListTag asList = tag.getList("as", net.minecraft.nbt.Tag.TAG_COMPOUND);
-            for (int k = 0; k < asList.size(); k++) {
-                net.minecraft.nbt.CompoundTag entry = asList.getCompound(k);
-                String eid = entry.getString("id");
-                if (eid.isEmpty()) continue;
-                net.minecraft.world.item.Item eItem = net.minecraftforge.registries.ForgeRegistries.ITEMS
-                        .getValue(ResourceLocation.tryParse(eid));
-                if (eItem != null && eItem != net.minecraft.world.item.Items.AIR
-                        && com.k1ngtle.taticalsuit.network.EquipWeaponPacket.isItemInCategory(eItem, vpbCategory)) {
-                    String name = eid.contains(":") ? eid.substring(eid.indexOf(':') + 1).replace("_", " ").toUpperCase() : eid.toUpperCase();
-                    return new AttachmentInfo(new ItemStack(eItem), name);
-                }
-            }
-        }
-
-        return new AttachmentInfo(ItemStack.EMPTY, "NONE");
-    }
-
-    private boolean isPrimaryWeapon(ItemStack stack) {
+    public boolean isPrimaryWeapon(ItemStack stack) {
         if (stack == null || stack.isEmpty()) return false;
         ResourceLocation loc = net.minecraftforge.registries.ForgeRegistries.ITEMS.getKey(stack.getItem());
         if (loc == null) return false;
@@ -2545,7 +358,7 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
         return false;
     }
 
-    private boolean isSidearmWeapon(ItemStack stack) {
+    public boolean isSidearmWeapon(ItemStack stack) {
         if (stack == null || stack.isEmpty()) return false;
         ResourceLocation loc = net.minecraftforge.registries.ForgeRegistries.ITEMS.getKey(stack.getItem());
         if (loc == null) return false;
@@ -2553,7 +366,7 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
         return dynamicSidearm.contains(id);
     }
 
-    private ItemStack getDisplayedPrimary() {
+    public ItemStack getDisplayedPrimary() {
         if (Minecraft.getInstance().player == null) return ItemStack.EMPTY;
         ItemStack menuStack = this.menu.getSlot(0).getItem();
         if (isPrimaryWeapon(menuStack)) return menuStack;
@@ -2562,7 +375,7 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
         return ItemStack.EMPTY;
     }
 
-    private ItemStack getDisplayedSidearm() {
+    public ItemStack getDisplayedSidearm() {
         if (Minecraft.getInstance().player == null) return ItemStack.EMPTY;
         ItemStack menuStack = this.menu.getSlot(1).getItem();
         if (isSidearmWeapon(menuStack)) return menuStack;
@@ -2571,7 +384,7 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
         return ItemStack.EMPTY;
     }
 
-    private void updateHelmetEquip() {
+    public void updateHelmetEquip() {
         String targetId = "NONE";
         
         if (this.selectedHelmet.equals("HELMET ONLY")) {
@@ -2591,7 +404,6 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
         if (!targetId.equals("NONE")) {
             targetItem = net.minecraftforge.registries.ForgeRegistries.ITEMS.getValue(new ResourceLocation(targetId));
             
-            // BULLETPROOF FALLBACK: Ensure the base helmet equips even if ID lookup fails
             if (targetItem == null || targetItem == net.minecraft.world.item.Items.AIR) {
                 for (net.minecraft.world.item.Item regItem : net.minecraftforge.registries.ForgeRegistries.ITEMS) {
                     if (regItem instanceof com.k1ngtle.taticalsuit.item.HelmetItem && 
@@ -2606,10 +418,8 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
             }
         }
         
-        // INSTANT CLIENT-SIDE GUI PREDICTION
         if (Minecraft.getInstance().player != null) {
             if (targetId.equals("NONE")) {
-                // Instantly clear from client inventory for responsive real-time GUI
                 for (int i = 0; i < Minecraft.getInstance().player.getInventory().getContainerSize(); i++) {
                     ItemStack stack = Minecraft.getInstance().player.getInventory().getItem(i);
                     if (stack.getItem() instanceof com.k1ngtle.taticalsuit.item.HelmetItem ||
@@ -2621,7 +431,6 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
                 }
                 Minecraft.getInstance().player.setItemSlot(net.minecraft.world.entity.EquipmentSlot.HEAD, ItemStack.EMPTY);
             } else if (targetItem != null && targetItem != net.minecraft.world.item.Items.AIR) {
-                // Clear out other helmets so they don't visually dupe in the hotbar
                 for (int i = 0; i < Minecraft.getInstance().player.getInventory().getContainerSize(); i++) {
                     ItemStack stack = Minecraft.getInstance().player.getInventory().getItem(i);
                     if (stack.getItem() instanceof com.k1ngtle.taticalsuit.item.HelmetItem ||
@@ -2632,16 +441,88 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
                     }
                 }
                 
-                // Force equip the new item instantly to update the 3D model
                 ItemStack localEquip = new ItemStack(targetItem);
                 localEquip.getOrCreateTag().putString("phosphor", this.selectedPhosphor);
                 Minecraft.getInstance().player.setItemSlot(net.minecraft.world.entity.EquipmentSlot.HEAD, localEquip);
             }
         }
         
-        // Send packet to server to scan and equip the helmet
         com.k1ngtle.taticalsuit.network.HeadwearNetwork.CHANNEL.sendToServer(
                 new com.k1ngtle.taticalsuit.network.HeadwearNetwork.EquipHelmetPacket(targetId, this.selectedPhosphor)
         );
+    }
+
+    @Override
+    public boolean mouseClicked(double pMouseX, double pMouseY, int pButton) {
+        if (this.designLayer.handleMouseClicked(pMouseX, pMouseY, pButton)) return true;
+        return super.mouseClicked(pMouseX, pMouseY, pButton);
+    }
+
+    @Override
+    public boolean mouseReleased(double pMouseX, double pMouseY, int pButton) {
+        this.isDraggingModel = false;
+        return super.mouseReleased(pMouseX, pMouseY, pButton);
+    }
+
+    @Override
+    public boolean mouseDragged(double pMouseX, double pMouseY, int pButton, double pDragX, double pDragY) {
+        if (this.designLayer.handleMouseDragged(pMouseX, pMouseY, pButton, pDragX, pDragY)) return true;
+        return super.mouseDragged(pMouseX, pMouseY, pButton, pDragX, pDragY);
+    }
+
+    @Override
+    public boolean mouseScrolled(double pMouseX, double pMouseY, double pDelta) {
+        if (this.designLayer.handleMouseScrolled(pMouseX, pMouseY, pDelta)) return true;
+        return super.mouseScrolled(pMouseX, pMouseY, pDelta);
+    }
+
+    @Override
+    public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float delta) {
+        int renderMouseX = mouseX;
+        int renderMouseY = mouseY;
+        
+        if (!this.inGunsmith && !this.inWeaponSelection && !this.inAttachmentSelection && !this.inMunitionSelection && !this.inHeadwearSelection && !this.inArmorSelection && !this.inTacticalSelection) {
+            if (this.inCustomizationTab) {
+                if (mouseX < 240) {
+                    renderMouseX = -999;
+                    renderMouseY = -999;
+                }
+            } else {
+                if (mouseX >= 165 && mouseX <= 195 && mouseY >= 35 && mouseY <= 165) {
+                    renderMouseX = -999;
+                    renderMouseY = -999;
+                } else if (mouseX < 240 && mouseY >= 190) {
+                    renderMouseX = -999;
+                    renderMouseY = -999;
+                }
+            }
+        }
+        
+        super.render(guiGraphics, renderMouseX, renderMouseY, delta);
+        this.designLayer.renderMain(guiGraphics, mouseX, mouseY, delta);
+    }
+
+    @Override
+    protected void renderBg(GuiGraphics guiGraphics, float partialTick, int mouseX, int mouseY) {
+        this.designLayer.renderBg(guiGraphics, mouseX, mouseY);
+    }
+
+    @Override
+    protected void renderLabels(GuiGraphics guiGraphics, int mouseX, int mouseY) {
+        if (!this.inGunsmith && !this.inWeaponSelection && !this.inAttachmentSelection && !this.inMunitionSelection && !this.inHeadwearSelection && !this.inArmorSelection && !this.inTacticalSelection) {
+            
+            int loadoutColor = !this.inCustomizationTab ? 0xFFFFFFFF : 0xFF7A818C;
+            int customColor = this.inCustomizationTab ? 0xFFFFFFFF : 0xFF7A818C;
+            
+            guiGraphics.drawString(this.font, "LOADOUT", 20, 6, loadoutColor, false);
+            
+            int slashX = 20 + this.font.width("LOADOUT") + 4;
+            guiGraphics.drawString(this.font, "/", slashX, 6, 0xFF555555, false);
+            
+            int customX = slashX + this.font.width("/") + 4;
+            guiGraphics.drawString(this.font, "CUSTOMIZATION", customX, 6, customColor, false);
+            
+            this.designLayer.renderLabels(guiGraphics, mouseX, mouseY);
+        }
     }
 }
