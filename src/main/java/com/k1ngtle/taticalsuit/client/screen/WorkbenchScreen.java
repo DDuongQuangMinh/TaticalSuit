@@ -131,8 +131,17 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
                 if (helmetStack.getItem() instanceof com.k1ngtle.taticalsuit.item.HelmetItem) {
                     this.selectedHelmet = "HELMET ONLY";
                     this.selectedMount = "NONE";
-                } else if (helmetStack.getItem() instanceof com.k1ngtle.taticalsuit.item.HelmetGPNVG18SandItem) {
+                } else if (helmetStack.getItem() instanceof com.k1ngtle.taticalsuit.item.HelmetPVS31Item) {
+                    this.selectedHelmet = "HELMET ONLY";
+                    this.selectedMount = "NVGS";
+                } else if (helmetStack.getItem() instanceof com.k1ngtle.taticalsuit.item.HelmetPVS31GhillieItem) {
+                    this.selectedHelmet = "GHILLIE HELMET";
+                    this.selectedMount = "NVGS";
+                } else if (helmetStack.getItem() instanceof com.k1ngtle.taticalsuit.item.HelmetPVS31SandItem) {
                     this.selectedHelmet = "SAND GHILLIE HELMET";
+                    this.selectedMount = "NVGS";
+                } else if (helmetStack.getItem() instanceof com.k1ngtle.taticalsuit.item.HelmetGPNVG18Item) {
+                    this.selectedHelmet = "HELMET ONLY";
                     this.selectedMount = "GPNVGS";
                 } else if (helmetStack.getItem() instanceof com.k1ngtle.taticalsuit.item.HelmetGPNVG18SnowItem) {
                     this.selectedHelmet = "SNOW GHILLIE HELMET";
@@ -407,14 +416,14 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
                 targetId = "taticalsuit:helmet_gpnvg18";
             }
         } else if (this.selectedHelmet.equals("GHILLIE HELMET")) {
-            if (this.selectedMount.equals("NONE")) {
-                targetId = "taticalsuit:helmet_ghillie";
-            } else if (this.selectedMount.equals("GPNVGS")) {
-                targetId = "taticalsuit:helmet_gpnvg18_ghillie";
-            }
+            if (this.selectedMount.equals("NONE")) targetId = "taticalsuit:helmet_ghillie";
+            else if (this.selectedMount.equals("NVGS")) targetId = "taticalsuit:helmet_pvs31_ghillie";
+            else if (this.selectedMount.equals("GPNVGS")) targetId = "taticalsuit:helmet_gpnvg18_ghillie";
         } else if (this.selectedHelmet.equals("SAND GHILLIE HELMET")) {
             if (this.selectedMount.equals("NONE")) {
                 targetId = "taticalsuit:helmet_sand";
+            } else if (this.selectedMount.equals("NVGS")) {
+                targetId = "taticalsuit:helmet_pvs31_sand";
             } else if (this.selectedMount.equals("GPNVGS")) {
                 targetId = "taticalsuit:helmet_gpnvg18_sand";
             }
@@ -437,6 +446,8 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
                 for (net.minecraft.world.item.Item regItem : net.minecraftforge.registries.ForgeRegistries.ITEMS) {
                     if (regItem instanceof com.k1ngtle.taticalsuit.item.HelmetItem && 
                        !(regItem instanceof com.k1ngtle.taticalsuit.item.HelmetPVS31Item) && 
+                       !(regItem instanceof com.k1ngtle.taticalsuit.item.HelmetPVS31GhillieItem) && 
+                       !(regItem instanceof com.k1ngtle.taticalsuit.item.HelmetPVS31SandItem) && 
                        !(regItem instanceof com.k1ngtle.taticalsuit.item.HelmetGPNVG18Item) &&
                        !(regItem instanceof com.k1ngtle.taticalsuit.item.HelmetGPNVG18GhillieItem) &&
                        !(regItem instanceof com.k1ngtle.taticalsuit.item.HelmetGPNVG18SandItem) &&
@@ -457,6 +468,8 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
                 ItemStack stack = Minecraft.getInstance().player.getInventory().getItem(i);
                 if (stack.getItem() instanceof com.k1ngtle.taticalsuit.item.HelmetItem ||
                     stack.getItem() instanceof com.k1ngtle.taticalsuit.item.HelmetPVS31Item ||
+                    stack.getItem() instanceof com.k1ngtle.taticalsuit.item.HelmetPVS31GhillieItem ||
+                    stack.getItem() instanceof com.k1ngtle.taticalsuit.item.HelmetPVS31SandItem ||
                     stack.getItem() instanceof com.k1ngtle.taticalsuit.item.HelmetGPNVG18Item ||
                     stack.getItem() instanceof com.k1ngtle.taticalsuit.item.HelmetGPNVG18GhillieItem ||
                     stack.getItem() instanceof com.k1ngtle.taticalsuit.item.HelmetGPNVG18SandItem ||
@@ -470,6 +483,8 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
             
             if (this.menu.getCarried().getItem() instanceof com.k1ngtle.taticalsuit.item.HelmetItem ||
                 this.menu.getCarried().getItem() instanceof com.k1ngtle.taticalsuit.item.HelmetPVS31Item ||
+                this.menu.getCarried().getItem() instanceof com.k1ngtle.taticalsuit.item.HelmetPVS31GhillieItem ||
+                this.menu.getCarried().getItem() instanceof com.k1ngtle.taticalsuit.item.HelmetPVS31SandItem ||
                 this.menu.getCarried().getItem() instanceof com.k1ngtle.taticalsuit.item.HelmetGPNVG18Item ||
                 this.menu.getCarried().getItem() instanceof com.k1ngtle.taticalsuit.item.HelmetGPNVG18GhillieItem ||
                 this.menu.getCarried().getItem() instanceof com.k1ngtle.taticalsuit.item.HelmetGPNVG18SandItem ||

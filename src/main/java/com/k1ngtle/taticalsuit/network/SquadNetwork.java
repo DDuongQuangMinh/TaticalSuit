@@ -7,7 +7,8 @@ import com.k1ngtle.taticalsuit.item.HelmetGPNVG18GhillieItem;
 import com.k1ngtle.taticalsuit.item.HelmetGPNVG18SandItem;
 import com.k1ngtle.taticalsuit.item.HelmetGPNVG18SnowItem;
 import com.k1ngtle.taticalsuit.item.HelmetPVS31Item;
-import com.k1ngtle.taticalsuit.item.HelmetGPNVG18GhillieItem;
+import com.k1ngtle.taticalsuit.item.HelmetPVS31GhillieItem;
+import com.k1ngtle.taticalsuit.item.HelmetPVS31SandItem;
 import com.k1ngtle.taticalsuit.item.HelmetGhillieItem;
 import com.k1ngtle.taticalsuit.item.HelmetSandItem;
 import com.k1ngtle.taticalsuit.item.HelmetSnowItem;
@@ -65,6 +66,8 @@ public class SquadNetwork {
                     
                     if (helmet.getItem() instanceof HelmetItem || 
                         helmet.getItem() instanceof HelmetPVS31Item || 
+                        helmet.getItem() instanceof HelmetPVS31GhillieItem || 
+                        helmet.getItem() instanceof HelmetPVS31SandItem || 
                         helmet.getItem() instanceof HelmetGPNVG18Item ||
                         helmet.getItem() instanceof HelmetGPNVG18GhillieItem ||
                         helmet.getItem() instanceof HelmetGPNVG18SandItem ||

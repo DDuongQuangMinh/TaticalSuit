@@ -29,6 +29,8 @@ public class ModCreativeTabs {
                         output.accept(ModItems.HELMET_SAND.get());
                         output.accept(ModItems.HELMET_SNOW.get());
                         output.accept(ModItems.HELMET_PVS31.get());
+                        output.accept(ModItems.HELMET_PVS31_GHILLIE.get());
+                        output.accept(ModItems.HELMET_PVS31_SAND.get());
                         output.accept(ModItems.HELMET_GPNVG18.get());
                         output.accept(ModItems.HELMET_GPNVG18_GHILLIE.get());
                         output.accept(ModItems.HELMET_GPNVG18_SAND.get());
