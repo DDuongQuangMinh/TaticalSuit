@@ -7,6 +7,7 @@ import com.k1ngtle.taticalsuit.item.HelmetPVS31Item;
 import com.k1ngtle.taticalsuit.item.HelmetGPNVG18Item;
 import com.k1ngtle.taticalsuit.item.HelmetGPNVG18GhillieItem;
 import com.k1ngtle.taticalsuit.item.HelmetGPNVG18SandItem;
+import com.k1ngtle.taticalsuit.item.HelmetGPNVG18SnowItem;
 import com.k1ngtle.taticalsuit.item.HelmetGhillieItem;
 import com.k1ngtle.taticalsuit.item.HelmetSandItem;
 import com.k1ngtle.taticalsuit.item.HelmetSnowItem;
@@ -91,6 +92,7 @@ public class HelmetCameraManager {
                                 head.getItem() instanceof HelmetGPNVG18Item ||
                                 head.getItem() instanceof HelmetGPNVG18GhillieItem ||
                                 head.getItem() instanceof HelmetGPNVG18SandItem ||
+                                head.getItem() instanceof HelmetGPNVG18SnowItem ||
                                 head.getItem() instanceof HelmetGhillieItem ||
                                 head.getItem() instanceof HelmetSandItem ||
                                 head.getItem() instanceof HelmetSnowItem;
@@ -100,6 +102,7 @@ public class HelmetCameraManager {
                                 hand.getItem() instanceof HelmetGPNVG18Item ||
                                 hand.getItem() instanceof HelmetGPNVG18GhillieItem ||
                                 hand.getItem() instanceof HelmetGPNVG18SandItem ||
+                                hand.getItem() instanceof HelmetGPNVG18SnowItem ||
                                 hand.getItem() instanceof HelmetGhillieItem ||
                                 hand.getItem() instanceof HelmetSandItem ||
                                 hand.getItem() instanceof HelmetSnowItem;

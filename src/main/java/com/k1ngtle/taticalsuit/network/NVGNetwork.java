@@ -4,6 +4,7 @@ import com.k1ngtle.taticalsuit.TaticalSuit;
 import com.k1ngtle.taticalsuit.item.HelmetGPNVG18Item;
 import com.k1ngtle.taticalsuit.item.HelmetGPNVG18GhillieItem;
 import com.k1ngtle.taticalsuit.item.HelmetGPNVG18SandItem;
+import com.k1ngtle.taticalsuit.item.HelmetGPNVG18SnowItem;
 import com.k1ngtle.taticalsuit.item.HelmetPVS31Item;
 import com.mojang.blaze3d.platform.InputConstants;
 import net.minecraft.client.KeyMapping;
@@ -60,8 +61,7 @@ public class NVGNetwork {
                 if (player != null) {
                     ItemStack helmet = player.getItemBySlot(EquipmentSlot.HEAD);
                     
-                    // Strictly enforce that they are wearing the PVS-31 or GPNVG-18 to process the toggle
-                    if (helmet.getItem() instanceof HelmetPVS31Item || helmet.getItem() instanceof HelmetGPNVG18Item || helmet.getItem() instanceof HelmetGPNVG18GhillieItem || helmet.getItem() instanceof HelmetGPNVG18SandItem) {
+                    if (helmet.getItem() instanceof HelmetPVS31Item || helmet.getItem() instanceof HelmetGPNVG18Item || helmet.getItem() instanceof HelmetGPNVG18GhillieItem || helmet.getItem() instanceof HelmetGPNVG18SandItem || helmet.getItem() instanceof HelmetGPNVG18SnowItem) {
                         CompoundTag tag = helmet.getOrCreateTag();
                         boolean isActive = !tag.getBoolean("nvg_active");
                         tag.putBoolean("nvg_active", isActive);
@@ -86,7 +86,7 @@ public class NVGNetwork {
             if (event.phase == TickEvent.Phase.END && !event.player.level().isClientSide()) {
                 ItemStack helmet = event.player.getItemBySlot(EquipmentSlot.HEAD);
                 
-                boolean hasNVGHelmet = (helmet.getItem() instanceof HelmetPVS31Item || helmet.getItem() instanceof HelmetGPNVG18Item || helmet.getItem() instanceof HelmetGPNVG18GhillieItem || helmet.getItem() instanceof HelmetGPNVG18SandItem);
+                boolean hasNVGHelmet = (helmet.getItem() instanceof HelmetPVS31Item || helmet.getItem() instanceof HelmetGPNVG18Item || helmet.getItem() instanceof HelmetGPNVG18GhillieItem || helmet.getItem() instanceof HelmetGPNVG18SandItem || helmet.getItem() instanceof HelmetGPNVG18SnowItem);
                 boolean isNVGActive = hasNVGHelmet && helmet.hasTag() && helmet.getTag().getBoolean("nvg_active");
 
                 if (isNVGActive) {
@@ -117,8 +117,7 @@ public class NVGNetwork {
                 if (mc.player != null) {
                     ItemStack helmet = mc.player.getItemBySlot(EquipmentSlot.HEAD);
                     
-                    // Only send the packet if they are wearing the PVS31 or GPNVG18
-                    if (helmet.getItem() instanceof HelmetPVS31Item || helmet.getItem() instanceof HelmetGPNVG18Item || helmet.getItem() instanceof HelmetGPNVG18GhillieItem || helmet.getItem() instanceof HelmetGPNVG18SandItem) {
+                    if (helmet.getItem() instanceof HelmetPVS31Item || helmet.getItem() instanceof HelmetGPNVG18Item || helmet.getItem() instanceof HelmetGPNVG18GhillieItem || helmet.getItem() instanceof HelmetGPNVG18SandItem || helmet.getItem() instanceof HelmetGPNVG18SnowItem) {
                         CHANNEL.sendToServer(new TogglePacket());
                     } else {
                         // Optional: Show a message when trying to activate without the right helmet
@@ -137,8 +136,7 @@ public class NVGNetwork {
 
             ItemStack helmet = mc.player.getItemBySlot(EquipmentSlot.HEAD);
             
-            // Check if they are wearing the helmet AND it is turned on
-            boolean isWearingActiveNVG = (helmet.getItem() instanceof HelmetPVS31Item || helmet.getItem() instanceof HelmetGPNVG18Item || helmet.getItem() instanceof HelmetGPNVG18GhillieItem || helmet.getItem() instanceof HelmetGPNVG18SandItem) 
+            boolean isWearingActiveNVG = (helmet.getItem() instanceof HelmetPVS31Item || helmet.getItem() instanceof HelmetGPNVG18Item || helmet.getItem() instanceof HelmetGPNVG18GhillieItem || helmet.getItem() instanceof HelmetGPNVG18SandItem || helmet.getItem() instanceof HelmetGPNVG18SnowItem) 
                                          && helmet.hasTag() && helmet.getTag().getBoolean("nvg_active");
 
             ResourceLocation targetShader = GREEN_SHADER;

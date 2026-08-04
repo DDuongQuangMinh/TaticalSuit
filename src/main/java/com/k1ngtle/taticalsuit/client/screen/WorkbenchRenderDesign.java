@@ -18,11 +18,13 @@ public class WorkbenchRenderDesign {
     }
 
     private void drawCleanBox(GuiGraphics guiGraphics, int x, int y, int w, int h) {
+        /* STREAMING_CHUNK: Drawing standard UI boxes */
         guiGraphics.fill(x, y, x + w, y + h, 0xFF2E3136); 
         guiGraphics.fill(x + 1, y + 1, x + w - 1, y + h - 1, 0xFF0B0C0E); 
     }
 
     private void drawSmallText(GuiGraphics guiGraphics, Font font, String text, int x, int y, float scale, int color) {
+        /* STREAMING_CHUNK: Rendering scaled UI text */
         guiGraphics.pose().pushPose();
         guiGraphics.pose().translate(x, y, 0);
         guiGraphics.pose().scale(scale, scale, 1.0F);
@@ -31,7 +33,7 @@ public class WorkbenchRenderDesign {
     }
 
     // --- ATTACHMENT INFO CLASS FOR RENDERING ---
-    private static class AttachmentInfo {
+    public static class AttachmentInfo {
         public final ItemStack stack;
         public final String name;
         public AttachmentInfo(ItemStack stack, String name) {
@@ -41,6 +43,7 @@ public class WorkbenchRenderDesign {
     }
 
     private AttachmentInfo getAttachmentInfo(ItemStack weaponStack, String category) {
+        /* STREAMING_CHUNK: Resolving gun attachment NBT data for labels */
         if (weaponStack == null || weaponStack.isEmpty() || !weaponStack.hasTag()) {
             return new AttachmentInfo(ItemStack.EMPTY, "NONE");
         }
@@ -92,6 +95,7 @@ public class WorkbenchRenderDesign {
     }
 
     public void renderMain(GuiGraphics guiGraphics, int mouseX, int mouseY, float delta) {
+        /* STREAMING_CHUNK: Rendering primary view */
         if (screen.inAttachmentSelection) {
             guiGraphics.fill(0, 0, screen.width, screen.height, 0xFF070707); 
             renderAttachmentSelectionBg(guiGraphics, screen.width, screen.height);
@@ -124,6 +128,7 @@ public class WorkbenchRenderDesign {
     }
 
     public void renderBg(GuiGraphics guiGraphics, int mouseX, int mouseY) {
+        /* STREAMING_CHUNK: Rendering primary background panels */
         guiGraphics.fill(0, 0, screen.width, screen.height, 0xFF070707);
         
         if (screen.inCustomizationTab) {
@@ -137,6 +142,7 @@ public class WorkbenchRenderDesign {
     }
 
     public void renderLabels(GuiGraphics guiGraphics, int mouseX, int mouseY) {
+        /* STREAMING_CHUNK: Rendering dynamic textual labels */
         if (screen.inCustomizationTab) {
             renderCustomizationLabels(guiGraphics, mouseX, mouseY);
             if (screen.inCustomizationSelection) {
@@ -152,6 +158,7 @@ public class WorkbenchRenderDesign {
     }
 
     private void renderStyleSelectionBar(GuiGraphics guiGraphics, int mouseX, int mouseY, int trueWidth, int trueHeight) {
+        /* STREAMING_CHUNK: Setting up style selection UI */
         int openSpaceWidth = trueWidth - 120; 
         int centerX = 240 + (openSpaceWidth - 240) / 2;
         int boxSize = 70;
@@ -168,6 +175,7 @@ public class WorkbenchRenderDesign {
 
         String[] styleItems = {"taticalsuit:base_helmet", "taticalsuit:helmet_ghillie", "taticalsuit:helmet_sand", "taticalsuit:helmet_snow"};
         
+        /* STREAMING_CHUNK: Rendering style item boxes */
         for (int i = 0; i < 4; i++) {
             int boxX = startX + (i * (boxSize + gap));
             
@@ -204,6 +212,7 @@ public class WorkbenchRenderDesign {
     }
 
     private void render3DOperator(GuiGraphics guiGraphics, int trueWidth, int trueHeight) {
+        /* STREAMING_CHUNK: Drawing 3D entity */
         if (Minecraft.getInstance().player != null) {
             int rightBound = trueWidth;
             if (screen.inCustomizationTab && screen.inCustomizationSelection) {
@@ -229,6 +238,7 @@ public class WorkbenchRenderDesign {
     }
 
     private void renderCustomizationBg(GuiGraphics guiGraphics, int trueWidth, int trueHeight, int mouseX, int mouseY) {
+        /* STREAMING_CHUNK: Setting up left panel UI boxes */
         guiGraphics.fill(0, 0, 240, trueHeight, 0xFF121212);
         guiGraphics.fill(20, 16, 220, 18, 0xFFD62929);
 
@@ -258,6 +268,7 @@ public class WorkbenchRenderDesign {
     }
 
     private void renderCustomizationGridBg(GuiGraphics guiGraphics, int trueWidth, int trueHeight, int mouseX, int mouseY) {
+        /* STREAMING_CHUNK: Drawing right-side scrolling layout */
         boolean isLargeGrid = screen.customizationCategory.equals("SHIRT") || screen.customizationCategory.equals("PANTS") || screen.customizationCategory.equals("ARMOR");
         int cols = isLargeGrid ? 3 : 2;
         int rows = isLargeGrid ? 7 : 6;
@@ -298,6 +309,7 @@ public class WorkbenchRenderDesign {
     }
 
     private void renderCustomizationLabels(GuiGraphics guiGraphics, int mouseX, int mouseY) {
+        /* STREAMING_CHUNK: Setting up specific grid texts */
         int startY = 30;
         
         drawSmallText(guiGraphics, font, "UNIFORM", 20, startY, 0.65f, 0xFFAAAAAA);
@@ -346,6 +358,7 @@ public class WorkbenchRenderDesign {
     }
 
     private void renderCustomizationGridLabels(GuiGraphics guiGraphics, int mouseX, int mouseY, int trueWidth, int trueHeight) {
+        /* STREAMING_CHUNK: Setting up grid variables */
         boolean isLargeGrid = screen.customizationCategory.equals("SHIRT") || screen.customizationCategory.equals("PANTS") || screen.customizationCategory.equals("ARMOR");
         int cols = isLargeGrid ? 3 : 2;
         int rows = isLargeGrid ? 7 : 6;
@@ -361,6 +374,7 @@ public class WorkbenchRenderDesign {
         
         guiGraphics.enableScissor(panelX, 40, trueWidth, trueHeight);
         
+        /* STREAMING_CHUNK: Rendering grid icons */
         for (int i = 0; i < itemsToRender; i++) {
             int col = i % cols;
             int row = i / cols;
@@ -399,6 +413,7 @@ public class WorkbenchRenderDesign {
     }
 
     private void renderLoadoutBg(GuiGraphics guiGraphics, int trueWidth, int trueHeight, int mouseX, int mouseY) {
+        /* STREAMING_CHUNK: Setup main background rendering layer */
         guiGraphics.fill(0, 0, 240, trueHeight, 0xFF121212);
         guiGraphics.fill(20, 16, 220, 18, 0xFFD62929);
 
@@ -426,6 +441,7 @@ public class WorkbenchRenderDesign {
     }
 
     private void renderTacticalSelectionBg(GuiGraphics guiGraphics, int trueWidth, int trueHeight) {
+        /* STREAMING_CHUNK: Tactical scroller processing */
         int startY = 100;
         int visibleHeight = trueHeight - 100;
         int listHeight = 6 * 45; 
@@ -452,6 +468,7 @@ public class WorkbenchRenderDesign {
     }
 
     private void renderArmorSelectionBg(GuiGraphics guiGraphics, int trueWidth, int trueHeight) {
+        /* STREAMING_CHUNK: Dynamic Armor Selection background */
         int visibleHeight = trueHeight - 100;
         
         int currentY = 0;
@@ -542,6 +559,7 @@ public class WorkbenchRenderDesign {
     }
 
     private void renderHeadwearSelectionBg(GuiGraphics guiGraphics, int trueWidth, int trueHeight) {
+        /* STREAMING_CHUNK: Setup Headwear scrolling background layer */
         int visibleHeight = trueHeight - 100;
         
         int currentY = 0;
@@ -595,6 +613,7 @@ public class WorkbenchRenderDesign {
     }
 
     private void renderWeaponSelectionBg(GuiGraphics guiGraphics, int trueWidth, int trueHeight) {
+        /* STREAMING_CHUNK: Setup weapon selection box array */
         int startY = 100;
         int visibleHeight = trueHeight - 100;
         
@@ -634,6 +653,7 @@ public class WorkbenchRenderDesign {
     }
 
     private void renderAttachmentSelectionBg(GuiGraphics guiGraphics, int trueWidth, int trueHeight) {
+        /* STREAMING_CHUNK: Render attachment modification background boxes */
         int startY = 100;
         int visibleHeight = trueHeight - 100;
         
@@ -673,6 +693,7 @@ public class WorkbenchRenderDesign {
     }
 
     private void renderMunitionSelectionBg(GuiGraphics guiGraphics, int trueWidth, int trueHeight) {
+        /* STREAMING_CHUNK: Setup clean munition list layout */
         int visibleHeight = trueHeight - 100;
         int listHeight = 60 + 20 + (13 * 35); 
         
@@ -693,6 +714,7 @@ public class WorkbenchRenderDesign {
     }
 
     private void renderGunsmithBg(GuiGraphics guiGraphics, int trueWidth, int trueHeight) {
+        /* STREAMING_CHUNK: Process primary Gunsmith modification background */
         int startY = 100;
         int visibleHeight = trueHeight - 100;
         
@@ -781,6 +803,7 @@ public class WorkbenchRenderDesign {
     }
 
     private void renderLoadoutLabels(GuiGraphics guiGraphics) {
+        /* STREAMING_CHUNK: Painting text content in main loadout UI */
         guiGraphics.pose().pushPose();
         guiGraphics.pose().translate(0, 0, 300.0F); 
         guiGraphics.fill(176, 50, 198, 72, 0xFF0B0C0E); 
@@ -844,6 +867,7 @@ public class WorkbenchRenderDesign {
                 headStack.getItem() instanceof com.k1ngtle.taticalsuit.item.HelmetGPNVG18Item ||
                 headStack.getItem() instanceof com.k1ngtle.taticalsuit.item.HelmetGPNVG18GhillieItem ||
                 headStack.getItem() instanceof com.k1ngtle.taticalsuit.item.HelmetGPNVG18SandItem ||
+                headStack.getItem() instanceof com.k1ngtle.taticalsuit.item.HelmetGPNVG18SnowItem ||
                 headStack.getItem() instanceof com.k1ngtle.taticalsuit.item.HelmetGhillieItem ||
                 headStack.getItem() instanceof com.k1ngtle.taticalsuit.item.HelmetSandItem ||
                 headStack.getItem() instanceof com.k1ngtle.taticalsuit.item.HelmetSnowItem)) {
@@ -876,6 +900,7 @@ public class WorkbenchRenderDesign {
     }
 
     private void renderArmorSelectionLabels(GuiGraphics guiGraphics, int mouseX, int mouseY, int trueWidth, int trueHeight) {
+        /* STREAMING_CHUNK: Setup Armor selection UI properties */
         drawSmallText(guiGraphics, font, "< LOADOUT", 20, 25, 0.75f, 0xFFFFFF);
         drawSmallText(guiGraphics, font, "ARMOR", 20, 55, 1.1f, 0xFFFFFF); 
         drawSmallText(guiGraphics, font, "SELECT EQUIPMENT", 20, 75, 0.65f, 0xFFD62929); 
@@ -1008,6 +1033,7 @@ public class WorkbenchRenderDesign {
     }
 
     private void renderHeadwearSelectionLabels(GuiGraphics guiGraphics, int mouseX, int mouseY, int trueWidth, int trueHeight) {
+        /* STREAMING_CHUNK: Processing rendering for Headwear properties */
         drawSmallText(guiGraphics, font, "< LOADOUT", 20, 25, 0.75f, 0xFFFFFF);
         drawSmallText(guiGraphics, font, "HEADWEAR", 20, 55, 1.1f, 0xFFFFFF); 
         drawSmallText(guiGraphics, font, "SELECT EQUIPMENT", 20, 75, 0.65f, 0xFFD62929); 
@@ -1076,6 +1102,7 @@ public class WorkbenchRenderDesign {
     }
 
     private void renderTacticalSelectionLabels(GuiGraphics guiGraphics, int mouseX, int mouseY, int trueWidth, int trueHeight) {
+        /* STREAMING_CHUNK: Setup labels for tactical equipment */
         drawSmallText(guiGraphics, font, "< LOADOUT", 20, 25, 0.75f, 0xFFFFFF);
         drawSmallText(guiGraphics, font, "LONG TACTICAL", 20, 55, 1.1f, 0xFFFFFF); 
         drawSmallText(guiGraphics, font, "SELECT EQUIPMENT", 20, 75, 0.65f, 0xFFD62929); 
@@ -1113,6 +1140,7 @@ public class WorkbenchRenderDesign {
     }
 
     private void renderAttachmentSelectionLabels(GuiGraphics guiGraphics, int mouseX, int mouseY, int trueWidth, int trueHeight) {
+        /* STREAMING_CHUNK: Setup labels for attachment modification UI */
         drawSmallText(guiGraphics, font, "< ATTACHMENT BUILD", 20, 25, 0.75f, 0xFFFFFF);
         
         String title = screen.editingAttachmentCategory;
@@ -1147,6 +1175,7 @@ public class WorkbenchRenderDesign {
     }
 
     private void renderWeaponSelectionLabels(GuiGraphics guiGraphics, int mouseX, int mouseY, int trueWidth, int trueHeight) {
+        /* STREAMING_CHUNK: Rendering full weapon selection layout with brief */
         drawSmallText(guiGraphics, font, "< WEAPON BUILD", 20, 25, 0.75f, 0xFFFFFF);
         
         if (screen.currentWeaponTab != 8) {
@@ -1366,6 +1395,7 @@ public class WorkbenchRenderDesign {
     }
 
     private void renderMunitionSelectionLabels(GuiGraphics guiGraphics, int mouseX, int mouseY, int trueWidth, int trueHeight) {
+        /* STREAMING_CHUNK: Setup Munitions text layer */
         drawSmallText(guiGraphics, font, "< LOADOUT", 20, 25, 0.75f, 0xFFFFFF);
         drawSmallText(guiGraphics, font, "MUNITIONS", 20, 55, 1.1f, 0xFFFFFF); 
         drawSmallText(guiGraphics, font, "SELECT EQUIPMENT", 20, 75, 0.65f, 0xFFD62929); 
@@ -1408,6 +1438,7 @@ public class WorkbenchRenderDesign {
     }
 
     private void renderTextListItem(GuiGraphics guiGraphics, String name, int x, int y, int mouseX, int mouseY) {
+        /* STREAMING_CHUNK: Processing clean selection items list UI hover logic */
         boolean isHovered = mouseY >= y && mouseY <= y + 35 && mouseX >= x && mouseX <= x + 200;
         int textColor = isHovered ? 0xFFFFFFFF : 0xFF7A818C;
         
@@ -1422,6 +1453,7 @@ public class WorkbenchRenderDesign {
     }
 
     private void renderGunsmithLabels(GuiGraphics guiGraphics) {
+        /* STREAMING_CHUNK: Setup main Gunsmith modification tab components */
         drawSmallText(guiGraphics, font, "< WEAPON BUILD", 20, 25, 0.75f, 0xFFFFFF);
         
         boolean isPrimary = (screen.currentWeaponTab != 8);
