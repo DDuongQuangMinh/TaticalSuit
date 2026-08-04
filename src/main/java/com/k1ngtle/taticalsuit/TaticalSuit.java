@@ -1,6 +1,7 @@
 package com.k1ngtle.taticalsuit;
 
 import com.k1ngtle.taticalsuit.client.renderer.WorkbenchRenderer;
+import com.k1ngtle.taticalsuit.network.EquipmentNetwork;
 import com.k1ngtle.taticalsuit.network.HeadwearNetwork;
 import com.k1ngtle.taticalsuit.network.ModNetworking;
 import com.k1ngtle.taticalsuit.network.NVGNetwork;
@@ -46,6 +47,7 @@ public class TaticalSuit {
         NVGNetwork.register();
         SquadNetwork.register();
         HeadwearNetwork.register();
+        EquipmentNetwork.register();
 
         MinecraftForge.EVENT_BUS.register(this);
     }
