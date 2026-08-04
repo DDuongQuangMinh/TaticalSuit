@@ -3,6 +3,7 @@ package com.k1ngtle.taticalsuit.menu;
 import com.k1ngtle.taticalsuit.capability.EquipmentSlotType;
 import com.k1ngtle.taticalsuit.capability.TacticalEquipmentProvider;
 import com.k1ngtle.taticalsuit.registry.ModMenuTypes;
+import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
@@ -11,33 +12,44 @@ import net.minecraft.world.item.ItemStack;
 
 public class TacticalEquipmentMenu extends AbstractContainerMenu {
 
+    private static final EquipmentSlot[] ARMOR_SLOTS = new EquipmentSlot[]{EquipmentSlot.HEAD, EquipmentSlot.CHEST, EquipmentSlot.LEGS, EquipmentSlot.FEET};
+
     public TacticalEquipmentMenu(int containerId, Inventory playerInv) {
         super(ModMenuTypes.TACTICAL_EQUIPMENT_MENU.get(), containerId);
 
-        // Fetch our hidden 8-slot capability inventory attached to the player
         playerInv.player.getCapability(TacticalEquipmentProvider.CAPABILITY).ifPresent(cap -> {
-            
-            // Left Side Slots (Flanking the player model)
-            this.addSlot(new TacticalEquipmentSlot(cap, EquipmentSlotType.SHIRT, 26, 8));
-            this.addSlot(new TacticalEquipmentSlot(cap, EquipmentSlotType.PANTS, 26, 26));
-            this.addSlot(new TacticalEquipmentSlot(cap, EquipmentSlotType.GLOVES, 26, 44));
-            this.addSlot(new TacticalEquipmentSlot(cap, EquipmentSlotType.BOOTS, 26, 62));
-
-            // Right Side Slots (Flanking the player model)
-            this.addSlot(new TacticalEquipmentSlot(cap, EquipmentSlotType.BELT, 134, 8));
-            this.addSlot(new TacticalEquipmentSlot(cap, EquipmentSlotType.TATTOO, 134, 26));
-            this.addSlot(new TacticalEquipmentSlot(cap, EquipmentSlotType.EYEWEAR, 134, 44));
-            this.addSlot(new TacticalEquipmentSlot(cap, EquipmentSlotType.WATCH, 134, 62));
+            this.addSlot(new TacticalEquipmentSlot(cap, EquipmentSlotType.SHIRT, -999, -999));
+            this.addSlot(new TacticalEquipmentSlot(cap, EquipmentSlotType.PANTS, -999, -999));
+            this.addSlot(new TacticalEquipmentSlot(cap, EquipmentSlotType.GLOVES, -999, -999));
+            this.addSlot(new TacticalEquipmentSlot(cap, EquipmentSlotType.BOOTS, -999, -999));
+            this.addSlot(new TacticalEquipmentSlot(cap, EquipmentSlotType.BELT, -999, -999));
+            this.addSlot(new TacticalEquipmentSlot(cap, EquipmentSlotType.TATTOO, -999, -999));
+            this.addSlot(new TacticalEquipmentSlot(cap, EquipmentSlotType.EYEWEAR, -999, -999));
+            this.addSlot(new TacticalEquipmentSlot(cap, EquipmentSlotType.WATCH, -999, -999));
         });
 
-        // Add Standard Player Inventory (27 slots)
+        for (int i = 0; i < 4; ++i) {
+            final EquipmentSlot equipmentslot = ARMOR_SLOTS[i];
+            this.addSlot(new Slot(playerInv, 39 - i, 8, 8 + i * 18) {
+                @Override
+                public int getMaxStackSize() {
+                    return 1;
+                }
+                @Override
+                public boolean mayPlace(ItemStack stack) {
+                    return stack.canEquip(equipmentslot, playerInv.player);
+                }
+            });
+        }
+
+        this.addSlot(new Slot(playerInv, 40, 77, 62));
+
         for (int row = 0; row < 3; ++row) {
             for (int col = 0; col < 9; ++col) {
                 this.addSlot(new Slot(playerInv, col + row * 9 + 9, 8 + col * 18, 84 + row * 18));
             }
         }
 
-        // Add Standard Player Hotbar (9 slots)
         for (int col = 0; col < 9; ++col) {
             this.addSlot(new Slot(playerInv, col, 8 + col * 18, 142));
         }
@@ -47,20 +59,50 @@ public class TacticalEquipmentMenu extends AbstractContainerMenu {
     public ItemStack quickMoveStack(Player player, int index) {
         ItemStack itemstack = ItemStack.EMPTY;
         Slot slot = this.slots.get(index);
-        
+
         if (slot != null && slot.hasItem()) {
             ItemStack slotStack = slot.getItem();
             itemstack = slotStack.copy();
 
-            // Custom Slots -> Player Inventory
-            if (index < 8) { 
-                if (!this.moveItemStackTo(slotStack, 8, 44, true)) {
+            if (index < 13) { 
+                // Tactical, Armor, or Offhand -> Inventory
+                if (!this.moveItemStackTo(slotStack, 13, 49, true)) {
                     return ItemStack.EMPTY;
                 }
-            } 
-            // Player Inventory -> Custom Slots
-            else if (!this.moveItemStackTo(slotStack, 0, 8, false)) {
-                return ItemStack.EMPTY;
+            } else {
+                // Inventory -> Equipment
+                boolean moved = false;
+                
+                // 1. Try Armor Slots
+                if (!moved) {
+                    for(int i = 8; i < 12; i++) {
+                        if (this.slots.get(i).mayPlace(slotStack)) {
+                            moved = this.moveItemStackTo(slotStack, i, i + 1, false);
+                            if (moved) break;
+                        }
+                    }
+                }
+                // 2. Try Custom Tactical Slots
+                if (!moved) {
+                    moved = this.moveItemStackTo(slotStack, 0, 8, false);
+                }
+                // 3. Try Offhand Slot
+                if (!moved && this.slots.get(12).mayPlace(slotStack)) {
+                    moved = this.moveItemStackTo(slotStack, 12, 13, false);
+                }
+
+                // Inventory <-> Hotbar Routing
+                if (!moved) {
+                    if (index >= 13 && index < 40) {
+                        if (!this.moveItemStackTo(slotStack, 40, 49, false)) {
+                            return ItemStack.EMPTY;
+                        }
+                    } else if (index >= 40 && index < 49) {
+                        if (!this.moveItemStackTo(slotStack, 13, 40, false)) {
+                            return ItemStack.EMPTY;
+                        }
+                    }
+                }
             }
 
             if (slotStack.isEmpty()) {
