@@ -10,6 +10,7 @@ import com.k1ngtle.taticalsuit.item.HelmetItem;
 import com.k1ngtle.taticalsuit.item.HelmetPVS31GhillieItem;
 import com.k1ngtle.taticalsuit.item.HelmetPVS31Item;
 import com.k1ngtle.taticalsuit.item.HelmetPVS31SandItem;
+import com.k1ngtle.taticalsuit.item.HelmetPVS31SnowItem;
 import com.k1ngtle.taticalsuit.item.HelmetSandItem;
 import com.k1ngtle.taticalsuit.item.HelmetSnowItem;
 
@@ -59,7 +60,10 @@ public class ModItems {
             () -> new HelmetPVS31GhillieItem(ArmorMaterials.IRON, ArmorItem.Type.HELMET, new Item.Properties()));
             
     public static final RegistryObject<Item> HELMET_PVS31_SAND = ITEMS.register("helmet_pvs31_sand",
-            () -> new HelmetPVS31SandItem(ArmorMaterials.IRON, ArmorItem.Type.HELMET, new Item.Properties()));        
+            () -> new HelmetPVS31SandItem(ArmorMaterials.IRON, ArmorItem.Type.HELMET, new Item.Properties()));
+            
+    public static final RegistryObject<Item> HELMET_PVS31_SNOW = ITEMS.register("helmet_pvs31_snow",
+            () -> new HelmetPVS31SnowItem(ArmorMaterials.IRON, ArmorItem.Type.HELMET, new Item.Properties()));        
 
     // This method hooks the registry into your main mod event bus
     public static void register(IEventBus eventBus) {

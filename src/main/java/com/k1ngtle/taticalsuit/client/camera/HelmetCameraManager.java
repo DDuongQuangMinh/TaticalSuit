@@ -13,6 +13,7 @@ import com.k1ngtle.taticalsuit.item.HelmetGhillieItem;
 import com.k1ngtle.taticalsuit.item.HelmetSandItem;
 import com.k1ngtle.taticalsuit.item.HelmetSnowItem;
 import com.k1ngtle.taticalsuit.item.HelmetPVS31SandItem;
+import com.k1ngtle.taticalsuit.item.HelmetPVS31SnowItem;
 import com.mojang.blaze3d.pipeline.RenderTarget;
 import com.mojang.blaze3d.pipeline.TextureTarget;
 import com.mojang.blaze3d.platform.InputConstants;
@@ -93,6 +94,7 @@ public class HelmetCameraManager {
                                 head.getItem() instanceof HelmetPVS31Item || 
                                 head.getItem() instanceof HelmetPVS31GhillieItem || 
                                 head.getItem() instanceof HelmetPVS31SandItem || 
+                                head.getItem() instanceof HelmetPVS31SnowItem ||
                                 head.getItem() instanceof HelmetGPNVG18Item ||
                                 head.getItem() instanceof HelmetGPNVG18GhillieItem ||
                                 head.getItem() instanceof HelmetGPNVG18SandItem ||
@@ -105,6 +107,7 @@ public class HelmetCameraManager {
                                 hand.getItem() instanceof HelmetPVS31Item || 
                                 hand.getItem() instanceof HelmetPVS31GhillieItem || 
                                 hand.getItem() instanceof HelmetPVS31SandItem || 
+                                hand.getItem() instanceof HelmetPVS31SnowItem ||
                                 hand.getItem() instanceof HelmetGPNVG18Item ||
                                 hand.getItem() instanceof HelmetGPNVG18GhillieItem ||
                                 hand.getItem() instanceof HelmetGPNVG18SandItem ||

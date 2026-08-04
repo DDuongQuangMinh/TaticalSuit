@@ -12,6 +12,7 @@ import com.k1ngtle.taticalsuit.item.HelmetItem;
 import com.k1ngtle.taticalsuit.item.HelmetPVS31Item;
 import com.k1ngtle.taticalsuit.item.HelmetPVS31GhillieItem;
 import com.k1ngtle.taticalsuit.item.HelmetPVS31SandItem;
+import com.k1ngtle.taticalsuit.item.HelmetPVS31SnowItem;
 import com.k1ngtle.taticalsuit.item.HelmetSandItem;
 import com.k1ngtle.taticalsuit.item.HelmetSnowItem;
 import net.minecraft.network.FriendlyByteBuf;
@@ -136,6 +137,7 @@ public class HeadwearNetwork {
                    stack.getItem() instanceof HelmetPVS31Item || 
                    stack.getItem() instanceof HelmetPVS31GhillieItem || 
                    stack.getItem() instanceof HelmetPVS31SandItem || 
+                   stack.getItem() instanceof HelmetPVS31SnowItem ||
                    stack.getItem() instanceof HelmetGPNVG18Item ||
                    stack.getItem() instanceof HelmetGPNVG18GhillieItem ||
                    stack.getItem() instanceof HelmetGPNVG18SandItem ||
