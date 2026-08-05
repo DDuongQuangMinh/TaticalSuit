@@ -29,7 +29,6 @@ public class TacticalEquipmentLayer<T extends LivingEntity, M extends HumanoidMo
 
     public TacticalEquipmentLayer(RenderLayerParent<T, M> parent, EntityModelSet modelSet) {
         super(parent);
-        // We pre-bake the vanilla armor models to use as base templates for rendering custom clothing
         this.innerArmorModel = new HumanoidModel<>(modelSet.bakeLayer(ModelLayers.PLAYER_INNER_ARMOR));
         this.outerArmorModel = new HumanoidModel<>(modelSet.bakeLayer(ModelLayers.PLAYER_OUTER_ARMOR));
     }
@@ -38,7 +37,6 @@ public class TacticalEquipmentLayer<T extends LivingEntity, M extends HumanoidMo
     public void render(PoseStack poseStack, MultiBufferSource buffer, int packedLight, T entity, float limbSwing, float limbSwingAmount, float partialTick, float ageInTicks, float netHeadYaw, float headPitch) {
         
         entity.getCapability(TacticalEquipmentProvider.CAPABILITY).ifPresent(cap -> {
-            
             // Left Side - Uniform/Armor
             renderSlot(poseStack, buffer, entity, packedLight, cap.getStackInSlot(EquipmentSlotType.SHIRT.getIndex()), EquipmentSlotType.SHIRT);
             renderSlot(poseStack, buffer, entity, packedLight, cap.getStackInSlot(EquipmentSlotType.PANTS.getIndex()), EquipmentSlotType.PANTS);
@@ -56,23 +54,41 @@ public class TacticalEquipmentLayer<T extends LivingEntity, M extends HumanoidMo
     private void renderSlot(PoseStack poseStack, MultiBufferSource buffer, T entity, int packedLight, ItemStack stack, EquipmentSlotType tacticalSlot) {
         if (stack.isEmpty()) return;
 
-        if (stack.getItem() instanceof ArmorItem armorItem) {
-            // If the item is an Armor piece, render it wrapped around the player's body!
-            EquipmentSlot vanillaSlotTarget = getArmorSlotMapping(tacticalSlot);
-            HumanoidModel<T> baseModel = (vanillaSlotTarget == EquipmentSlot.LEGS) ? innerArmorModel : outerArmorModel;
-            renderArmorPiece(poseStack, buffer, entity, stack, vanillaSlotTarget, tacticalSlot, packedLight, baseModel);
+        EquipmentSlot vanillaSlotTarget = getArmorSlotMapping(tacticalSlot);
+        HumanoidModel<T> baseModel = (vanillaSlotTarget == EquipmentSlot.LEGS) ? innerArmorModel : outerArmorModel;
+        
+        HumanoidModel<?> customModel = (HumanoidModel<?>) net.minecraftforge.client.ForgeHooksClient.getArmorModel(entity, stack, vanillaSlotTarget, baseModel);
+        
+        boolean isArmor = stack.getItem() instanceof ArmorItem;
+        boolean hasCustomModel = customModel != baseModel;
+
+        if (isArmor || hasCustomModel) {
+            // Render wrapped around the player's body! (Perfect for GeckoLib modded clothing)
+            renderArmorPiece(poseStack, buffer, entity, stack, vanillaSlotTarget, tacticalSlot, packedLight, baseModel, customModel);
         } else {
-            // If it's a standard Item (like a custom 3D model Watch or Glasses), pin it to a bone!
+            // Fallback rendering for standard flat 2D/3D Items pinned directly to a bone
             switch (tacticalSlot) {
                 case EYEWEAR:
                     renderItemAttached(poseStack, buffer, stack, packedLight, this.getParentModel().head, 0.0f, -0.25f, -0.28f, 0f, 180f, 0f, 0.65f);
                     break;
                 case WATCH:
-                    // Pin to the left wrist
                     renderItemAttached(poseStack, buffer, stack, packedLight, this.getParentModel().leftArm, 0.05f, 0.65f, 0.0f, 0f, -90f, 0f, 0.4f);
                     break;
                 case BELT:
                     renderItemAttached(poseStack, buffer, stack, packedLight, this.getParentModel().body, 0.0f, 0.65f, -0.15f, 0f, 180f, 0f, 0.75f);
+                    break;
+                case SHIRT:
+                case TATTOO:
+                    renderItemAttached(poseStack, buffer, stack, packedLight, this.getParentModel().body, 0.0f, 0.2f, -0.15f, 0f, 180f, 0f, 0.75f);
+                    break;
+                case PANTS:
+                    renderItemAttached(poseStack, buffer, stack, packedLight, this.getParentModel().rightLeg, 0.0f, 0.5f, 0.0f, 0f, 180f, 0f, 0.65f);
+                    break;
+                case GLOVES:
+                    renderItemAttached(poseStack, buffer, stack, packedLight, this.getParentModel().rightArm, 0.0f, 0.7f, 0.0f, 0f, 180f, 0f, 0.4f);
+                    break;
+                case BOOTS:
+                    renderItemAttached(poseStack, buffer, stack, packedLight, this.getParentModel().rightLeg, 0.0f, 0.9f, 0.0f, 0f, 180f, 0f, 0.65f);
                     break;
                 default:
                     break;
@@ -89,39 +105,34 @@ public class TacticalEquipmentLayer<T extends LivingEntity, M extends HumanoidMo
         };
     }
 
-    private void renderArmorPiece(PoseStack poseStack, MultiBufferSource bufferSource, T entity, ItemStack itemStack, EquipmentSlot slot, EquipmentSlotType tacticalSlot, int packedLight, HumanoidModel<T> defaultModel) {
+    private void renderArmorPiece(PoseStack poseStack, MultiBufferSource bufferSource, T entity, ItemStack itemStack, EquipmentSlot slot, EquipmentSlotType tacticalSlot, int packedLight, HumanoidModel<T> defaultModel, HumanoidModel<?> model) {
         
-        // Fetch custom models (supports GeckoLib natively!)
-        HumanoidModel<?> model = (HumanoidModel<?>) net.minecraftforge.client.ForgeHooksClient.getArmorModel(entity, itemStack, slot, defaultModel);
         this.getParentModel().copyPropertiesTo((HumanoidModel<T>) model);
-        
-        // Define which body parts to show based on the custom slot
         setPartVisibility(model, slot, tacticalSlot);
 
-        ArmorItem armorItem = (ArmorItem) itemStack.getItem();
-
-        // Fetch custom textures and colors
-        String materialName = armorItem.getMaterial().getName();
-        String domain = "minecraft";
-        int idx = materialName.indexOf(':');
-        if (idx != -1) {
-            domain = materialName.substring(0, idx);
-            materialName = materialName.substring(idx + 1);
-        }
-        String defaultTexture = String.format("%s:textures/models/armor/%s_layer_%d.png", domain, materialName, (slot == EquipmentSlot.LEGS ? 2 : 1));
-        
-        String textureStr = net.minecraftforge.client.ForgeHooksClient.getArmorTexture(entity, itemStack, defaultTexture, slot, null);
-        ResourceLocation texture = new ResourceLocation(textureStr);
-        
+        String textureStr = "minecraft:textures/models/armor/iron_layer_1.png"; // Fallback for non-ArmorItem custom 3D models
         float r = 1.0F, g = 1.0F, b = 1.0F;
-        if (armorItem instanceof net.minecraft.world.item.DyeableArmorItem dyedArmor) {
-            int color = dyedArmor.getColor(itemStack);
-            r = (float)(color >> 16 & 255) / 255.0F;
-            g = (float)(color >> 8 & 255) / 255.0F;
-            b = (float)(color & 255) / 255.0F;
+
+        if (itemStack.getItem() instanceof ArmorItem armorItem) {
+            String materialName = armorItem.getMaterial().getName();
+            String domain = "minecraft";
+            int idx = materialName.indexOf(':');
+            if (idx != -1) {
+                domain = materialName.substring(0, idx);
+                materialName = materialName.substring(idx + 1);
+            }
+            String defaultTexture = String.format("%s:textures/models/armor/%s_layer_%d.png", domain, materialName, (slot == EquipmentSlot.LEGS ? 2 : 1));
+            textureStr = net.minecraftforge.client.ForgeHooksClient.getArmorTexture(entity, itemStack, defaultTexture, slot, null);
+            
+            if (armorItem instanceof net.minecraft.world.item.DyeableArmorItem dyedArmor) {
+                int color = dyedArmor.getColor(itemStack);
+                r = (float)(color >> 16 & 255) / 255.0F;
+                g = (float)(color >> 8 & 255) / 255.0F;
+                b = (float)(color & 255) / 255.0F;
+            }
         }
 
-        // Send to renderer
+        ResourceLocation texture = new ResourceLocation(textureStr);
         VertexConsumer vertexconsumer = ItemRenderer.getArmorFoilBuffer(bufferSource, RenderType.armorCutoutNoCull(texture), false, itemStack.hasFoil());
         model.renderToBuffer(poseStack, vertexconsumer, packedLight, OverlayTexture.NO_OVERLAY, r, g, b, 1.0F);
     }
@@ -129,17 +140,23 @@ public class TacticalEquipmentLayer<T extends LivingEntity, M extends HumanoidMo
     private void setPartVisibility(HumanoidModel<?> model, EquipmentSlot slot, EquipmentSlotType tacticalSlot) {
         model.setAllVisible(false);
         
-        // Custom visibilities so a shirt doesn't accidentally render leggings, etc.
         if (tacticalSlot == EquipmentSlotType.GLOVES) {
             model.leftArm.visible = true;
             model.rightArm.visible = true;
         } else if (tacticalSlot == EquipmentSlotType.BELT) {
             model.body.visible = true;
+            model.rightLeg.visible = true;
+            model.leftLeg.visible = true;
         } else if (tacticalSlot == EquipmentSlotType.TATTOO) {
             model.setAllVisible(true);
             model.hat.visible = false;
+        } else if (tacticalSlot == EquipmentSlotType.WATCH) {
+            model.leftArm.visible = true;
+        } else if (tacticalSlot == EquipmentSlotType.EYEWEAR) {
+            model.head.visible = true;
+            model.hat.visible = true;
         } else {
-            // Standard mappings
+            // Standard mappings for SHIRT, PANTS, BOOTS
             switch (slot) {
                 case HEAD:
                     model.head.visible = true;

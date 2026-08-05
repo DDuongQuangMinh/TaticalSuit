@@ -18,14 +18,14 @@ public class TacticalEquipmentMenu extends AbstractContainerMenu {
         super(ModMenuTypes.TACTICAL_EQUIPMENT_MENU.get(), containerId);
 
         playerInv.player.getCapability(TacticalEquipmentProvider.CAPABILITY).ifPresent(cap -> {
-            this.addSlot(new TacticalEquipmentSlot(cap, EquipmentSlotType.SHIRT, -999, -999));
-            this.addSlot(new TacticalEquipmentSlot(cap, EquipmentSlotType.PANTS, -999, -999));
-            this.addSlot(new TacticalEquipmentSlot(cap, EquipmentSlotType.GLOVES, -999, -999));
-            this.addSlot(new TacticalEquipmentSlot(cap, EquipmentSlotType.BOOTS, -999, -999));
-            this.addSlot(new TacticalEquipmentSlot(cap, EquipmentSlotType.BELT, -999, -999));
-            this.addSlot(new TacticalEquipmentSlot(cap, EquipmentSlotType.TATTOO, -999, -999));
-            this.addSlot(new TacticalEquipmentSlot(cap, EquipmentSlotType.EYEWEAR, -999, -999));
-            this.addSlot(new TacticalEquipmentSlot(cap, EquipmentSlotType.WATCH, -999, -999));
+            this.addSlot(new TacticalEquipmentSlot(cap, EquipmentSlotType.SHIRT, -28, 8));
+            this.addSlot(new TacticalEquipmentSlot(cap, EquipmentSlotType.PANTS, -28, 26));
+            this.addSlot(new TacticalEquipmentSlot(cap, EquipmentSlotType.GLOVES, -28, 44));
+            this.addSlot(new TacticalEquipmentSlot(cap, EquipmentSlotType.BOOTS, -28, 62));
+            this.addSlot(new TacticalEquipmentSlot(cap, EquipmentSlotType.BELT, -28, 80));
+            this.addSlot(new TacticalEquipmentSlot(cap, EquipmentSlotType.TATTOO, -28, 98));
+            this.addSlot(new TacticalEquipmentSlot(cap, EquipmentSlotType.EYEWEAR, -28, 116));
+            this.addSlot(new TacticalEquipmentSlot(cap, EquipmentSlotType.WATCH, -28, 134));
         });
 
         for (int i = 0; i < 4; ++i) {
