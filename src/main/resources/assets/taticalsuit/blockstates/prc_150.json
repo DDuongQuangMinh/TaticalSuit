@@ -1,0 +1,27 @@
+{
+  "variants": {
+    "facing=north,full=false": { "model": "taticalsuit:block/prc_150" },
+    "facing=east,full=false": { "model": "taticalsuit:block/prc_150", "y": 90 },
+    "facing=south,full=false": {
+      "model": "taticalsuit:block/prc_150",
+      "y": 180
+    },
+    "facing=west,full=false": {
+      "model": "taticalsuit:block/prc_150",
+      "y": 270
+    },
+    "facing=north,full=true": { "model": "taticalsuit:block/prc_150_full" },
+    "facing=east,full=true": {
+      "model": "taticalsuit:block/prc_150_full",
+      "y": 90
+    },
+    "facing=south,full=true": {
+      "model": "taticalsuit:block/prc_150_full",
+      "y": 180
+    },
+    "facing=west,full=true": {
+      "model": "taticalsuit:block/prc_150_full",
+      "y": 270
+    }
+  }
+}

@@ -52,6 +52,7 @@ public class ModCreativeTabs {
                         // Add the Workbench to the tab
                         output.accept(ModItems.PRC_152A_RADIO.get());
                         output.accept(ModItems.PRC_163_RADIO.get());
+                        output.accept(ModItems.PRC_150_ITEM.get());
                     })
                     .build());                
 }

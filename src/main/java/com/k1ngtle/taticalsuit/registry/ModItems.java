@@ -17,6 +17,7 @@ import com.k1ngtle.taticalsuit.item.RadioItem;
 
 import net.minecraft.world.item.ArmorItem;
 import net.minecraft.world.item.ArmorMaterials;
+import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
 import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.registries.DeferredRegister;
@@ -71,7 +72,10 @@ public class ModItems {
             () -> new RadioItem(new Item.Properties())); 
             
     public static final RegistryObject<Item> PRC_163_RADIO = ITEMS.register("prc_163",
-            () -> new RadioItem(new Item.Properties()));        
+            () -> new RadioItem(new Item.Properties()));       
+            
+    public static final RegistryObject<Item> PRC_150_ITEM = ITEMS.register("prc_150",
+            () -> new BlockItem(ModBlocks.PRC_150.get(), new Item.Properties()));        
 
     // This method hooks the registry into your main mod event bus
     public static void register(IEventBus eventBus) {

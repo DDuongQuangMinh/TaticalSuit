@@ -1,6 +1,7 @@
 package com.k1ngtle.taticalsuit.registry;
 
 import com.k1ngtle.taticalsuit.TaticalSuit;
+import com.k1ngtle.taticalsuit.block.RadioStationBlock;
 import com.k1ngtle.taticalsuit.block.WorkbenchBlock;
 import com.k1ngtle.taticalsuit.item.custom.WorkbenchItem;
 
@@ -9,6 +10,7 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockBehaviour;
+import net.minecraft.world.level.material.MapColor;
 import net.minecraftforge.registries.DeferredRegister;
 import net.minecraftforge.registries.ForgeRegistries;
 import net.minecraftforge.registries.RegistryObject;
@@ -24,4 +26,7 @@ public class ModBlocks {
     // Register the Item to place the block
     public static final RegistryObject<Item> WORKBENCH_ITEM = ITEMS.register("workbench", 
             () -> new WorkbenchItem(WORKBENCH.get(), new Item.Properties()));
+
+    public static final RegistryObject<Block> PRC_150 = BLOCKS.register("prc_150",
+            () -> new RadioStationBlock(BlockBehaviour.Properties.of().mapColor(MapColor.METAL).strength(3.0f).noOcclusion()));        
 }
