@@ -57,6 +57,15 @@ public class AudioDeviceScreen extends Screen {
                 this.onClose();
             }
         ).bounds(centerX - 100, startY + 110, 200, 20).build());
+        
+        // Voice Activation Toggle Button
+        this.addRenderableWidget(Button.builder(
+            Component.literal(VoiceManager.useVoiceActivation ? "§aInput Mode: Voice Activation" : "§cInput Mode: Push To Talk"),
+            button -> {
+                VoiceManager.useVoiceActivation = !VoiceManager.useVoiceActivation;
+                button.setMessage(Component.literal(VoiceManager.useVoiceActivation ? "§aInput Mode: Voice Activation" : "§cInput Mode: Push To Talk"));
+            }
+        ).bounds(centerX - 100, startY + 80, 200, 20).build());
     }
 
     private String truncate(String text) {

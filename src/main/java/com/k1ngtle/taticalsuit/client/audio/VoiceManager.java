@@ -40,6 +40,11 @@ public class VoiceManager {
     private static volatile boolean isRunning = false;
     public static boolean loopbackDebug = false;
     
+    // Voice Activation (VAD) variables
+    public static boolean useVoiceActivation = false;
+    public static int voiceActivationThreshold = 12;
+    private static int voiceHoldFrames = 0;
+    
     private static float currentVolume = 1.0f;
 
     public static String currentMicName = "Default System Device";
@@ -151,7 +156,8 @@ public class VoiceManager {
                     captureBuffer.clear();
                     ALC11.alcCaptureSamples(captureDevice, captureBuffer, FRAME_SIZE);
                     
-                    if (isTransmitting) {
+                    // Constantly process audio if VAD is on, otherwise only when PTT is held
+                    if (useVoiceActivation || isTransmitting) {
                         short[] pcmData = new short[FRAME_SIZE];
                         captureBuffer.get(pcmData);
                         
@@ -162,7 +168,21 @@ public class VoiceManager {
                         double rms = Math.sqrt(sum / (double)FRAME_SIZE);
                         final int currentVol = (int) rms;
 
-                        if (currentVol > 10) {
+                        boolean shouldTransmit = false;
+                        
+                        if (useVoiceActivation) {
+                            if (currentVol > voiceActivationThreshold) {
+                                voiceHoldFrames = 50; // Hold mic open for ~500ms after you stop speaking
+                                shouldTransmit = true;
+                            } else if (voiceHoldFrames > 0) {
+                                voiceHoldFrames--;
+                                shouldTransmit = true;
+                            }
+                        } else {
+                            shouldTransmit = isTransmitting;
+                        }
+
+                        if (shouldTransmit && currentVol > 5) { // Small baseline filter
                             if (tickCount++ % 15 == 0) {
                                 Minecraft mc = Minecraft.getInstance();
                                 mc.execute(() -> {
@@ -197,6 +217,7 @@ public class VoiceManager {
                         }
                     } else {
                         tickCount = 0;
+                        voiceHoldFrames = 0;
                     }
                 } else {
                     try { Thread.sleep(5); } catch (InterruptedException ignored) {}
