@@ -5,6 +5,7 @@ import com.k1ngtle.taticalsuit.network.EquipmentNetwork;
 import com.k1ngtle.taticalsuit.network.HeadwearNetwork;
 import com.k1ngtle.taticalsuit.network.ModNetworking;
 import com.k1ngtle.taticalsuit.network.NVGNetwork;
+import com.k1ngtle.taticalsuit.network.RadioNetwork;
 import com.k1ngtle.taticalsuit.network.SquadNetwork;
 import com.k1ngtle.taticalsuit.registry.ModBlockEntities;
 import com.k1ngtle.taticalsuit.registry.ModBlocks;
@@ -48,6 +49,7 @@ public class TaticalSuit {
         SquadNetwork.register();
         HeadwearNetwork.register();
         EquipmentNetwork.register();
+        RadioNetwork.register();
 
         MinecraftForge.EVENT_BUS.register(this);
     }

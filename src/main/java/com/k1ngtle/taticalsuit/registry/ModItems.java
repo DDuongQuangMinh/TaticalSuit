@@ -13,6 +13,7 @@ import com.k1ngtle.taticalsuit.item.HelmetPVS31SandItem;
 import com.k1ngtle.taticalsuit.item.HelmetPVS31SnowItem;
 import com.k1ngtle.taticalsuit.item.HelmetSandItem;
 import com.k1ngtle.taticalsuit.item.HelmetSnowItem;
+import com.k1ngtle.taticalsuit.item.RadioItem;
 
 import net.minecraft.world.item.ArmorItem;
 import net.minecraft.world.item.ArmorMaterials;
@@ -64,6 +65,10 @@ public class ModItems {
             
     public static final RegistryObject<Item> HELMET_PVS31_SNOW = ITEMS.register("helmet_pvs31_snow",
             () -> new HelmetPVS31SnowItem(ArmorMaterials.IRON, ArmorItem.Type.HELMET, new Item.Properties()));        
+
+    //Item: Radio
+    public static final RegistryObject<Item> PRC_152A_RADIO = ITEMS.register("prc_152a",
+            () -> new RadioItem(new Item.Properties()));        
 
     // This method hooks the registry into your main mod event bus
     public static void register(IEventBus eventBus) {

@@ -1,5 +1,6 @@
 {
   "creativetab.tatical_suit_tab": "Tactical Suit Equipment",
+  "creativetab.tatical_utilities_tab": "Tactical Suit Utilities",
   "category.taticalsuit.keys": "Tactical Suit",
   "key.taticalsuit.helmet_cam_cycle": "Cycle Helmet Camera Mode",
   "key.taticalsuit.helmet_cam_off": "Turn Off Helmet Camera",
@@ -18,5 +19,5 @@
   "item.taticalsuit.helmet_gpnvg18": "GPNVG-18 Helmet",
   "item.taticalsuit.helmet_gpnvg18_ghillie": "GPNVG-18 Ghillie Helmet",
   "item.taticalsuit.helmet_gpnvg18_sand": "GPNVG-18 Sand Helmet",
-  "item.taticalsuit.helmet_gpnvg18_snow": "GPNVG-18 Snow Helmet"
+  "item.taticalsuit.prc_152a": "PRC-152A Radio"
 }

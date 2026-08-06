@@ -3,9 +3,13 @@ package com.k1ngtle.taticalsuit.client.model;
 import com.k1ngtle.taticalsuit.TaticalSuit;
 import com.k1ngtle.taticalsuit.item.HelmetPVS31SandItem;
 import net.minecraft.resources.ResourceLocation;
-import software.bernie.geckolib.model.GeoModel;
+import software.bernie.geckolib.model.DefaultedItemGeoModel;
 
-public class HelmetPVS31SandModel extends GeoModel<HelmetPVS31SandItem> {
+public class HelmetPVS31SandModel extends DefaultedItemGeoModel<HelmetPVS31SandItem> {
+    public HelmetPVS31SandModel() {
+        super(new ResourceLocation(TaticalSuit.MODID, "helmet_pvs31_sand"));
+    }
+
     @Override
     public ResourceLocation getModelResource(HelmetPVS31SandItem object) {
         return new ResourceLocation(TaticalSuit.MODID, "geo/armor/helmet_pvs31_sand.geo.json");

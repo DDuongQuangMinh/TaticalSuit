@@ -17,7 +17,7 @@ public class ModCreativeTabs {
     public static final RegistryObject<CreativeModeTab> TATICAL_SUIT_TAB = CREATIVE_MODE_TABS.register("tatical_suit_tab",
             () -> CreativeModeTab.builder()
                     // Set the icon of the tab (We will use your Workbench as the icon!)
-                    .icon(() -> new ItemStack(ModBlocks.WORKBENCH_ITEM.get()))
+                    .icon(() -> new ItemStack(ModItems.BASE_HELMET.get()))
                     // The name of the tab (We will define this in the en_us.json file)
                     .title(Component.translatable("creativetab.tatical_suit_tab"))
                     // Add items to the tab here
@@ -40,4 +40,17 @@ public class ModCreativeTabs {
                         // output.accept(ModItems.YOUR_NEW_ITEM.get());
                     })
                     .build());
+
+    public static final RegistryObject<CreativeModeTab> UTILITIES_TAB = CREATIVE_MODE_TABS.register("tatical_utilities_tab",
+            () -> CreativeModeTab.builder()
+                    // Set the icon of the tab (We will use your Workbench as the icon!)
+                    .icon(() -> new ItemStack(ModItems.BASE_HELMET.get()))
+                    // The name of the tab (We will define this in the en_us.json file)
+                    .title(Component.translatable("creativetab.tatical_utilities_tab"))
+                    // Add items to the tab here
+                    .displayItems((itemDisplayParameters, output) -> {
+                        // Add the Workbench to the tab
+                        output.accept(ModItems.PRC_152A_RADIO.get());
+                    })
+                    .build());                
 }
