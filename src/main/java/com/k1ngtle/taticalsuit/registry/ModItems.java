@@ -68,6 +68,9 @@ public class ModItems {
 
     //Item: Radio
     public static final RegistryObject<Item> PRC_152A_RADIO = ITEMS.register("prc_152a",
+            () -> new RadioItem(new Item.Properties())); 
+            
+    public static final RegistryObject<Item> PRC_163_RADIO = ITEMS.register("prc_163",
             () -> new RadioItem(new Item.Properties()));        
 
     // This method hooks the registry into your main mod event bus

@@ -37,9 +37,11 @@ public class RadioScreen extends Screen {
     private EditBox keyField;
     
     private final String[] ALGORITHMS = {"CLEAR", "AES-128", "DES", "BLOWFISH", "TWOFISH", "CHACHA20"};
+    
+    private final String radioName;
 
-    public RadioScreen(InteractionHand hand, int activeChannel, String[] freqs, String[] algos, String[] keys, float currentVol) {
-        super(Component.literal("PRC-152A Configuration"));
+    public RadioScreen(InteractionHand hand, int activeChannel, String[] freqs, String[] algos, String[] keys, float currentVol, String radioName) {
+        super(Component.literal(radioName + " Configuration"));
         this.hand = hand;
         this.activeChannel = activeChannel;
         this.currentVolumeValue = currentVol;
@@ -53,6 +55,7 @@ public class RadioScreen extends Screen {
             this.channelAlgos[i] = algos[i] != null ? algos[i] : "CLEAR";
             this.channelKeys[i] = keys[i] != null ? keys[i] : "";
         }
+        this.radioName = radioName;
     }
 
     public static void open(InteractionHand hand, ItemStack stack) {
@@ -76,7 +79,10 @@ public class RadioScreen extends Screen {
                 keys[i] = tag.contains("ch" + i + "_key") ? tag.getString("ch" + i + "_key") : "";
             }
         }
-        Minecraft.getInstance().setScreen(new RadioScreen(hand, channel, freqs, algos, keys, vol));
+        
+        String name = stack.getHoverName().getString().toUpperCase();
+        if (name.equals("AIR") || name.isEmpty()) name = "PRC-152A"; // Fallback safety
+        Minecraft.getInstance().setScreen(new RadioScreen(hand, channel, freqs, algos, keys, vol, name));
     }
 
     @Override
@@ -134,7 +140,7 @@ public class RadioScreen extends Screen {
         guiGraphics.fill(boxX, boxY, boxX + 2, boxY + boxH, bgLeft); // Left highlight
         guiGraphics.fill(boxX + boxW - 2, boxY, boxX + boxW, boxY + boxH, bgRight); // Right shadow
         
-        guiGraphics.drawString(this.font, "PRC-152A", boxX + 10, boxY + 10, textTitle, false);
+        guiGraphics.drawString(this.font, this.radioName, boxX + 10, boxY + 10, textTitle, false);
 
         // Theme Toggle Button
         int modeBtnX = boxX + boxW - 35;
