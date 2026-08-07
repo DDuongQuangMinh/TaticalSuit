@@ -1,6 +1,8 @@
 package com.k1ngtle.taticalsuit.registry;
 
 import com.k1ngtle.taticalsuit.TaticalSuit;
+import com.k1ngtle.taticalsuit.radar.registry.RadarBlocks;
+
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.CreativeModeTab;
@@ -53,6 +55,13 @@ public class ModCreativeTabs {
                         output.accept(ModItems.PRC_152A_RADIO.get());
                         output.accept(ModItems.PRC_163_RADIO.get());
                         output.accept(ModItems.PRC_150_ITEM.get());
+                        output.accept(RadarBlocks.PULSE_DOPPLER_RADAR_ITEM.get());
+                        output.accept(RadarBlocks.SEARCH_RADAR_ITEM.get());
+                        output.accept(RadarBlocks.SCANNING_RADAR_ITEM.get());
+                        output.accept(RadarBlocks.TRACKING_RADAR_ITEM.get());
+                        output.accept(RadarBlocks.RADAR_BEACON_ITEM.get());
+                        output.accept(RadarBlocks.SIGNAL_TEST_EMITTER_ITEM.get());
+                        output.accept(RadarBlocks.SIGNAL_TEST_RECEIVER_ITEM.get());
                     })
                     .build());                
 }

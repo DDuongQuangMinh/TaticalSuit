@@ -15,8 +15,8 @@ public class RadioStationScreen extends Screen {
 
     private final RadioStationBlockEntity station;
 
-    private final int windowWidth = 500;
-    private final int windowHeight = 350;
+    private final int windowWidth = 560;
+    private final int windowHeight = 390;
     private int windowX;
     private int windowY;
 
@@ -27,6 +27,24 @@ public class RadioStationScreen extends Screen {
     private String algo;
     private String key;
     private boolean isIntercepting;
+
+    private float zoomLevel = 1.0f;
+
+    // Drag and Drop Variables
+    private final String[] AVAILABLE_MODULES = {
+        "PWR-SUPPLY-AC", 
+        "ANTENNA-VHF", 
+        "ANTENNA-UHF", 
+        "SPKR-EXTERNAL", 
+        "DATA-LINK-CBL"
+    };
+    
+    private String installedPower = "PWR-SUPPLY-AC";
+    private String installedAntenna = "ANTENNA-VHF";
+    private String installedSpeaker = "SPKR-EXTERNAL";
+    private String installedData = "DATA-LINK-CBL";
+    
+    private String draggedModule = null;
 
     private final List<String> terminalLog = new ArrayList<>();
     private String currentInput = "";
@@ -86,7 +104,7 @@ public class RadioStationScreen extends Screen {
         guiGraphics.fill(windowX, windowY, windowX + windowWidth, windowY + 1, 0xFF777777);
         guiGraphics.fill(windowX, windowY + windowHeight - 1, windowX + windowWidth, windowY + windowHeight, 0xFF777777);
 
-        guiGraphics.drawString(this.font, "Tactical Router Console - Harris RT-1694D", windowX + 8, windowY + 6, 0xFF000000, false);
+        drawClearText(guiGraphics, "Tactical Router Console - Harris RT-1694D", windowX + 8, windowY + 6, 0xFF000000);
 
         int tabY = windowY + 22;
         String[] tabNames = {"Physical", "Config", "CLI"};
@@ -102,13 +120,13 @@ public class RadioStationScreen extends Screen {
                 guiGraphics.fill(currentTabX, tabY, currentTabX + tabW, tabY + 1, 0xFFAAAAAA); 
                 guiGraphics.fill(currentTabX, tabY, currentTabX + 1, tabY + 21, 0xFFAAAAAA); 
                 guiGraphics.fill(currentTabX + tabW - 1, tabY, currentTabX + tabW, tabY + 21, 0xFFAAAAAA); 
-                guiGraphics.drawCenteredString(this.font, tabNames[i], currentTabX + (tabW / 2), tabY + 6, 0xFF000000);
+                drawClearCenteredText(guiGraphics, tabNames[i], currentTabX + (tabW / 2), tabY + 6, 0xFF000000);
             } else {
                 guiGraphics.fill(currentTabX, tabY + 2, currentTabX + tabW, tabY + 20, 0xFFDDDDDD);
                 guiGraphics.fill(currentTabX, tabY + 2, currentTabX + tabW, tabY + 3, 0xFFAAAAAA); 
                 guiGraphics.fill(currentTabX, tabY + 2, currentTabX + 1, tabY + 20, 0xFFAAAAAA); 
                 guiGraphics.fill(currentTabX + tabW - 1, tabY + 2, currentTabX + tabW, tabY + 20, 0xFFAAAAAA); 
-                guiGraphics.drawCenteredString(this.font, tabNames[i], currentTabX + (tabW / 2), tabY + 7, 0xFF000000);
+                drawClearCenteredText(guiGraphics, tabNames[i], currentTabX + (tabW / 2), tabY + 7, 0xFF000000);
             }
             currentTabX += tabW + 4;
         }
@@ -124,30 +142,46 @@ public class RadioStationScreen extends Screen {
         }
     }
 
+    private void drawClearText(GuiGraphics guiGraphics, String text, int x, int y, int color) {
+        guiGraphics.drawString(this.font, text, x, y, color, false);
+    }
+
+    private void drawClearCenteredText(GuiGraphics guiGraphics, String text, int x, int y, int color) {
+        guiGraphics.drawString(this.font, text, x - (this.font.width(text) / 2), y, color, false);
+    }
+
     private void renderPhysicalTab(GuiGraphics guiGraphics, int mouseX, int mouseY, int winW, int winH) {
         int contentX = windowX + 15;
         int contentY = windowY + 50;
 
-        guiGraphics.fill(contentX, contentY, contentX + 110, contentY + 225, 0xFFFFFFFF);
+        guiGraphics.fill(contentX, contentY, contentX + 110, contentY + 265, 0xFFFFFFFF);
         guiGraphics.fill(contentX, contentY, contentX + 110, contentY + 1, 0xFFAAAAAA);
-        guiGraphics.fill(contentX, contentY + 224, contentX + 110, contentY + 225, 0xFFAAAAAA);
-        guiGraphics.fill(contentX, contentY, contentX + 1, contentY + 225, 0xFFAAAAAA);
-        guiGraphics.fill(contentX + 109, contentY, contentX + 110, contentY + 225, 0xFFAAAAAA);
+        guiGraphics.fill(contentX, contentY + 264, contentX + 110, contentY + 265, 0xFFAAAAAA);
+        guiGraphics.fill(contentX, contentY, contentX + 1, contentY + 265, 0xFFAAAAAA);
+        guiGraphics.fill(contentX + 109, contentY, contentX + 110, contentY + 265, 0xFFAAAAAA);
 
-        guiGraphics.drawString(this.font, "MODULES", contentX + 5, contentY + 5, 0xFF000000, false);
+        drawClearText(guiGraphics, "MODULES", contentX + 5, contentY + 5, 0xFF000000);
         guiGraphics.fill(contentX + 1, contentY + 18, contentX + 109, contentY + 32, 0xFFDDDDDD); 
-        guiGraphics.drawString(this.font, "RT-1694D-CHASSIS", contentX + 5, contentY + 21, 0xFF000000, false);
+        drawClearText(guiGraphics, "RT-1694D-CHASSIS", contentX + 5, contentY + 21, 0xFF000000);
         
-        guiGraphics.drawString(this.font, "PWR-SUPPLY-AC", contentX + 5, contentY + 35, 0xFF000000, false);
-        guiGraphics.drawString(this.font, "ANTENNA-VHF", contentX + 5, contentY + 49, 0xFF000000, false);
-        guiGraphics.drawString(this.font, "ANTENNA-UHF", contentX + 5, contentY + 63, 0xFF000000, false);
-        guiGraphics.drawString(this.font, "SPKR-EXTERNAL", contentX + 5, contentY + 77, 0xFF000000, false);
-        guiGraphics.drawString(this.font, "DATA-LINK-CBL", contentX + 5, contentY + 91, 0xFF000000, false);
+        int listY = contentY + 35;
+        for (String mod : AVAILABLE_MODULES) {
+            boolean isInstalled = mod.equals(installedPower) || mod.equals(installedAntenna) || mod.equals(installedSpeaker) || mod.equals(installedData);
+            boolean isDragged = mod.equals(draggedModule);
+            
+            if (isInstalled || isDragged) {
+                guiGraphics.fill(contentX + 5, listY, contentX + 105, listY + 12, 0xFFDDDDDD);
+                drawClearText(guiGraphics, mod, contentX + 8, listY + 2, 0xFFAAAAAA);
+            } else {
+                drawClearText(guiGraphics, mod, contentX + 5, listY + 2, 0xFF000000);
+            }
+            listY += 15;
+        }
 
         int viewX = contentX + 120;
         int viewY = contentY;
         int viewWidth = winW - 150;
-        int viewHeight = 225;
+        int viewHeight = 265;
 
         guiGraphics.fill(viewX, viewY, viewX + viewWidth, viewY + viewHeight, 0xFFFFFFFF);
         guiGraphics.fill(viewX, viewY, viewX + viewWidth, viewY + 1, 0xFFAAAAAA);
@@ -155,135 +189,174 @@ public class RadioStationScreen extends Screen {
         guiGraphics.fill(viewX, viewY, viewX + 1, viewY + viewHeight, 0xFFAAAAAA);
         guiGraphics.fill(viewX + viewWidth - 1, viewY, viewX + viewWidth, viewY + viewHeight, 0xFFAAAAAA);
 
-        guiGraphics.drawCenteredString(this.font, "Physical Device View", viewX + (viewWidth / 2), viewY + 8, 0xFF000000);
+        drawClearCenteredText(guiGraphics, "Physical Device View", viewX + (viewWidth / 2), viewY + 8, 0xFF000000);
 
         int btnY = viewY + 25;
-        guiGraphics.fill(viewX + 25, btnY, viewX + 105, btnY + 15, 0xFFDDDDDD);
-        guiGraphics.fill(viewX + 25, btnY, viewX + 105, btnY + 1, 0xFFAAAAAA);
-        guiGraphics.fill(viewX + 25, btnY+14, viewX + 105, btnY + 15, 0xFFAAAAAA);
-        guiGraphics.fill(viewX + 25, btnY, viewX + 26, btnY + 15, 0xFFAAAAAA);
-        guiGraphics.fill(viewX + 104, btnY, viewX + 105, btnY + 15, 0xFFAAAAAA);
-        guiGraphics.drawCenteredString(this.font, "Zoom In", viewX + 65, btnY + 4, 0xFF000000);
+        // Zoom In Button
+        guiGraphics.fill(viewX + 60, btnY, viewX + 140, btnY + 15, 0xFFDDDDDD);
+        guiGraphics.fill(viewX + 60, btnY, viewX + 140, btnY + 1, 0xFFAAAAAA);
+        guiGraphics.fill(viewX + 60, btnY+14, viewX + 140, btnY + 15, 0xFFAAAAAA);
+        guiGraphics.fill(viewX + 60, btnY, viewX + 61, btnY + 15, 0xFFAAAAAA);
+        guiGraphics.fill(viewX + 139, btnY, viewX + 140, btnY + 15, 0xFFAAAAAA);
+        drawClearCenteredText(guiGraphics, "Zoom In", viewX + 100, btnY + 4, 0xFF000000);
         
-        guiGraphics.fill(viewX + 115, btnY, viewX + 235, btnY + 15, 0xFFDDDDDD);
-        guiGraphics.fill(viewX + 115, btnY, viewX + 235, btnY + 1, 0xFFAAAAAA);
-        guiGraphics.fill(viewX + 115, btnY+14, viewX + 235, btnY + 15, 0xFFAAAAAA);
-        guiGraphics.fill(viewX + 115, btnY, viewX + 116, btnY + 15, 0xFFAAAAAA);
-        guiGraphics.fill(viewX + 234, btnY, viewX + 235, btnY + 15, 0xFFAAAAAA);
-        guiGraphics.drawCenteredString(this.font, "Original Size", viewX + 175, btnY + 4, 0xFF000000);
+        // Original Size Button
+        guiGraphics.fill(viewX + 165, btnY, viewX + 245, btnY + 15, 0xFFDDDDDD);
+        guiGraphics.fill(viewX + 165, btnY, viewX + 245, btnY + 1, 0xFFAAAAAA);
+        guiGraphics.fill(viewX + 165, btnY+14, viewX + 245, btnY + 15, 0xFFAAAAAA);
+        guiGraphics.fill(viewX + 165, btnY, viewX + 166, btnY + 15, 0xFFAAAAAA);
+        guiGraphics.fill(viewX + 244, btnY, viewX + 245, btnY + 15, 0xFFAAAAAA);
+        drawClearCenteredText(guiGraphics, "Original Size", viewX + 205, btnY + 4, 0xFF000000);
         
-        guiGraphics.fill(viewX + 245, btnY, viewX + 325, btnY + 15, 0xFFDDDDDD);
-        guiGraphics.fill(viewX + 245, btnY, viewX + 325, btnY + 1, 0xFFAAAAAA);
-        guiGraphics.fill(viewX + 245, btnY+14, viewX + 325, btnY + 15, 0xFFAAAAAA);
-        guiGraphics.fill(viewX + 245, btnY, viewX + 246, btnY + 15, 0xFFAAAAAA);
-        guiGraphics.fill(viewX + 324, btnY, viewX + 325, btnY + 15, 0xFFAAAAAA);
-        guiGraphics.drawCenteredString(this.font, "Zoom Out", viewX + 285, btnY + 4, 0xFF000000);
+        // Zoom Out Button
+        guiGraphics.fill(viewX + 270, btnY, viewX + 350, btnY + 15, 0xFFDDDDDD);
+        guiGraphics.fill(viewX + 270, btnY, viewX + 350, btnY + 1, 0xFFAAAAAA);
+        guiGraphics.fill(viewX + 270, btnY+14, viewX + 350, btnY + 15, 0xFFAAAAAA);
+        guiGraphics.fill(viewX + 270, btnY, viewX + 271, btnY + 15, 0xFFAAAAAA);
+        guiGraphics.fill(viewX + 349, btnY, viewX + 350, btnY + 15, 0xFFAAAAAA);
+        drawClearCenteredText(guiGraphics, "Zoom Out", viewX + 310, btnY + 4, 0xFF000000);
 
         int chassisX = viewX + 25;
         int chassisY = viewY + 60;
         int chassisW = viewWidth - 50;
-        int chassisH = 135;
+        int chassisH = 150;
+
+        guiGraphics.enableScissor(viewX + 1, viewY + 45, viewX + viewWidth - 1, viewY + viewHeight - 1);
+        guiGraphics.pose().pushPose();
+        
+        float centerX = viewX + (viewWidth / 2f);
+        float centerY = viewY + 130f;
+        
+        guiGraphics.pose().translate(centerX, centerY, 0);
+        guiGraphics.pose().scale(zoomLevel, zoomLevel, 1.0f);
+        guiGraphics.pose().translate(-centerX, -centerY, 0);
 
         guiGraphics.fill(chassisX, chassisY, chassisX + chassisW, chassisY + chassisH, 0xFF4A5A35);
-        guiGraphics.fill(chassisX, chassisY + 65, chassisX + chassisW, chassisY + 67, 0xFF354224);
+        guiGraphics.fill(chassisX, chassisY + 75, chassisX + chassisW, chassisY + 77, 0xFF354224);
 
-        guiGraphics.fill(chassisX + 85, chassisY + 15, chassisX + 215, chassisY + 60, 0xFF111511);
-        if (isOn) {
-            guiGraphics.drawString(this.font, "HARRIS OS 2.4", chassisX + 90, chassisY + 20, 0xFF00FF00, false);
+        guiGraphics.fill(chassisX + 90, chassisY + 15, chassisX + 240, chassisY + 65, 0xFF111511);
+        if (isOn && installedPower != null) {
+            drawClearText(guiGraphics, "HARRIS OS 2.4", chassisX + 95, chassisY + 20, 0xFF00FF00);
             
             if (frequency.equals("0.000") || frequency.equals("0.0")) {
-                guiGraphics.drawString(this.font, "MODE: SCANNER", chassisX + 90, chassisY + 32, 0xFF00FF00, false);
+                drawClearText(guiGraphics, "MODE: SCANNER", chassisX + 95, chassisY + 32, 0xFF00FF00);
                 if (isIntercepting) {
-                    guiGraphics.drawString(this.font, "[SWEEPING FREQS]", chassisX + 90, chassisY + 44, 0xFFD62929, false);
+                    drawClearText(guiGraphics, "[SWEEPING FREQS]", chassisX + 95, chassisY + 44, 0xFFD62929);
                 }
             } else {
-                guiGraphics.drawString(this.font, "FREQ: " + frequency + " MHz", chassisX + 90, chassisY + 32, 0xFF00FF00, false);
-                guiGraphics.drawString(this.font, "ALGO: " + algo, chassisX + 90, chassisY + 44, 0xFF00FF00, false);
+                drawClearText(guiGraphics, "FREQ: " + frequency + " MHz", chassisX + 95, chassisY + 32, 0xFF00FF00);
+                drawClearText(guiGraphics, "ALGO: " + algo, chassisX + 95, chassisY + 44, 0xFF00FF00);
                 if (isIntercepting) {
-                    guiGraphics.drawString(this.font, "[MITM HACK ACTIVE]", chassisX + 90, chassisY + 56, 0xFFD62929, false);
+                    drawClearText(guiGraphics, "[MITM HACK ACTIVE]", chassisX + 95, chassisY + 56, 0xFFD62929);
                 }
             }
         }
 
-        drawScaledString(guiGraphics, "AUDIO", chassisX + 31, chassisY + 18, 0.7f, 0xFF000000);
-        guiGraphics.fill(chassisX + 33, chassisY + 26, chassisX + 45, chassisY + 38, 0xFF000000);
-        guiGraphics.fill(chassisX + 35, chassisY + 28, chassisX + 43, chassisY + 36, 0xFF4488FF);
+        // Left Side Connections
+        drawScaledString(guiGraphics, "AUDIO", chassisX + 35, chassisY + 18, 0.7f, 0xFF000000);
+        guiGraphics.fill(chassisX + 37, chassisY + 26, chassisX + 49, chassisY + 38, 0xFF000000);
+        if (installedData != null) guiGraphics.fill(chassisX + 39, chassisY + 28, chassisX + 47, chassisY + 36, 0xFF4488FF);
 
-        drawScaledString(guiGraphics, "DATA", chassisX + 33, chassisY + 45, 0.7f, 0xFF000000);
-        guiGraphics.fill(chassisX + 33, chassisY + 53, chassisX + 45, chassisY + 65, 0xFF000000);
-        guiGraphics.fill(chassisX + 35, chassisY + 55, chassisX + 43, chassisY + 63, 0xFF4488FF);
+        drawScaledString(guiGraphics, "DATA", chassisX + 37, chassisY + 45, 0.7f, 0xFF000000);
+        guiGraphics.fill(chassisX + 37, chassisY + 53, chassisX + 49, chassisY + 65, 0xFF000000);
+        if (installedData != null) guiGraphics.fill(chassisX + 39, chassisY + 55, chassisX + 47, chassisY + 63, 0xFF4488FF);
 
-        drawScaledString(guiGraphics, "RT-1694D(P)(C)/U", chassisX + 225, chassisY + 10, 0.8f, 0xFFFFFFFF);
-        guiGraphics.drawString(this.font, "HARRIS", chassisX + 235, chassisY + 20, 0xFFFFFFFF, false);
+        // Right Side Brand & Modules
+        drawScaledString(guiGraphics, "RT-1694D(P)(C)/U", chassisX + 260, chassisY + 10, 0.8f, 0xFFFFFFFF);
+        drawClearText(guiGraphics, "HARRIS", chassisX + 280, chassisY + 20, 0xFFFFFFFF);
 
-        drawScaledString(guiGraphics, "ANTENNA", chassisX + 258, chassisY + 32, 0.6f, 0xFFFFFFFF);
-        guiGraphics.fill(chassisX + 265, chassisY + 38, chassisX + 281, chassisY + 48, 0xFF222222);
+        drawScaledString(guiGraphics, "ANTENNA", chassisX + 310, chassisY + 32, 0.6f, 0xFFFFFFFF);
+        guiGraphics.fill(chassisX + 312, chassisY + 38, chassisX + 332, chassisY + 48, 0xFF111111);
+        if (installedAntenna != null) {
+            guiGraphics.fill(chassisX + 314, chassisY + 40, chassisX + 330, chassisY + 46, 0xFF222222);
+        }
 
-        drawScaledString(guiGraphics, "ACCESSORY", chassisX + 236, chassisY + 43, 0.6f, 0xFF000000);
-        guiGraphics.fill(chassisX + 243, chassisY + 49, chassisX + 255, chassisY + 61, 0xFF000000);
-        guiGraphics.fill(chassisX + 245, chassisY + 51, chassisX + 253, chassisY + 59, 0xFF4488FF);
+        drawScaledString(guiGraphics, "ACCESSORY", chassisX + 280, chassisY + 43, 0.6f, 0xFF000000);
+        guiGraphics.fill(chassisX + 287, chassisY + 49, chassisX + 299, chassisY + 61, 0xFF000000);
+        guiGraphics.fill(chassisX + 289, chassisY + 51, chassisX + 297, chassisY + 59, 0xFF4488FF);
 
-        drawScaledString(guiGraphics, "PWR", chassisX + 220, chassisY + 36, 0.6f, 0xFFFFFFFF);
-        int pwrColor = isOn ? 0xFF00FF00 : 0xFF550000;
-        guiGraphics.fill(chassisX + 218, chassisY + 44, chassisX + 234, chassisY + 60, 0xFF000000); 
-        guiGraphics.fill(chassisX + 220, chassisY + 46, chassisX + 232, chassisY + 58, pwrColor); 
+        drawScaledString(guiGraphics, "PWR", chassisX + 255, chassisY + 36, 0.6f, 0xFFFFFFFF);
+        guiGraphics.fill(chassisX + 251, chassisY + 44, chassisX + 267, chassisY + 60, 0xFF000000);
+        if (installedPower != null) {
+            int pwrColor = isOn ? 0xFF00FF00 : 0xFF550000;
+            guiGraphics.fill(chassisX + 253, chassisY + 46, chassisX + 265, chassisY + 58, pwrColor);
+        } else {
+            guiGraphics.fill(chassisX + 253, chassisY + 46, chassisX + 265, chassisY + 58, 0xFF111111);
+        }
 
-        drawScaledString(guiGraphics, "SPKR", chassisX + 150, chassisY + 75, 0.6f, 0xFF000000);
-        guiGraphics.fill(chassisX + 152, chassisY + 83, chassisX + 164, chassisY + 95, 0xFF000000);
-        guiGraphics.fill(chassisX + 154, chassisY + 85, chassisX + 162, chassisY + 93, 0xFF4488FF);
+        // Bottom Section Speakers & Vent
+        drawScaledString(guiGraphics, "SPKR", chassisX + 160, chassisY + 85, 0.6f, 0xFF000000);
+        guiGraphics.fill(chassisX + 162, chassisY + 93, chassisX + 174, chassisY + 105, 0xFF000000);
+        if (installedSpeaker != null) guiGraphics.fill(chassisX + 164, chassisY + 95, chassisX + 172, chassisY + 103, 0xFF4488FF);
 
-        drawScaledString(guiGraphics, "AUX", chassisX + 185, chassisY + 75, 0.6f, 0xFF000000);
-        guiGraphics.fill(chassisX + 182, chassisY + 83, chassisX + 194, chassisY + 95, 0xFF000000);
-        guiGraphics.fill(chassisX + 184, chassisY + 85, chassisX + 192, chassisY + 93, 0xFF4488FF);
+        drawScaledString(guiGraphics, "AUX", chassisX + 195, chassisY + 85, 0.6f, 0xFF000000);
+        guiGraphics.fill(chassisX + 192, chassisY + 93, chassisX + 204, chassisY + 105, 0xFF000000);
+        if (installedSpeaker != null) guiGraphics.fill(chassisX + 194, chassisY + 95, chassisX + 202, chassisY + 103, 0xFF4488FF);
 
-        drawScaledString(guiGraphics, "PA CTL", chassisX + 165, chassisY + 105, 0.6f, 0xFF000000);
-        guiGraphics.fill(chassisX + 167, chassisY + 113, chassisX + 179, chassisY + 125, 0xFF000000);
-        guiGraphics.fill(chassisX + 169, chassisY + 115, chassisX + 177, chassisY + 123, 0xFF4488FF);
+        drawScaledString(guiGraphics, "PA CTL", chassisX + 175, chassisY + 115, 0.6f, 0xFF000000);
+        guiGraphics.fill(chassisX + 177, chassisY + 123, chassisX + 189, chassisY + 135, 0xFF000000);
+        if (installedSpeaker != null) guiGraphics.fill(chassisX + 179, chassisY + 125, chassisX + 187, chassisY + 133, 0xFF4488FF);
 
-        guiGraphics.fill(chassisX + 210, chassisY + 75, chassisX + 285, chassisY + 125, 0xFF354224);
-        for (int gx = 0; gx < 9; gx++) {
+        guiGraphics.fill(chassisX + 230, chassisY + 85, chassisX + 325, chassisY + 135, 0xFF354224);
+        for (int gx = 0; gx < 11; gx++) {
             for (int gy = 0; gy < 6; gy++) {
-                guiGraphics.fill(chassisX + 215 + (gx * 8), chassisY + 80 + (gy * 8), chassisX + 218 + (gx * 8), chassisY + 83 + (gy * 8), 0xFF111111);
+                guiGraphics.fill(chassisX + 235 + (gx * 8), chassisY + 90 + (gy * 8), chassisX + 238 + (gx * 8), chassisY + 93 + (gy * 8), 0xFF111111);
             }
         }
 
-        guiGraphics.fill(contentX, contentY + 235, contentX + winW - 30, contentY + 285, 0xFFFFFFFF);
-        guiGraphics.fill(contentX, contentY + 235, contentX + winW - 30, contentY + 236, 0xFFAAAAAA);
-        guiGraphics.fill(contentX, contentY + 284, contentX + winW - 30, contentY + 285, 0xFFAAAAAA);
-        guiGraphics.fill(contentX, contentY + 235, contentX + 1, contentY + 285, 0xFFAAAAAA);
-        guiGraphics.fill(contentX + winW - 31, contentY + 235, contentX + winW - 30, contentY + 285, 0xFFAAAAAA);
+        guiGraphics.pose().popPose();
+        guiGraphics.disableScissor();
 
-        guiGraphics.drawString(this.font, "The RT-1694D provides secure military-grade communications routing.", contentX + 5, contentY + 240, 0xFF000000, false);
-        guiGraphics.drawString(this.font, "Tune to 0.000 MHz and activate Intercept for WIDEBAND SCAN MODE.", contentX + 5, contentY + 254, 0xFF000000, false);
-        guiGraphics.drawString(this.font, "Configure cryptography and tuning via the CLI terminal tab.", contentX + 5, contentY + 268, 0xFF000000, false);
+        guiGraphics.fill(contentX, contentY + 275, contentX + winW - 30, contentY + 325, 0xFFFFFFFF);
+        guiGraphics.fill(contentX, contentY + 275, contentX + winW - 30, contentY + 276, 0xFFAAAAAA);
+        guiGraphics.fill(contentX, contentY + 324, contentX + winW - 30, contentY + 325, 0xFFAAAAAA);
+        guiGraphics.fill(contentX, contentY + 275, contentX + 1, contentY + 325, 0xFFAAAAAA);
+        guiGraphics.fill(contentX + winW - 31, contentY + 275, contentX + winW - 30, contentY + 325, 0xFFAAAAAA);
+
+        drawClearText(guiGraphics, "The RT-1694D provides secure military-grade communications routing.", contentX + 5, contentY + 280, 0xFF000000);
+        drawClearText(guiGraphics, "Tune to 0.000 MHz and activate Intercept for WIDEBAND SCAN MODE.", contentX + 5, contentY + 294, 0xFF000000);
+        drawClearText(guiGraphics, "Configure cryptography and tuning via the CLI terminal tab.", contentX + 5, contentY + 308, 0xFF000000);
+
+        // Draw the module attached to the cursor
+        if (draggedModule != null) {
+            guiGraphics.pose().pushPose();
+            guiGraphics.pose().translate(0, 0, 400); // Draw above everything
+            guiGraphics.fill(mouseX - 50, mouseY - 6, mouseX + 50, mouseY + 6, 0xFFEEEEEE);
+            guiGraphics.fill(mouseX - 50, mouseY - 6, mouseX + 50, mouseY - 5, 0xFFAAAAAA);
+            guiGraphics.fill(mouseX - 50, mouseY + 5, mouseX + 50, mouseY + 6, 0xFFAAAAAA);
+            guiGraphics.fill(mouseX - 50, mouseY - 6, mouseX - 49, mouseY + 6, 0xFFAAAAAA);
+            guiGraphics.fill(mouseX + 49, mouseY - 6, mouseX + 50, mouseY + 6, 0xFFAAAAAA);
+            drawClearCenteredText(guiGraphics, draggedModule, mouseX, mouseY - 4, 0xFF000000);
+            guiGraphics.pose().popPose();
+        }
     }
 
     private void renderConfigTab(GuiGraphics guiGraphics, int winW, int winH) {
         int contentX = windowX + 15;
         int contentY = windowY + 50;
 
-        guiGraphics.fill(contentX, contentY, contentX + 110, contentY + 285, 0xFFFFFFFF);
+        guiGraphics.fill(contentX, contentY, contentX + 110, contentY + 325, 0xFFFFFFFF);
         guiGraphics.fill(contentX, contentY, contentX + 110, contentY + 1, 0xFFAAAAAA);
-        guiGraphics.fill(contentX, contentY + 284, contentX + 110, contentY + 285, 0xFFAAAAAA);
-        guiGraphics.fill(contentX, contentY, contentX + 1, contentY + 285, 0xFFAAAAAA);
-        guiGraphics.fill(contentX + 109, contentY, contentX + 110, contentY + 285, 0xFFAAAAAA);
+        guiGraphics.fill(contentX, contentY + 324, contentX + 110, contentY + 325, 0xFFAAAAAA);
+        guiGraphics.fill(contentX, contentY, contentX + 1, contentY + 325, 0xFFAAAAAA);
+        guiGraphics.fill(contentX + 109, contentY, contentX + 110, contentY + 325, 0xFFAAAAAA);
 
-        guiGraphics.drawString(this.font, "GLOBAL", contentX + 5, contentY + 5, 0xFF000000, false);
-        guiGraphics.drawString(this.font, "  Settings", contentX + 5, contentY + 19, 0xFF333333, false);
+        drawClearText(guiGraphics, "GLOBAL", contentX + 5, contentY + 5, 0xFF000000);
+        drawClearText(guiGraphics, "  Settings", contentX + 5, contentY + 19, 0xFF333333);
         guiGraphics.fill(contentX + 1, contentY + 18, contentX + 109, contentY + 29, 0xFFDDDDDD); 
-        guiGraphics.drawString(this.font, "  Settings", contentX + 5, contentY + 19, 0xFF000000, false);
+        drawClearText(guiGraphics, "  Settings", contentX + 5, contentY + 19, 0xFF000000);
         
-        guiGraphics.drawString(this.font, "ROUTING", contentX + 5, contentY + 43, 0xFF000000, false);
-        guiGraphics.drawString(this.font, "  Static", contentX + 5, contentY + 57, 0xFFAAAAAA, false);
+        drawClearText(guiGraphics, "ROUTING", contentX + 5, contentY + 43, 0xFF000000);
+        drawClearText(guiGraphics, "  Static", contentX + 5, contentY + 57, 0xFFAAAAAA);
         
-        guiGraphics.drawString(this.font, "INTERFACE", contentX + 5, contentY + 81, 0xFF000000, false);
-        guiGraphics.drawString(this.font, "  FastEthernet0/0", contentX + 5, contentY + 95, 0xFF555555, false);
-        guiGraphics.drawString(this.font, "  VHF Antenna", contentX + 5, contentY + 109, 0xFF555555, false);
+        drawClearText(guiGraphics, "INTERFACE", contentX + 5, contentY + 81, 0xFF000000);
+        drawClearText(guiGraphics, "  FastEthernet0/0", contentX + 5, contentY + 95, 0xFF555555);
+        drawClearText(guiGraphics, "  VHF Antenna", contentX + 5, contentY + 109, 0xFF555555);
 
         int viewX = contentX + 120;
         int viewY = contentY;
         int viewWidth = winW - 150;
-        int viewHeight = 285;
+        int viewHeight = 325;
 
         guiGraphics.fill(viewX, viewY, viewX + viewWidth, viewY + viewHeight, 0xFFFFFFFF);
         guiGraphics.fill(viewX, viewY, viewX + viewWidth, viewY + 1, 0xFFAAAAAA);
@@ -291,27 +364,27 @@ public class RadioStationScreen extends Screen {
         guiGraphics.fill(viewX, viewY, viewX + 1, viewY + viewHeight, 0xFFAAAAAA);
         guiGraphics.fill(viewX + viewWidth - 1, viewY, viewX + viewWidth, viewY + viewHeight, 0xFFAAAAAA);
 
-        guiGraphics.drawCenteredString(this.font, "Device Configuration", viewX + (viewWidth / 2), viewY + 8, 0xFF000000);
+        drawClearCenteredText(guiGraphics, "Device Configuration", viewX + (viewWidth / 2), viewY + 8, 0xFF000000);
 
         int textX = viewX + 15;
         int startY = viewY + 35;
         
-        guiGraphics.drawString(this.font, "Power Status:", textX, startY, 0xFF000000, false);
-        guiGraphics.drawString(this.font, isOn ? "ONLINE" : "OFFLINE", textX + 100, startY, isOn ? 0xFF00AA00 : 0xFFD62929, false);
+        drawClearText(guiGraphics, "Power Status:", textX, startY, 0xFF000000);
+        drawClearText(guiGraphics, isOn ? "ONLINE" : "OFFLINE", textX + 100, startY, isOn ? 0xFF00AA00 : 0xFFD62929);
 
-        guiGraphics.drawString(this.font, "Tuned Frequency:", textX, startY + 25, 0xFF000000, false);
-        guiGraphics.drawString(this.font, frequency.equals("0.000") || frequency.equals("0.0") ? "SWEEPING ALL" : frequency + " MHz", textX + 100, startY + 25, 0xFF000000, false);
+        drawClearText(guiGraphics, "Tuned Frequency:", textX, startY + 25, 0xFF000000);
+        drawClearText(guiGraphics, frequency.equals("0.000") || frequency.equals("0.0") ? "SWEEPING ALL" : frequency + " MHz", textX + 100, startY + 25, 0xFF000000);
 
-        guiGraphics.drawString(this.font, "Encryption Algo:", textX, startY + 50, 0xFF000000, false);
-        guiGraphics.drawString(this.font, frequency.equals("0.000") || frequency.equals("0.0") ? "N/A (SCANNING)" : algo, textX + 100, startY + 50, 0xFF000000, false);
+        drawClearText(guiGraphics, "Encryption Algo:", textX, startY + 50, 0xFF000000);
+        drawClearText(guiGraphics, frequency.equals("0.000") || frequency.equals("0.0") ? "N/A (SCANNING)" : algo, textX + 100, startY + 50, 0xFF000000);
 
-        guiGraphics.drawString(this.font, "MITM Hack Status:", textX, startY + 75, 0xFF000000, false);
+        drawClearText(guiGraphics, "MITM Hack Status:", textX, startY + 75, 0xFF000000);
         String interceptStatus = isIntercepting ? (frequency.equals("0.000") || frequency.equals("0.0") ? "SWEEPING SIGNALS" : "EXPLOITING PACKETS") : "DISABLED";
         int interceptColor = isIntercepting ? 0xFFD62929 : 0xFF000000;
-        guiGraphics.drawString(this.font, interceptStatus, textX + 100, startY + 75, interceptColor, false);
+        drawClearText(guiGraphics, interceptStatus, textX + 100, startY + 75, interceptColor);
         
-        guiGraphics.drawString(this.font, "Note: All configurations must be applied", textX, startY + 125, 0xFF555555, false);
-        guiGraphics.drawString(this.font, "manually via the CLI interface.", textX, startY + 139, 0xFF555555, false);
+        drawClearText(guiGraphics, "Note: All configurations must be applied", textX, startY + 125, 0xFF555555);
+        drawClearText(guiGraphics, "manually via the CLI interface.", textX, startY + 139, 0xFF555555);
     }
 
     private void renderCLITab(GuiGraphics guiGraphics, int winW, int winH) {
@@ -328,19 +401,19 @@ public class RadioStationScreen extends Screen {
 
         guiGraphics.fill(cliX, cliY, cliX + cliW, cliY + cliH, 0xFF000000);
 
-        int maxLines = 26;
+        int maxLines = 29; // Increased for taller window
         int startIndex = Math.max(0, terminalLog.size() - maxLines + logScroll);
         int yOffset = cliY + 5;
 
         for (int i = startIndex; i < Math.min(terminalLog.size(), startIndex + maxLines); i++) {
-            guiGraphics.drawString(this.font, terminalLog.get(i), cliX + 5, yOffset, 0xFF00FF00, false);
+            drawClearText(guiGraphics, terminalLog.get(i), cliX + 5, yOffset, 0xFF00FF00);
             yOffset += 10;
         }
 
         if (terminalLog.size() < maxLines || startIndex + maxLines >= terminalLog.size()) {
             String prefix = this.isOn ? "RT-1694D> " : "> ";
             String cursor = (System.currentTimeMillis() % 1000 > 500) ? "_" : "";
-            guiGraphics.drawString(this.font, prefix + currentInput + cursor, cliX + 5, yOffset, 0xFF00FF00, false);
+            drawClearText(guiGraphics, prefix + currentInput + cursor, cliX + 5, yOffset, 0xFF00FF00);
         }
     }
 
@@ -368,23 +441,129 @@ public class RadioStationScreen extends Screen {
             }
 
             if (activeTab == 0) {
-                int viewX = windowX + 15 + 120;
-                int chassisX = viewX + 25;
-                int chassisY = windowY + 50 + 60;
+                int contentX = windowX + 15;
+                int contentY = windowY + 50;
+                int viewX = contentX + 120;
+                int viewY = contentY;
+                int viewWidth = windowWidth - 150;
                 
-                int btnX = chassisX + 218;
-                int btnY = chassisY + 44;
-
-                if (mouseX >= btnX - 2 && mouseX <= btnX + 18 && mouseY >= btnY - 2 && mouseY <= btnY + 18) {
-                    this.isOn = !this.isOn;
-                    syncToServer();
-                    terminalLog.add(this.isOn ? "SYSTEM BOOTING... ONLINE." : "SYSTEM SHUTTING DOWN... OFFLINE.");
+                int btnY = viewY + 25;
+                
+                // Zoom In
+                if (mouseX >= viewX + 60 && mouseX <= viewX + 140 && mouseY >= btnY && mouseY <= btnY + 15) {
+                    zoomLevel = Math.min(3.0f, zoomLevel + 0.25f);
                     playClickSound();
                     return true;
+                }
+                // Original Size
+                if (mouseX >= viewX + 165 && mouseX <= viewX + 245 && mouseY >= btnY && mouseY <= btnY + 15) {
+                    zoomLevel = 1.0f;
+                    playClickSound();
+                    return true;
+                }
+                // Zoom Out
+                if (mouseX >= viewX + 270 && mouseX <= viewX + 350 && mouseY >= btnY && mouseY <= btnY + 15) {
+                    zoomLevel = Math.max(0.5f, zoomLevel - 0.25f);
+                    playClickSound();
+                    return true;
+                }
+
+                // Check left panel module list for Drag Start
+                int listY = contentY + 35;
+                for (String mod : AVAILABLE_MODULES) {
+                    if (mouseX >= contentX + 5 && mouseX <= contentX + 105 && mouseY >= listY && mouseY <= listY + 12) {
+                        boolean isInstalled = mod.equals(installedPower) || mod.equals(installedAntenna) || mod.equals(installedSpeaker) || mod.equals(installedData);
+                        if (!isInstalled) {
+                            draggedModule = mod;
+                            playClickSound();
+                            return true;
+                        }
+                    }
+                    listY += 15;
+                }
+
+                // Check clicks on the physical chassis
+                if (mouseX >= viewX + 1 && mouseX <= viewX + viewWidth - 1 && mouseY >= viewY + 45 && mouseY <= viewY + 265 - 1) {
+                    float centerX = viewX + (viewWidth / 2f);
+                    float centerY = viewY + 130f;
+                    double mappedX = (mouseX - centerX) / zoomLevel + centerX;
+                    double mappedY = (mouseY - centerY) / zoomLevel + centerY;
+                    
+                    int chassisX = viewX + 25;
+                    int chassisY = viewY + 60;
+                    
+                    // Power Button Interaction
+                    int pwrBtnX = chassisX + 251; int pwrBtnY = chassisY + 44;
+                    if (mappedX >= pwrBtnX && mappedX <= pwrBtnX + 16 && mappedY >= pwrBtnY && mappedY <= pwrBtnY + 16) {
+                        if (installedPower == null) {
+                            terminalLog.add("ERROR: AC Power Supply missing. Cannot boot.");
+                        } else {
+                            this.isOn = !this.isOn;
+                            syncToServer();
+                            terminalLog.add(this.isOn ? "SYSTEM BOOTING... ONLINE." : "SYSTEM SHUTTING DOWN... OFFLINE.");
+                        }
+                        playClickSound();
+                        return true;
+                    }
+
+                    // Remove modules from chassis slots
+                    if (installedAntenna != null && mappedX >= chassisX+310 && mappedX <= chassisX+335 && mappedY >= chassisY+38 && mappedY <= chassisY+50) {
+                        draggedModule = installedAntenna; installedAntenna = null; playClickSound(); return true;
+                    }
+                    if (installedPower != null && mappedX >= chassisX+250 && mappedX <= chassisX+270 && mappedY >= chassisY+42 && mappedY <= chassisY+62) {
+                        draggedModule = installedPower; installedPower = null; 
+                        if (this.isOn) { this.isOn = false; terminalLog.add("CRITICAL: POWER SUPPLY REMOVED. SYSTEM OFFLINE."); syncToServer(); }
+                        playClickSound(); return true;
+                    }
+                    if (installedSpeaker != null && mappedX >= chassisX+160 && mappedX <= chassisX+210 && mappedY >= chassisY+80 && mappedY <= chassisY+135) {
+                        draggedModule = installedSpeaker; installedSpeaker = null; playClickSound(); return true;
+                    }
+                    if (installedData != null && mappedX >= chassisX+30 && mappedX <= chassisX+55 && mappedY >= chassisY+20 && mappedY <= chassisY+70) {
+                        draggedModule = installedData; installedData = null; playClickSound(); return true;
+                    }
                 }
             }
         }
         return super.mouseClicked(mouseX, mouseY, button);
+    }
+
+    @Override
+    public boolean mouseReleased(double mouseX, double mouseY, int button) {
+        if (draggedModule != null && button == 0) {
+            int viewX = windowX + 15 + 120;
+            int viewY = windowY + 50;
+            int viewWidth = windowWidth - 150;
+            
+            if (mouseX >= viewX + 1 && mouseX <= viewX + viewWidth - 1 && mouseY >= viewY + 45 && mouseY <= viewY + 265 - 1) {
+                float centerX = viewX + (viewWidth / 2f);
+                float centerY = viewY + 130f;
+                double mappedX = (mouseX - centerX) / zoomLevel + centerX;
+                double mappedY = (mouseY - centerY) / zoomLevel + centerY;
+                
+                int chassisX = viewX + 25;
+                int chassisY = viewY + 60;
+
+                if (draggedModule.startsWith("ANTENNA") && mappedX >= chassisX+310 && mappedX <= chassisX+335 && mappedY >= chassisY+38 && mappedY <= chassisY+50) {
+                    if (installedAntenna != null) terminalLog.add("ERROR: Slot occupied.");
+                    else { installedAntenna = draggedModule; playClickSound(); }
+                }
+                else if (draggedModule.equals("PWR-SUPPLY-AC") && mappedX >= chassisX+250 && mappedX <= chassisX+270 && mappedY >= chassisY+42 && mappedY <= chassisY+62) {
+                    if (installedPower != null) terminalLog.add("ERROR: Slot occupied.");
+                    else { installedPower = draggedModule; playClickSound(); }
+                }
+                else if (draggedModule.equals("SPKR-EXTERNAL") && mappedX >= chassisX+160 && mappedX <= chassisX+210 && mappedY >= chassisY+80 && mappedY <= chassisY+135) {
+                    if (installedSpeaker != null) terminalLog.add("ERROR: Slot occupied.");
+                    else { installedSpeaker = draggedModule; playClickSound(); }
+                }
+                else if (draggedModule.equals("DATA-LINK-CBL") && mappedX >= chassisX+30 && mappedX <= chassisX+55 && mappedY >= chassisY+20 && mappedY <= chassisY+70) {
+                    if (installedData != null) terminalLog.add("ERROR: Slot occupied.");
+                    else { installedData = draggedModule; playClickSound(); }
+                }
+            }
+            draggedModule = null; // Always reset when dropped
+            return true;
+        }
+        return super.mouseReleased(mouseX, mouseY, button);
     }
 
     private void playClickSound() {
