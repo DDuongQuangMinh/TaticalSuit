@@ -1,6 +1,7 @@
 package com.k1ngtle.taticalsuit.registry;
 
 import com.k1ngtle.taticalsuit.TaticalSuit;
+import com.k1ngtle.taticalsuit.block.RadioStationBlockEntity;
 import com.k1ngtle.taticalsuit.entity.WorkbenchBlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraftforge.registries.DeferredRegister;
@@ -12,4 +13,7 @@ public class ModBlockEntities {
 
     public static final RegistryObject<BlockEntityType<WorkbenchBlockEntity>> WORKBENCH_BE = BLOCK_ENTITIES.register("workbench",
             () -> BlockEntityType.Builder.of(WorkbenchBlockEntity::new, ModBlocks.WORKBENCH.get()).build(null));
+
+    public static final RegistryObject<BlockEntityType<RadioStationBlockEntity>> RADIO_STATION_BE = BLOCK_ENTITIES.register("radio_station_be",
+            () -> BlockEntityType.Builder.of(RadioStationBlockEntity::new, ModBlocks.PRC_150.get()).build(null));        
 }

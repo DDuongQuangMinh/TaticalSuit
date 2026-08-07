@@ -27,6 +27,10 @@ public class VoiceClientEvents {
             "key.taticalsuit.audio_menu", KeyConflictContext.IN_GAME,
             InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_RIGHT_BRACKET, "category.taticalsuit.keys");
 
+    public static final KeyMapping SQUELCH_KEY = new KeyMapping(
+            "key.taticalsuit.squelch", KeyConflictContext.IN_GAME,
+            InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_Z, "category.taticalsuit.keys");
+
     @SubscribeEvent
     public static void onClientSetup(FMLClientSetupEvent event) {
         VoiceManager.init();
@@ -36,6 +40,7 @@ public class VoiceClientEvents {
     public static void onKeyRegister(RegisterKeyMappingsEvent event) {
         event.register(PTT_KEY);
         event.register(AUDIO_MENU_KEY);
+        event.register(SQUELCH_KEY);
     }
 
     @Mod.EventBusSubscriber(modid = TaticalSuit.MODID, value = Dist.CLIENT, bus = Mod.EventBusSubscriber.Bus.FORGE)
@@ -45,6 +50,7 @@ public class VoiceClientEvents {
             if (event.phase == TickEvent.Phase.END) {
                 // Push microphone state to the thread
                 VoiceManager.setTransmitting(PTT_KEY.isDown());
+                VoiceManager.isSquelchOverrideHeld = SQUELCH_KEY.isDown();
                 
                 // Safely caches variables for the Async Audio Engine
                 VoiceManager.updateState();

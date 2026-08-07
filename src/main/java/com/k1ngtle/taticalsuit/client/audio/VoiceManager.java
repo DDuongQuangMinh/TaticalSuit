@@ -45,6 +45,8 @@ public class VoiceManager {
     public static int voiceActivationThreshold = 12;
     private static int voiceHoldFrames = 0;
     
+    public static boolean isSquelchOverrideHeld = false; // NEW: Squelch Tracker
+    
     private static float currentVolume = 1.0f;
 
     public static String currentMicName = "Default System Device";
@@ -52,7 +54,16 @@ public class VoiceManager {
 
     private static Thread captureThread;
     private static Thread playbackThread;
-    private static final ConcurrentLinkedQueue<byte[]> audioQueue = new ConcurrentLinkedQueue<>();
+    
+    public static class AudioTask {
+        public final byte[] data;
+        public final net.minecraft.core.BlockPos pos;
+        public AudioTask(byte[] data, net.minecraft.core.BlockPos pos) {
+            this.data = data;
+            this.pos = pos;
+        }
+    }
+    private static final ConcurrentLinkedQueue<AudioTask> audioQueue = new ConcurrentLinkedQueue<>();
     
     // RNNoise Reflection Objects
     private static Object rnnoiseInstance = null;
@@ -123,7 +134,8 @@ public class VoiceManager {
 
         try {
             // Init Java Sound Line strictly for the Speaker (Bypasses AL10 Thread crashes entirely)
-            AudioFormat format = new AudioFormat(SAMPLE_RATE, 16, 1, true, false);
+            // UPGRADED TO STEREO (2 CHANNELS) FOR 3D SPATIAL AUDIO!
+            AudioFormat format = new AudioFormat(SAMPLE_RATE, 16, 2, true, false);
             DataLine.Info info = new DataLine.Info(SourceDataLine.class, format);
             speakerLine = (SourceDataLine) AudioSystem.getLine(info);
             speakerLine.open(format);
@@ -205,14 +217,15 @@ public class VoiceManager {
                             String freq = getActiveFrequency();
                             String algo = getActiveEncryptionAlgo();
                             String key = getActiveEncryptionKey();
+                            String bw = getActiveBandwidth();
                             
                             byte[] encryptedData = processCrypto(byteData, byteData.length, algo, key, Cipher.ENCRYPT_MODE);
 
                             if (loopbackDebug) {
                                 byte[] lbBuffer = processCrypto(encryptedData, encryptedData.length, algo, key, Cipher.DECRYPT_MODE);
-                                playAudio(lbBuffer);
+                                playAudio(lbBuffer, null);
                             } else {
-                                RadioNetwork.CHANNEL.sendToServer(new RadioNetwork.VoicePacket(encryptedData, freq, algo, key));
+                                RadioNetwork.CHANNEL.sendToServer(new RadioNetwork.VoicePacket(encryptedData, freq, algo, key, false, null, bw, 0.0));
                             }
                         }
                     } else {
@@ -231,31 +244,63 @@ public class VoiceManager {
 
     private static void startPlaybackThread() {
         playbackThread = new Thread(() -> {
-            byte[] silence = new byte[FRAME_SIZE * 2]; // 10ms of pure zeroes
+            byte[] stereoSilence = new byte[FRAME_SIZE * 4]; // 2 bytes per sample * 2 channels = 4 bytes
             int silenceFramesWritten = 0;
 
             while (isRunning) {
-                byte[] data = audioQueue.poll();
-                if (data != null && speakerLine != null && speakerLine.isOpen()) {
+                AudioTask task = audioQueue.poll();
+                if (task != null && speakerLine != null && speakerLine.isOpen()) {
+                    byte[] data = task.data;
+                    net.minecraft.core.BlockPos pos = task.pos;
                     float vol = currentVolume;
-                    byte[] adjData = new byte[data.length];
                     
-                    // Apply the tactical volume slider multiplier to the raw byte stream
+                    float leftVol = 1.0f;
+                    float rightVol = 1.0f;
+
+                    // 3D SPATIAL MATH
+                    if (pos != null) {
+                        Minecraft mc = Minecraft.getInstance();
+                        if (mc.player != null) {
+                            net.minecraft.world.phys.Vec3 playerPos = mc.player.position();
+                            net.minecraft.world.phys.Vec3 sourceVec = new net.minecraft.world.phys.Vec3(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5);
+                            
+                            double distance = playerPos.distanceTo(sourceVec);
+                            float distVol = (float) Math.max(0.0, 1.0 - (distance / 20.0)); // 20 Block Falloff
+                            
+                            net.minecraft.world.phys.Vec3 lookVec = mc.player.getLookAngle();
+                            net.minecraft.world.phys.Vec3 dirToSource = sourceVec.subtract(playerPos).normalize();
+                            
+                            // Cross product with UP vector to get player's Right vector
+                            net.minecraft.world.phys.Vec3 rightVec = lookVec.cross(new net.minecraft.world.phys.Vec3(0, 1, 0)).normalize();
+                            double pan = dirToSource.dot(rightVec); // -1.0 (left) to 1.0 (right)
+                            
+                            leftVol = distVol * (float)Math.min(1.0, 1.0 - pan + 0.2);
+                            rightVol = distVol * (float)Math.min(1.0, 1.0 + pan + 0.2);
+                        }
+                    }
+
+                    // Convert 16-bit Mono to 16-bit Stereo
+                    byte[] stereoData = new byte[data.length * 2];
                     for (int i = 0; i < data.length; i += 2) {
                         short sample = (short) ((data[i + 1] << 8) | (data[i] & 0xFF));
-                        sample = (short) (sample * vol); 
-                        adjData[i] = (byte) (sample & 0xFF);
-                        adjData[i + 1] = (byte) ((sample >> 8) & 0xFF);
+                        
+                        short lSample = (short) (sample * vol * leftVol);
+                        short rSample = (short) (sample * vol * rightVol);
+                        
+                        // Left channel
+                        stereoData[i * 2] = (byte) (lSample & 0xFF);
+                        stereoData[i * 2 + 1] = (byte) ((lSample >> 8) & 0xFF);
+                        // Right channel
+                        stereoData[i * 2 + 2] = (byte) (rSample & 0xFF);
+                        stereoData[i * 2 + 3] = (byte) ((rSample >> 8) & 0xFF);
                     }
                     
-                    speakerLine.write(adjData, 0, adjData.length);
+                    speakerLine.write(stereoData, 0, stereoData.length);
                     silenceFramesWritten = 0; // Reset the silence tail
                 } else if (speakerLine != null && speakerLine.isOpen()) {
                     // FIX: Java Sound Driver Buffer Underrun Loop Bug
-                    // If queue is empty, write 10 frames (100ms) of pure silence to flush the hardware
-                    // and stop the last sound from repeating like a broken robot.
                     if (silenceFramesWritten < 10) {
-                        speakerLine.write(silence, 0, silence.length);
+                        speakerLine.write(stereoSilence, 0, stereoSilence.length);
                         silenceFramesWritten++;
                     } else {
                         try { Thread.sleep(5); } catch (InterruptedException ignored) {}
@@ -302,13 +347,13 @@ public class VoiceManager {
         currentVolume = 1.0f;
     }
 
-    public static void playAudio(byte[] data) {
+    public static void playAudio(byte[] data, net.minecraft.core.BlockPos pos) {
         if (isRunning) {
             // FIX: Queue Cap to prevent massive echo/delay buildup during lag spikes
             if (audioQueue.size() > 15) {
                 audioQueue.clear(); 
             }
-            audioQueue.add(data);
+            audioQueue.add(new AudioTask(data, pos));
         }
     }
 
@@ -440,5 +485,19 @@ public class VoiceManager {
             }
         }
         return "";
+    }
+    
+    private static String getActiveBandwidth() {
+        Player player = Minecraft.getInstance().player;
+        if (player == null) return "25.0k";
+        for (int i = 0; i < player.getInventory().getContainerSize(); i++) {
+            ItemStack stack = player.getInventory().getItem(i);
+            if (stack.getItem() instanceof RadioItem && stack.hasTag()) {
+                int ch = stack.getTag().contains("channel") ? stack.getTag().getInt("channel") : 0;
+                if (stack.getTag().contains("ch" + ch + "_bw")) return stack.getTag().getString("ch" + ch + "_bw");
+                return "25.0k";
+            }
+        }
+        return "25.0k";
     }
 }

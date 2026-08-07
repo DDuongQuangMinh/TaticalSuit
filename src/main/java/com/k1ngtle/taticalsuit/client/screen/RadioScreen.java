@@ -1,7 +1,6 @@
 package com.k1ngtle.taticalsuit.client.screen;
 
 import com.k1ngtle.taticalsuit.network.RadioNetwork;
-import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.EditBox;
@@ -24,11 +23,13 @@ public class RadioScreen extends Screen {
     private final float[] channelFreqs = new float[5];
     private final String[] channelAlgos = new String[5];
     private final String[] channelKeys = new String[5];
+    private final String[] channelBws = new String[5];
     
     private float currentVolumeValue;
     
-    private final float minFreq = 0.0f;
-    private final float maxFreq = 1000.0f;
+    // Real-world VHF/UHF tactical ranges
+    private final float minFreq = 200.000f;
+    private final float maxFreq = 670.000f;
     
     private boolean isDraggingTune = false;
     private boolean isDraggingVolume = false;
@@ -37,10 +38,11 @@ public class RadioScreen extends Screen {
     private EditBox keyField;
     
     private final String[] ALGORITHMS = {"CLEAR", "AES-128", "DES", "BLOWFISH", "TWOFISH", "CHACHA20"};
+    private final String[] BANDWIDTHS = {"12.5k", "25.0k", "50.0k"};
     
     private final String radioName;
 
-    public RadioScreen(InteractionHand hand, int activeChannel, String[] freqs, String[] algos, String[] keys, float currentVol, String radioName) {
+    public RadioScreen(InteractionHand hand, int activeChannel, String[] freqs, String[] algos, String[] keys, String[] bws, float currentVol, String radioName) {
         super(Component.literal(radioName + " Configuration"));
         this.hand = hand;
         this.activeChannel = activeChannel;
@@ -50,19 +52,21 @@ public class RadioScreen extends Screen {
             try {
                 this.channelFreqs[i] = Float.parseFloat(freqs[i]);
             } catch (NumberFormatException e) {
-                this.channelFreqs[i] = 145.0f;
+                this.channelFreqs[i] = 446.000f;
             }
             this.channelAlgos[i] = algos[i] != null ? algos[i] : "CLEAR";
             this.channelKeys[i] = keys[i] != null ? keys[i] : "";
+            this.channelBws[i] = bws[i] != null ? bws[i] : "25.0k";
         }
         this.radioName = radioName;
     }
 
     public static void open(InteractionHand hand, ItemStack stack) {
         int channel = 0;
-        String[] freqs = {"145.0", "145.0", "145.0", "145.0", "145.0"};
+        String[] freqs = {"446.000", "446.000", "446.000", "446.000", "446.000"};
         String[] algos = {"CLEAR", "CLEAR", "CLEAR", "CLEAR", "CLEAR"};
         String[] keys = {"", "", "", "", ""};
+        String[] bws = {"25.0k", "25.0k", "25.0k", "25.0k", "25.0k"};
         float vol = 1.0f;
         
         if (stack.hasTag()) {
@@ -70,19 +74,19 @@ public class RadioScreen extends Screen {
             if (tag.contains("channel")) channel = tag.getInt("channel");
             if (tag.contains("volume")) vol = tag.getFloat("volume");
             
-            // Fallback for older radio saves
-            String oldFreq = tag.contains("frequency") ? tag.getString("frequency") : "145.0";
+            String oldFreq = tag.contains("frequency") ? tag.getString("frequency") : "446.000";
             
             for (int i = 0; i < 5; i++) {
                 freqs[i] = tag.contains("ch" + i + "_freq") ? tag.getString("ch" + i + "_freq") : oldFreq;
                 algos[i] = tag.contains("ch" + i + "_algo") ? tag.getString("ch" + i + "_algo") : "CLEAR";
                 keys[i] = tag.contains("ch" + i + "_key") ? tag.getString("ch" + i + "_key") : "";
+                bws[i] = tag.contains("ch" + i + "_bw") ? tag.getString("ch" + i + "_bw") : "25.0k";
             }
         }
         
         String name = stack.getHoverName().getString().toUpperCase();
-        if (name.equals("AIR") || name.isEmpty()) name = "PRC-152A"; // Fallback safety
-        Minecraft.getInstance().setScreen(new RadioScreen(hand, channel, freqs, algos, keys, vol, name));
+        if (name.equals("AIR") || name.isEmpty()) name = "PRC-152A";
+        Minecraft.getInstance().setScreen(new RadioScreen(hand, channel, freqs, algos, keys, bws, vol, name));
     }
 
     @Override
@@ -92,23 +96,21 @@ public class RadioScreen extends Screen {
         int centerX = this.width / 2;
         int centerY = this.height / 2;
         
-        // Enlarged UI dimensions
         int displayY = centerY - 50;
         int displayX = centerX - 70;
 
-        // Digital Frequency Input
-        this.freqField = new EditBox(this.font, displayX + 25, displayY + 15, 50, 12, Component.literal("Freq"));
+        // Expanded for 3 decimal precision
+        this.freqField = new EditBox(this.font, displayX + 22, displayY + 15, 60, 12, Component.literal("Freq"));
         this.freqField.setBordered(false);
-        this.freqField.setTextColor(0xFF00FF00); // Terminal green
-        this.freqField.setValue(String.format(Locale.US, "%.1f", this.channelFreqs[this.activeChannel]));
-        this.freqField.setFilter(s -> s.isEmpty() || s.matches("^[0-9]{0,4}(\\.[0-9]{0,1})?$"));
+        this.freqField.setTextColor(0xFF00FF00);
+        this.freqField.setValue(String.format(Locale.US, "%.3f", this.channelFreqs[this.activeChannel]));
+        this.freqField.setFilter(s -> s.isEmpty() || s.matches("^[0-9]{0,3}(\\.[0-9]{0,3})?$"));
         this.addRenderableWidget(this.freqField);
         
-        // Custom Key String Input
-        int keyY = displayY + 50 + 75; // Perfectly aligns with the rendered background box
+        int keyY = displayY + 50 + 75; 
         this.keyField = new EditBox(this.font, displayX + 15, keyY + 4, 110, 10, Component.literal("Key"));
         this.keyField.setBordered(false);
-        this.keyField.setTextColor(0xFFFF5555); // Red text for secure key
+        this.keyField.setTextColor(0xFFFF5555);
         this.keyField.setValue(this.channelKeys[this.activeChannel]);
         this.keyField.setMaxLength(16);
         this.addRenderableWidget(this.keyField);
@@ -133,16 +135,14 @@ public class RadioScreen extends Screen {
         int textTitle = isLightMode ? 0xFF666666 : 0xFF555555;
         int textLabel = isLightMode ? 0xFF555555 : 0xFFAAAAAA;
 
-        // Dark/Light Military Tactical Enclosure
         guiGraphics.fill(boxX, boxY, boxX + boxW, boxY + boxH, bgBase);
-        guiGraphics.fill(boxX, boxY, boxX + boxW, boxY + 2, bgTop); // Top highlight
-        guiGraphics.fill(boxX, boxY + boxH - 2, boxX + boxW, boxY + boxH, bgBot); // Bottom shadow
-        guiGraphics.fill(boxX, boxY, boxX + 2, boxY + boxH, bgLeft); // Left highlight
-        guiGraphics.fill(boxX + boxW - 2, boxY, boxX + boxW, boxY + boxH, bgRight); // Right shadow
+        guiGraphics.fill(boxX, boxY, boxX + boxW, boxY + 2, bgTop);
+        guiGraphics.fill(boxX, boxY + boxH - 2, boxX + boxW, boxY + boxH, bgBot);
+        guiGraphics.fill(boxX, boxY, boxX + 2, boxY + boxH, bgLeft);
+        guiGraphics.fill(boxX + boxW - 2, boxY, boxX + boxW, boxY + boxH, bgRight);
         
         guiGraphics.drawString(this.font, this.radioName, boxX + 10, boxY + 10, textTitle, false);
 
-        // Theme Toggle Button
         int modeBtnX = boxX + boxW - 35;
         int modeBtnY = boxY + 8;
         guiGraphics.fill(modeBtnX, modeBtnY, modeBtnX + 25, modeBtnY + 12, isLightMode ? 0xFF333333 : 0xFFEEEEEE);
@@ -153,7 +153,6 @@ public class RadioScreen extends Screen {
         int displayX = centerX - (displayW / 2);
         int displayY = centerY - 50;
         
-        // Digital LCD Display Screen (Kept dark for green LED text contrast)
         guiGraphics.fill(displayX, displayY, displayX + displayW, displayY + displayH, 0xFF0A0B0C); 
         guiGraphics.fill(displayX, displayY, displayX + displayW, displayY + 1, 0xFF000000); 
         guiGraphics.fill(displayX, displayY + displayH - 1, displayX + displayW, displayY + displayH, 0xFF2A2D30);
@@ -163,7 +162,6 @@ public class RadioScreen extends Screen {
         guiGraphics.drawString(this.font, "FM", displayX + 5, displayY + 5, 0xFF005500, false);
         guiGraphics.drawString(this.font, "TX/RX", displayX + displayW - 35, displayY + 5, 0xFF005500, false);
 
-        // Linear tuning bar inside digital screen
         int barY = displayY + 35;
         guiGraphics.fill(displayX + 10, barY, displayX + displayW - 10, barY + 2, 0xFF112211);
         
@@ -175,11 +173,10 @@ public class RadioScreen extends Screen {
         float clampedFreq = Math.max(minFreq, Math.min(maxFreq, currentFreqFloat));
         float freqPercent = (clampedFreq - minFreq) / (maxFreq - minFreq);
         int needleX = displayX + 10 + (int)(freqPercent * (displayW - 20));
-        guiGraphics.fill(needleX - 1, barY - 4, needleX + 2, barY + 6, 0xFF00FF00); // Green needle
+        guiGraphics.fill(needleX - 1, barY - 4, needleX + 2, barY + 6, 0xFF00FF00);
 
         guiGraphics.drawString(this.font, "MHz", this.freqField.getX() + this.freqField.getWidth() + 2, displayY + 15, 0xFF00FF00, false);
         
-        // Draw Channel Buttons
         guiGraphics.drawString(this.font, "CH", displayX - 20, displayY + displayH + 14, textLabel, false);
         for (int i = 0; i < 5; i++) {
             int btnX = displayX + 10 + (i * 24);
@@ -188,38 +185,38 @@ public class RadioScreen extends Screen {
             drawTacticalButton(guiGraphics, btnX, chY, String.valueOf(i+1), isChActive, 0xFF00FF00);
         }
 
-        // Draw Encryption Algorithm Selector
         int algoY = displayY + displayH + 45;
-        guiGraphics.drawString(this.font, "ALG", displayX - 25, algoY + 4, textLabel, false);
-        
-        String activeAlgo = this.channelAlgos[this.activeChannel];
         int fieldBgOuter = isLightMode ? 0xFFAAAAAA : 0xFF2A2D30;
         int fieldBgInner = isLightMode ? 0xFFEEEEEE : 0xFF111111;
-        guiGraphics.fill(displayX + 10, algoY, displayX + 130, algoY + 16, fieldBgOuter);
-        guiGraphics.fill(displayX + 11, algoY + 1, displayX + 129, algoY + 15, fieldBgInner);
-        guiGraphics.drawCenteredString(this.font, activeAlgo, displayX + 70, algoY + 4, activeAlgo.equals("CLEAR") ? 0xFF00FF00 : 0xFFFF5555);
 
-        // Draw Key Input Field Background
+        guiGraphics.drawString(this.font, "ALG", displayX - 25, algoY + 4, textLabel, false);
+        String activeAlgo = this.channelAlgos[this.activeChannel];
+        guiGraphics.fill(displayX + 10, algoY, displayX + 65, algoY + 16, fieldBgOuter);
+        guiGraphics.fill(displayX + 11, algoY + 1, displayX + 64, algoY + 15, fieldBgInner);
+        guiGraphics.drawCenteredString(this.font, activeAlgo.substring(0, Math.min(4, activeAlgo.length())), displayX + 37, algoY + 4, activeAlgo.equals("CLEAR") ? 0xFF00FF00 : 0xFFFF5555);
+
+        guiGraphics.drawString(this.font, "BW", displayX + 70, algoY + 4, textLabel, false);
+        String activeBw = this.channelBws[this.activeChannel];
+        guiGraphics.fill(displayX + 85, algoY, displayX + 130, algoY + 16, fieldBgOuter);
+        guiGraphics.fill(displayX + 86, algoY + 1, displayX + 129, algoY + 15, fieldBgInner);
+        guiGraphics.drawCenteredString(this.font, activeBw, displayX + 107, algoY + 4, 0xFF00FF00);
+
         int keyY = displayY + displayH + 75;
         guiGraphics.drawString(this.font, "KEY", displayX - 25, keyY + 4, textLabel, false);
-        
         int keyBgOuter = isLightMode ? 0xFFAAAAAA : 0xFF0B0C0E;
         int keyBgInner = isLightMode ? 0xFFCCCCCC : 0xFF4A4E52;
         guiGraphics.fill(displayX + 10, keyY, displayX + 130, keyY + 16, keyBgOuter);
         guiGraphics.fill(displayX + 10, keyY + 15, displayX + 130, keyY + 16, keyBgInner);
 
-        // Left Tune Dial
         int dialL_X = boxX + 50;
         int dialL_Y = centerY - 20;
         drawDigitalDial(guiGraphics, dialL_X, dialL_Y, freqPercent, "TUNE");
 
-        // Right Vol Slider
         int sliderX = boxX + boxW - 45;
         int sliderY = centerY - 50;
         int sliderH = 95;
         drawVerticalSlider(guiGraphics, sliderX, sliderY, sliderH, currentVolumeValue, "VOL");
 
-        // Super is called last so the EditBoxes render ON TOP of everything
         super.render(guiGraphics, mouseX, mouseY, partialTick);
     }
 
@@ -304,12 +301,10 @@ public class RadioScreen extends Screen {
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        // ALWAYS let super process clicks first so EditBoxes gain focus securely!
         if (super.mouseClicked(mouseX, mouseY, button)) {
             return true;
         }
         
-        // If they clicked the background, clear text focus
         this.freqField.setFocused(false);
         this.keyField.setFocused(false);
 
@@ -321,7 +316,6 @@ public class RadioScreen extends Screen {
             int boxX = centerX - (boxW / 2);
             int boxY = centerY - (boxH / 2);
             
-            // Check Theme Toggle
             int modeBtnX = boxX + boxW - 35;
             int modeBtnY = boxY + 8;
             if (mouseX >= modeBtnX && mouseX <= modeBtnX + 25 && mouseY >= modeBtnY && mouseY <= modeBtnY + 12) {
@@ -340,7 +334,6 @@ public class RadioScreen extends Screen {
             int sliderY = centerY - 50;
             int sliderH = 95;
             
-            // Check Channel Buttons
             for (int i = 0; i < 5; i++) {
                 int btnX = displayX + 10 + (i * 24);
                 int chY = displayY + displayH + 10;
@@ -354,15 +347,19 @@ public class RadioScreen extends Screen {
                 }
             }
             
-            // Check Algorithm Toggle
             int algoY = displayY + displayH + 45;
-            if (mouseX >= displayX + 10 && mouseX <= displayX + 130 && mouseY >= algoY && mouseY <= algoY + 16) {
+            if (mouseX >= displayX + 10 && mouseX <= displayX + 65 && mouseY >= algoY && mouseY <= algoY + 16) {
                 cycleAlgorithm();
                 playClick();
                 return true;
             }
             
-            // Check Tuner Dial/Display Dragging
+            if (mouseX >= displayX + 85 && mouseX <= displayX + 130 && mouseY >= algoY && mouseY <= algoY + 16) {
+                cycleBandwidth();
+                playClick();
+                return true;
+            }
+            
             if ((mouseX >= displayX && mouseX <= displayX + 140 && mouseY >= displayY && mouseY <= displayY + 50) ||
                 Math.hypot(mouseX - dialL_X, mouseY - dialL_Y) <= 26) {
                 this.isDraggingTune = true;
@@ -370,7 +367,6 @@ public class RadioScreen extends Screen {
                 return true;
             }
             
-            // Check Volume Slider
             if (mouseX >= sliderX - 15 && mouseX <= sliderX + 15 && mouseY >= sliderY - 8 && mouseY <= sliderY + sliderH + 8) {
                 this.isDraggingVolume = true;
                 updateVolumeFromMouse(mouseY, sliderY, sliderH);
@@ -389,6 +385,16 @@ public class RadioScreen extends Screen {
         index = (index + 1) % ALGORITHMS.length;
         this.channelAlgos[this.activeChannel] = ALGORITHMS[index];
     }
+    
+    private void cycleBandwidth() {
+        String current = this.channelBws[this.activeChannel];
+        int index = 0;
+        for (int i = 0; i < BANDWIDTHS.length; i++) {
+            if (BANDWIDTHS[i].equals(current)) index = i;
+        }
+        index = (index + 1) % BANDWIDTHS.length;
+        this.channelBws[this.activeChannel] = BANDWIDTHS[index];
+    }
 
     private void saveCurrentChannelLocally() {
         try {
@@ -399,7 +405,7 @@ public class RadioScreen extends Screen {
     }
     
     private void loadChannelLocally() {
-        this.freqField.setValue(String.format(Locale.US, "%.1f", this.channelFreqs[this.activeChannel]));
+        this.freqField.setValue(String.format(Locale.US, "%.3f", this.channelFreqs[this.activeChannel]));
         this.keyField.setValue(this.channelKeys[this.activeChannel]);
     }
 
@@ -415,14 +421,16 @@ public class RadioScreen extends Screen {
         String[] freqs = new String[5];
         String[] algos = new String[5];
         String[] keys = new String[5];
+        String[] bws = new String[5];
         
         for (int i = 0; i < 5; i++) {
-            freqs[i] = String.format(Locale.US, "%.1f", this.channelFreqs[i]);
+            freqs[i] = String.format(Locale.US, "%.3f", this.channelFreqs[i]);
             algos[i] = this.channelAlgos[i];
             keys[i] = this.channelKeys[i];
+            bws[i] = this.channelBws[i];
         }
         
-        RadioNetwork.CHANNEL.sendToServer(new RadioNetwork.SyncRadioFrequencyPacket(this.activeChannel, freqs, algos, keys, this.currentVolumeValue, this.hand == InteractionHand.MAIN_HAND));
+        RadioNetwork.CHANNEL.sendToServer(new RadioNetwork.SyncRadioFrequencyPacket(this.activeChannel, freqs, algos, keys, bws, this.currentVolumeValue, this.hand == InteractionHand.MAIN_HAND));
     }
 
     @Override
@@ -481,7 +489,7 @@ public class RadioScreen extends Screen {
         percent = Math.max(0.0f, Math.min(1.0f, percent));
         float newFreq = minFreq + (percent * (maxFreq - minFreq));
         this.channelFreqs[this.activeChannel] = newFreq;
-        this.freqField.setValue(String.format(Locale.US, "%.1f", newFreq));
+        this.freqField.setValue(String.format(Locale.US, "%.3f", newFreq));
     }
     
     private void updateVolumeFromMouse(double mouseY, int sliderTopY, int sliderHeight) {
