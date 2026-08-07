@@ -3,8 +3,8 @@
 	"credit": "Made with Blockbench",
 	"texture_size": [64, 64],
 	"textures": {
-		"0": "prc_150",
-		"particle": "prc_150"
+		"0": "taticalsuit:block/prc_150",
+		"particle": "taticalsuit:block/prc_150"
 	},
 	"elements": [
 		{
