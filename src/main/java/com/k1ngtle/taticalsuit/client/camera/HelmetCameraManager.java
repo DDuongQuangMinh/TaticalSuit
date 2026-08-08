@@ -14,6 +14,7 @@ import com.k1ngtle.taticalsuit.item.HelmetSandItem;
 import com.k1ngtle.taticalsuit.item.HelmetSnowItem;
 import com.k1ngtle.taticalsuit.item.HelmetPVS31SandItem;
 import com.k1ngtle.taticalsuit.item.HelmetPVS31SnowItem;
+
 import com.mojang.blaze3d.pipeline.RenderTarget;
 import com.mojang.blaze3d.pipeline.TextureTarget;
 import com.mojang.blaze3d.platform.InputConstants;
@@ -30,6 +31,7 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.client.renderer.PostChain;
 import net.minecraft.resources.ResourceLocation;
+
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
@@ -102,7 +104,7 @@ public class HelmetCameraManager {
                                 head.getItem() instanceof HelmetGhillieItem ||
                                 head.getItem() instanceof HelmetSandItem ||
                                 head.getItem() instanceof HelmetSnowItem;
-                                
+
         boolean holdingHelmet = hand.getItem() instanceof HelmetItem || 
                                 hand.getItem() instanceof HelmetPVS31Item || 
                                 hand.getItem() instanceof HelmetPVS31GhillieItem || 
