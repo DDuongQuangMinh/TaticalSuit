@@ -225,6 +225,7 @@ public class VoiceManager {
                                 byte[] lbBuffer = processCrypto(encryptedData, encryptedData.length, algo, key, Cipher.DECRYPT_MODE);
                                 playAudio(lbBuffer, null);
                             } else {
+                                // FIXED: Added 0.0 at the end for the "distance" parameter!
                                 RadioNetwork.CHANNEL.sendToServer(new RadioNetwork.VoicePacket(encryptedData, freq, algo, key, false, null, bw, 0.0));
                             }
                         }

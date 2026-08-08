@@ -34,7 +34,7 @@ import org.slf4j.Logger;
 @Mod(TaticalSuit.MODID)
 public class TaticalSuit {
     public static final String MODID = "taticalsuit";
-    public static final Logger LOGGER = LogUtils.getLogger();
+    public static final Logger LOGGER = LogUtils.getLogger(); // Fixed: Changed from private to public!
 
     public TaticalSuit() {
         IEventBus modEventBus = FMLJavaModLoadingContext.get().getModEventBus();
@@ -73,7 +73,7 @@ public class TaticalSuit {
     private void commonSetup(final FMLCommonSetupEvent event) {
         event.enqueueWork(() -> {
             // Register Debug Beacons as radar targets
-            RadarRegistry.addTargetSource(com.k1ngtle.taticalsuit.radar.debug.RadarBeaconBlockEntity::beaconsIn);
+            RadarRegistry.addTargetSource(RadarBeaconBlockEntity::beaconsIn);
             
             // Check config and mod loaded status before applying Valkyrien Skies 2 integration
             if (VsCompat.isLoaded() && RadarConfig.ENABLE_VS_INTEGRATION.get()) {
